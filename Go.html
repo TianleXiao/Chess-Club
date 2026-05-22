@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Go Studio - Monochromatic Masterpiece Pro</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --surface: #141418;
+            --surface-sub: #1e1e24;
+            --border: #2c2c35;
+            --text-main: #f0f0f0;
+            --text-dim: #888899;
+            --board-line: #444455;
+            --star-point: #666677;
+            --ease: cubic-bezier(0.16, 1, 0.3, 1);
+            --cell-size: 28px; /* Optimized scale for 19x19 standard board */
+            --board-pad: 20px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        .container { display: flex; gap: 30px; max-width: 1200px; width: 100%; align-items: center; justify-content: center; }
+        .sidebar { flex: 0 0 320px; width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; }
+        
+        h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
+        .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .panel-section { background: #0f0f12; border: 1px solid var(--border); border-radius: 8px; padding: 12px; position: relative; }
+        
+        .eval-container { height: 4px; width: 100%; background: #22222a; border-radius: 2px; margin-top: 8px; display: flex; overflow: hidden; }
+        .eval-bar-black { height: 100%; background: #ffffff; width: 50%; transition: width 0.4s var(--ease); }
+        .eval-bar-white { height: 100%; background: #555566; width: 50%; transition: width 0.4s var(--ease); }
+        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
+
+        .peer-id-display { font-family: monospace; font-size: 0.9rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
+        .input-group { display: flex; gap: 8px; }
+        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.85rem; outline: none; }
+        input[type="text"]:focus { border-color: #555; }
+
+        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn:hover { background: #e5e5e5; transform: translateY(-1px); }
+        .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+        .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
+        
+        .btn-danger { background: #222; color: #ff4d4d; border: 1px solid #442222; }
+        .btn-danger:hover { background: #331111; border-color: #ff4d4d; }
+
+        .status-area { display: flex; flex-wrap: wrap; gap: 6px; }
+        .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #222; color: var(--text-dim); }
+        .status-badge.connected { background: #1b4332; color: #52b788; }
+        .status-badge.your-turn { background: #343444; color: #ffffff; animation: turnPulse 2s infinite; }
+        .status-badge.local-mode { background: #1a233a; color: #70a1ff; }
+
+        @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,255,255,0.2); } 100% { opacity: 0.8; } }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+        .stat-card { background: var(--surface-sub); padding: 6px; border-radius: 6px; border: 1px solid var(--border); }
+        .stat-val { font-size: 1rem; font-weight: bold; margin-top: 2px; }
+        .log-box { max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
+        .log-box::-webkit-scrollbar { width: 4px; }
+        .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .board-wrapper {
+            position: relative;
+            background: #18181c; 
+            padding: var(--board-pad);
+            border-radius: 8px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+            border: 1px solid var(--border);
+            user-select: none;
+        }
+
+        .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
+        
+        .go-board { 
+            position: relative; 
+            display: grid; 
+            grid-template-columns: repeat(19, var(--cell-size)); 
+            grid-template-rows: repeat(19, var(--cell-size)); 
+            z-index: 5; 
+            width: calc(18 * var(--cell-size));
+            height: calc(18 * var(--cell-size));
+        }
+        
+        /* Interactive grid hitboxes centered on line intersections */
+        .intersection { 
+            position: absolute; 
+            width: var(--cell-size); 
+            height: var(--cell-size); 
+            transform: translate(-50%, -50%); 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 10;
+        }
+
+        .stone {
+            width: 24px; height: 24px; border-radius: 50%; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset -1px -2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.15s var(--ease); pointer-events: none; z-index: 6;
+        }
+        
+        .stone.black { background: #33333c; border: 1px solid #33333c; }
+        .stone.white { background: #ffffff; border: 1px solid #ffffff; }
+        
+        /* Dynamic visual indicators */
+        .intersection.last-move::after { content: ""; position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ff4d4d; z-index: 8; }
+        .intersection:hover:not(.has-stone)::before { content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); z-index: 4; }
+        
+        .intersection.assist-suggest::before { content: ""; position: absolute; width: 22px; height: 22px; border: 1px dashed rgba(255, 255, 255, 0.45); border-radius: 50%; z-index: 2; animation: pulse 1.8s infinite; }
+
+        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.4; } }
+
+        .switch-wrap { display: flex; align-items: center; gap: 6px; }
+        .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .3s; border-radius: 18px; border: 1px solid var(--border); }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: #777; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #ffffff; border-color: #ffffff; }
+        input:checked + .slider:before { transform: translateX(16px); background-color: #0a0a0c; }
+
+        /* Celebration Overlay Styles */
+        .celebration-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(10, 10, 12, 0.88); backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s var(--ease);
+        }
+        .celebration-overlay.active { opacity: 1; pointer-events: auto; }
+        .celebration-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 40px 50px; text-align: center;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+            transform: scale(0.85); transition: transform 0.5s var(--ease);
+        }
+        .celebration-overlay.active .celebration-card { transform: scale(1); }
+        .celebration-title { font-size: 2.8rem; font-weight: 200; letter-spacing: 0.15em; margin-bottom: 12px; text-transform: uppercase; color: #ffffff; }
+        .celebration-subtitle { font-size: 1rem; color: var(--text-dim); margin-bottom: 24px; font-weight: 300; }
+
+        /* Monochromatic Material Danger Banner Styles (Suicide Move Confirmation) */
+        .danger-banner {
+            position: absolute; top: var(--board-pad); left: var(--board-pad);
+            width: calc(100% - 2 * var(--board-pad)); height: calc(100% - 2 * var(--board-pad));
+            background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(6px);
+            border-radius: 6px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease);
+            border: 1px solid rgba(255, 77, 77, 0.15);
+        }
+        .danger-banner.active { opacity: 1; pointer-events: auto; }
+        .danger-content {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 24px 32px; max-width: 380px; width: 90%;
+            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+        }
+        .danger-title { font-size: 1.1rem; font-weight: 600; color: #ff4d4d; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+        .danger-desc { font-size: 0.85rem; color: var(--text-main); line-height: 1.6; margin-bottom: 20px; }
+        .danger-actions { display: flex; gap: 12px; justify-content: center; }
+
+        @media (max-width: 950px) {
+            body { padding: 10px; }
+            .container { flex-direction: column-reverse; gap: 20px; }
+            .sidebar { width: 100%; max-width: 550px; flex: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="celebrationOverlay" class="celebration-overlay">
+        <div class="celebration-card">
+            <div id="celebrationTitle" class="celebration-title">MATCH OVER</div>
+            <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
+            <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">返回局势</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h1>
+                Go Studio Pro
+                <div class="switch-wrap">
+                    <span class="label-tiny" style="margin:0; font-size: 9px; color:#a0a0aa;">AI Suggest</span>
+                    <label class="switch">
+                        <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </h1>
+            
+            <div class="panel-section">
+                <span class="label-tiny">Match Stats</span>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-color: #52b788;"><span class="label-tiny">WIN</span><div class="stat-val" id="statWins" style="color: #52b788;">0</div></div>
+                    <div class="stat-card" style="border-color: #ff4d4d;"><span class="label-tiny">LOSE</span><div class="stat-val" id="statLosses" style="color: #ff4d4d;">0</div></div>
+                    <div class="stat-card"><span class="label-tiny">RATE</span><div class="stat-val" id="statRate">0%</div></div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Real-time Stone Balance</span>
+                <div class="eval-labels">
+                    <span id="blackEvalText" style="color: #ffffff; font-weight:bold;">0 Black</span>
+                    <span id="whiteEvalText" style="color: #888899; font-weight:bold;">0 White</span>
+                </div>
+                <div class="eval-container">
+                    <div class="eval-bar-black" id="blackEvalBar"></div>
+                    <div class="eval-bar-white" id="whiteEvalBar"></div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Your Room Key</span>
+                <div class="peer-id-display" id="myIdDisplay">Generating...</div>
+                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Key</button>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Join Room</span>
+                <div class="input-group">
+                    <input type="text" id="peerIdInput" placeholder="Paste opponent key...">
+                    <button class="btn" onclick="connectToPeer()">Join</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Game Status</span>
+                <div class="status-area" style="margin-top:4px;">
+                    <div id="connectionStatus" class="status-badge local-mode">Local Mode</div>
+                    <div id="turnStatus" class="status-badge">Turn: Black</div>
+                    <div id="roleStatus" class="status-badge" style="display:none;"></div>
+                </div>
+                <div class="log-box" id="logBox">Go 19x19 intersection matrix grid initialized.</div>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="requestUndo()">申请悔棋</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="sendPass()">认输/停手</button>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%;" onclick="initBoard()">Reset Match</button>
+        </div>
+
+        <div class="board-wrapper" id="boardWrapper">
+            <div id="dangerBanner" class="danger-banner">
+                <div class="danger-content">
+                    <div class="danger-title">⚠️ 无气自杀提示</div>
+                    <div id="dangerDesc" class="danger-desc">该落子点没有“气”，且无法提掉对方任何棋子。执意落子将被视作无效或送死。确定落子吗？</div>
+                    <div class="danger-actions">
+                        <button class="btn btn-danger" id="dangerConfirmBtn">执意如此</button>
+                        <button class="btn btn-secondary" onclick="cancelPendingMove()">容我三思</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="go-board" id="board"></div>
+        </div>
+    </div>
+
+    <script>
+        const BOARD_SIZE = 19;
+        let boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+        let myRole = null; 
+        let currentTurn = 'black'; // Black plays first in Go standard rule matrix
+        let lastMove = null;
+        let moveHistory = [];
+        let assistModeActive = false;
+        let pendingMoveContext = null;
+
+        // MQTT Network core variables
+        let mqttClient = null;
+        let currentRoomTopic = '';
+        const myUniqueId = 'UID_' + Math.random().toString(36).substr(2, 9);
+        let myRoomId = '';
+
+        let matchStats = JSON.parse(localStorage.getItem('go_p2p_stats')) || { wins: 0, losses: 0 };
+
+        // 9 Standard Star Points (星位) for 19x19 Grid Matrix
+        const starPoints = [
+            {r: 3, c: 3}, {r: 3, c: 9}, {r: 3, c: 15},
+            {r: 9, c: 3}, {r: 9, c: 9}, {r: 9, c: 15},
+            {r: 15, c: 3}, {r: 15, c: 9}, {r: 15, c: 15}
+        ];
+
+        function renderSVGBoard() {
+            const CS = 28; 
+            const w = (BOARD_SIZE - 1) * CS; 
+            const h = (BOARD_SIZE - 1) * CS; 
+            const strokeColor = "var(--board-line)";
+            
+            let svgStr = `<svg class="svg-layer" width="${w + 2}" height="${h + 2}" viewBox="-1 -1 ${w + 2} ${h + 2}" xmlns="http://www.w3.org/2000/svg">`;
+            
+            // Draw grid lines
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                // Horizontal line
+                svgStr += `<line x1="0" y1="${i * CS}" x2="${w}" y2="${i * CS}" stroke="${strokeColor}" stroke-width="1"/>`;
+                // Vertical line
+                svgStr += `<line x1="${i * CS}" y1="0" x2="${i * CS}" y2="${h}" stroke="${strokeColor}" stroke-width="1"/>`;
+            }
+
+            // Draw star points (星位)
+            starPoints.forEach(p => {
+                svgStr += `<circle cx="${p.c * CS}" cy="${p.r * CS}" r="3.5" fill="var(--star-point)"/>`;
+            });
+
+            svgStr += `</svg>`;
+            
+            // Cleanup old SVGs if exist
+            const oldSvg = document.querySelector('.svg-layer');
+            if (oldSvg) oldSvg.remove();
+            
+            document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svgStr);
+        }
+
+        function createDOMGrid() {
+            const boardDOM = document.getElementById('board'); 
+            boardDOM.innerHTML = '';
+            const CS = 28;
+            
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const hitBox = document.createElement('div');
+                    hitBox.className = 'intersection';
+                    hitBox.style.left = `${c * CS}px`;
+                    hitBox.style.top = `${r * CS}px`;
+                    hitBox.dataset.row = r;
+                    hitBox.dataset.col = c;
+                    
+                    hitBox.addEventListener('click', () => handleIntersectionClick(r, c));
+                    boardDOM.appendChild(hitBox);
+                }
+            }
+        }
+
+        function initNetwork() {
+            myRoomId = 'GO-' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('myIdDisplay').innerText = myRoomId;
+            currentRoomTopic = `go/room/${myRoomId}`;
+
+            log("正在连接分布式数据通道...");
+            mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+
+            mqttClient.on('connect', () => {
+                log("网关中转联通成功。正在守候远程节点...");
+                mqttClient.subscribe(currentRoomTopic);
+            });
+
+            mqttClient.on('message', (topic, message) => {
+                try {
+                    const data = JSON.parse(message.toString());
+                    if (data.senderId === myUniqueId) return;
+                    handleNetworkData(data);
+                } catch (e) { console.error(e); }
+            });
+        }
+
+        function connectToPeer() {
+            const remoteId = document.getElementById('peerIdInput').value.trim();
+            if (!remoteId) return alert("请输入合法的棋室密钥！");
+            if (remoteId === myRoomId) return alert("无法加入您本地的棋局房间！");
+
+            log(`切换网络信道至对端总线: ${remoteId}...`);
+            mqttClient.unsubscribe(currentRoomTopic);
+            currentRoomTopic = `go/room/${remoteId}`;
+            mqttClient.subscribe(currentRoomTopic);
+
+            myRole = 'white';
+            sendMqttMessage('join');
+        }
+
+        function sendMqttMessage(type, extraPayload = {}) {
+            if (!mqttClient || !currentRoomTopic) return;
+            const messageObj = { type: type, senderId: myUniqueId, ...extraPayload };
+            mqttClient.publish(currentRoomTopic, JSON.stringify(messageObj));
+        }
+
+        function handleNetworkData(data) {
+            if (data.type === 'join') {
+                myRole = 'black';
+                updateConnectionUI(true);
+                initBoard();
+                log("对方已连入房间。你执黑子(先手)。");
+                sendMqttMessage('join_ack');
+            } else if (data.type === 'join_ack') {
+                myRole = 'white';
+                updateConnectionUI(true);
+                initBoard();
+                log("已成功加入对战。你执白子(后手)。");
+            } else if (data.type === 'move') {
+                executeMoveSync(data.r, data.c);
+            } else if (data.type === 'pass') {
+                log(`对方选择停手/过牌。`);
+                currentTurn = currentTurn === 'black' ? 'white' : 'black';
+                updateTurnUI();
+            } else if (data.type === 'reset') {
+                resetBoardLocal(); log("对方重启了棋局。");
+            } else if (data.type === 'undo_request') {
+                if (confirm("对方请求撤回一步，是否同意？")) {
+                    executeUndoLocal(); sendMqttMessage('undo_response', { accept: true });
+                } else { sendMqttMessage('undo_response', { accept: false }); }
+            } else if (data.type === 'undo_response') {
+                if (data.accept) { executeUndoLocal(); log("对方同意了你的悔棋申请。"); } else { log("悔棋被拒绝。"); }
+            }
+        }
+
+        function initBoard() { resetBoardLocal(); sendMqttMessage('reset'); }
+
+        function resetBoardLocal() {
+            boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+            currentTurn = 'black'; 
+            lastMove = null;
+            moveHistory = [];
+            renderStones();
+            updateTurnUI();
+            updateStonesCount();
+            clearAssistHighlights();
+            cancelPendingMove();
+            if (assistModeActive) calculateBestMove();
+        }
+
+        function handleIntersectionClick(r, c) {
+            if (myRole !== null && currentTurn !== myRole) return;
+            if (pendingMoveContext || boardState[r][c] !== null) return;
+
+            // Rule matrix validation: Suicide check
+            const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
+            
+            if (validation.isSuicide) {
+                // Risk interruption deployment
+                triggerRiskInterruption(r, c);
+            } else {
+                commitPlacement(r, c);
+            }
+        }
+
+        function triggerRiskInterruption(r, c) {
+            pendingMoveContext = { r, c };
+            document.getElementById('dangerBanner').classList.add('active');
+        }
+
+        function cancelPendingMove() {
+            pendingMoveContext = null;
+            document.getElementById('dangerBanner').classList.remove('active');
+        }
+
+        // Action confirmation bound to risk trigger execution
+        document.getElementById('dangerConfirmBtn').onclick = () => {
+            if (pendingMoveContext) {
+                const { r, c } = pendingMoveContext;
+                cancelPendingMove();
+                commitPlacement(r, c);
+            }
+        };
+
+        function commitPlacement(r, c) {
+            if (myRole !== null) {
+                sendMqttMessage('move', { r, c });
+            }
+            executeMoveSync(r, c);
+        }
+
+        // BFS Core Rule Algorithm: Evaluate liberties (气) for specific group
+        function getGroupInfo(startR, startC, targetBoard) {
+            const color = targetBoard[startR][startC];
+            if (!color) return { stones: [], liberties: 0 };
+
+            const visited = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(false));
+            const stones = [];
+            const libertiesSet = new Set();
+            const queue = [{r: startR, c: startC}];
+            
+            visited[startR][startC] = true;
+
+            const dir = [{r:-1, c:0}, {r:1, c:0}, {r:0, c:-1}, {r:0, c:1}];
+
+            while(queue.length > 0) {
+                const curr = queue.shift();
+                stones.push(curr);
+
+                for(let i=0; i<4; i++) {
+                    const nr = curr.r + dir[i].r;
+                    const nc = curr.c + dir[i].c;
+
+                    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+                        if (!targetBoard[nr][nc]) {
+                            libertiesSet.add(`${nr},${nc}`);
+                        } else if (targetBoard[nr][nc] === color && !visited[nr][nc]) {
+                            visited[nr][nc] = true;
+                            queue.push({r: nr, c: nc});
+                        }
+                    }
+                }
+            }
+            return { stones, liberties: libertiesSet.size };
+        }
+
+        // Rule Matrix Check: Simulation mapping for captures and suicide conditions
+        function simulatePlacementAndCheckCaptured(r, c, color) {
+            // Clone matrix state
+            const simBoard = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+            for(let i=0; i<BOARD_SIZE; i++) {
+                for(let j=0; j<BOARD_SIZE; j++) simBoard[i][j] = boardState[i][j];
+            }
+
+            simBoard[r][c] = color;
+            const enemyColor = color === 'black' ? 'white' : 'black';
+            const capturedStones = [];
+
+            // Check adjacent enemy nodes first to process potential captures
+            const dir = [{r:-1, c:0}, {r:1, c:0}, {r:0, c:-1}, {r:0, c:1}];
+            for(let i=0; i<4; i++) {
+                const nr = r + dir[i].r;
+                const nc = c + dir[i].c;
+                if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+                    if (simBoard[nr][nc] === enemyColor) {
+                        const group = getGroupInfo(nr, nc, simBoard);
+                        if (group.liberties === 0) {
+                            group.stones.forEach(s => {
+                                if (!capturedStones.some(exist => exist.r === s.r && exist.c === s.c)) {
+                                    capturedStones.push(s);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Remove dead stones from simulation matrix
+            capturedStones.forEach(s => simBoard[s.r][s.c] = null);
+
+            // Re-evaluate self group for absolute suicide determination
+            const selfGroup = getGroupInfo(r, c, simBoard);
+            const isSuicide = (selfGroup.liberties === 0);
+
+            return { isSuicide, capturedStones };
+        }
+
+        function executeMoveSync(r, c) {
+            const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
+            
+            // Archive current layout snapshot
+            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
+            
+            // Apply placement sequence
+            boardState[r][c] = currentTurn;
+            
+            // Process removals
+            validation.capturedStones.forEach(s => {
+                boardState[s.r][s.c] = null;
+            });
+
+            lastMove = { r, c };
+            
+            renderStones();
+            updateStonesCount();
+            playStoneSound();
+
+            // Alternate dynamic turn sequence
+            currentTurn = currentTurn === 'black' ? 'white' : 'black';
+            updateTurnUI();
+
+            if (assistModeActive) setTimeout(calculateBestMove, 100);
+        }
+
+        function renderStones() {
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const hitBox = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
+                    const oldStone = hitBox.querySelector('.stone');
+                    if (oldStone) oldStone.remove();
+
+                    hitBox.classList.remove('last-move', 'has-stone');
+
+                    if (lastMove && lastMove.r === r && lastMove.c === c) {
+                        hitBox.classList.add('last-move');
+                    }
+
+                    const val = boardState[r][c];
+                    if (val) {
+                        hitBox.classList.add('has-stone');
+                        const stoneDOM = document.createElement('div');
+                        stoneDOM.className = `stone ${val}`;
+                        hitBox.appendChild(stoneDOM);
+                    }
+                }
+            }
+        }
+
+        function updateStonesCount() {
+            let bCount = 0, wCount = 0;
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (boardState[r][c] === 'black') bCount++;
+                    if (boardState[r][c] === 'white') wCount++;
+                }
+            }
+            
+            document.getElementById('blackEvalText').innerText = `${bCount} Black`;
+            document.getElementById('whiteEvalText').innerText = `${wCount} White`;
+            
+            const total = bCount + wCount;
+            if (total === 0) {
+                document.getElementById('blackEvalBar').style.width = '50%';
+                document.getElementById('whiteEvalBar').style.width = '50%';
+            } else {
+                const bPercent = (bCount / total) * 100;
+                document.getElementById('blackEvalBar').style.width = `${bPercent}%`;
+                document.getElementById('whiteEvalBar').style.width = `${100 - bPercent}%`;
+            }
+        }
+
+        function playStoneSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+            } catch (e) {}
+        }
+
+        function toggleAssistMode(force) {
+            assistModeActive = force !== undefined ? force : !assistModeActive;
+            document.getElementById('assistToggle').checked = assistModeActive;
+            log(`[AI 辅助] 局部气位与生存判定预测算法已${assistModeActive?'激活':'关闭'}。`);
+            if(assistModeActive && currentTurn && (!myRole || myRole === currentTurn)) calculateBestMove();
+            else clearAssistHighlights();
+        }
+
+        function clearAssistHighlights() {
+            document.querySelectorAll('.intersection').forEach(el => el.classList.remove('assist-suggest'));
+        }
+
+        // Lightweight AI analysis heuristics engine optimized for local response matrices
+        function calculateBestMove() {
+            if (!currentTurn) return;
+            clearAssistHighlights();
+
+            let bestPoint = null;
+            let highestScore = -9999;
+
+            // Sample step intervals if matrix exceeds rendering constraints
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (boardState[r][c] !== null) continue;
+
+                    const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
+                    if (validation.isSuicide) continue;
+
+                    let currentScore = 0;
+                    
+                    // Priority heuristic 1: Reward immediate capture weights
+                    if (validation.capturedStones.length > 0) {
+                        currentScore += validation.capturedStones.length * 15;
+                    }
+
+                    // Priority heuristic 2: Spatial structure preference (Star positions / Center clusters)
+                    if (starPoints.some(sp => sp.r === r && sp.c === c)) currentScore += 2;
+                    if (r >= 6 && r <= 12 && c >= 6 && c <= 12) currentScore += 1;
+
+                    if (currentScore > highestScore) {
+                        highestScore = currentScore;
+                        bestPoint = { r, c };
+                    }
+                }
+            }
+
+            if (bestPoint) {
+                const cell = document.querySelector(`[data-row='${bestPoint.r}'][data-col='${bestPoint.c}']`);
+                if (cell) cell.classList.add('assist-suggest');
+            }
+        }
+
+        function sendPass() {
+            if (confirm("确定要在本回合停手过牌吗？(双方连续停手通常意味着终局计数)")) {
+                sendMqttMessage('pass');
+                currentTurn = currentTurn === 'black' ? 'white' : 'black';
+                updateTurnUI();
+                log("你选择了停手过牌。");
+            }
+        }
+
+        function requestUndo() {
+            if (moveHistory.length === 0) return alert("没有可以撤销的步骤。");
+            if (myRole !== null) {
+                if (currentTurn === myRole) return alert("必须在对方回合期间才能申请悔棋！");
+                log("向对方发送悔棋申请..."); sendMqttMessage('undo_request');
+            } else { executeUndoLocal(); log("本地撤回上一步成功。"); }
+        }
+
+        function executeUndoLocal() {
+            if (moveHistory.length === 0) return;
+            const prev = moveHistory.pop();
+            boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
+            clearSelectionHighlights(); renderStones(); updateTurnUI(); updateStonesCount();
+            cancelPendingMove();
+            if (assistModeActive) calculateBestMove();
+        }
+
+        function clearSelectionHighlights() {
+            // Placeholder compatibility interface with previous standard logic parameters
+        }
+
+        function updateConnectionUI(isConnected) {
+            const badge = document.getElementById('connectionStatus'); 
+            const rBadge = document.getElementById('roleStatus');
+            if (isConnected) {
+                badge.innerText = "网络对战"; badge.className = "status-badge connected";
+                rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'black' ? "黑子(先手)" : "白子(后手)";
+            } else {
+                badge.innerText = "离线单机"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
+            }
+            updateTurnUI();
+        }
+
+        function updateTurnUI() {
+            const turnBadge = document.getElementById('turnStatus'); 
+            if (!currentTurn) return;
+            const name = currentTurn === 'black' ? '黑方' : '白方'; 
+            turnBadge.innerText = `当前回合: ${name}`;
+            if (myRole !== null && currentTurn === myRole) { 
+                turnBadge.className = "status-badge your-turn"; 
+                turnBadge.innerText += " (轮到你)"; 
+            } else { 
+                turnBadge.className = "status-badge"; 
+            }
+        }
+
+        function updateStatsUI() {
+            document.getElementById('statWins').innerText = matchStats.wins;
+            document.getElementById('statLosses').innerText = matchStats.losses;
+            const total = matchStats.wins + matchStats.losses;
+            document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
+        }
+
+        function copyRoomKey() { 
+            const id = document.getElementById('myIdDisplay').innerText; 
+            if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("棋室钥匙复制成功！")); 
+        }
+        
+        function log(text) { 
+            const logBox = document.getElementById('logBox'); 
+            logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; 
+            logBox.scrollTop = logBox.scrollHeight; 
+        }
+
+        renderSVGBoard(); 
+        createDOMGrid(); 
+        resetBoardLocal(); 
+        initNetwork(); 
+        updateStatsUI();
+    </script>
+</body>
+</html>

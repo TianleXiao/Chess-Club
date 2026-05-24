@@ -628,7 +628,6 @@
                         clearSelectionHighlights(); return;
                     }
                     
-                    // 防失子拦截判定：开关开启 且 确实存在危险
                     if (riskAlertActive && isCapturedRiskMove(selectedCell.r, selectedCell.c, r, c, currentTurn)) {
                         triggerRiskInterruption(selectedCell.r, selectedCell.c, r, c);
                     } else {
@@ -757,17 +756,14 @@
                 showCelebration(winner);
                 currentTurn = null; updateTurnUI(); playChessSound();
 
-                // 无论是单机还是联机，在3秒庆典动画结束后触发换色重开逻辑
                 setTimeout(() => {
                     if (myRole !== null && myRole !== 'spectator') {
                         if (winner === myRole) matchStats.wins++; else matchStats.losses++;
                         localStorage.setItem('chess_p2p_stats', JSON.stringify(matchStats));
                         updateStatsUI();
 
-                        // 核心：由赢家（或红方）统一在3秒后发出攻守角色对换指令
                         if (myRole === 'red') {
-                            const nextRoleOfPeer = 'red'; // 红变成黑，说明对端会变成红
-                            sendMqttMessage('role_swap', { nextRole: myRole }); // 把当前身份作为对方的下一任身份发过去
+                            sendMqttMessage('role_swap', { nextRole: myRole }); 
                             myRole = 'black'; 
                             updateOrientation(); updateConnectionUI(true); resetBoardLocal();
                         } else if (myRole === 'black') {
@@ -775,7 +771,6 @@
                             updateOrientation(); updateConnectionUI(true); resetBoardLocal();
                         }
                     } else if (myRole === null) {
-                        // 单机演练模式直接对调视角并重置
                         resetBoardLocal();
                         log("[单机重开] 战场初始化完毕。");
                     }
@@ -869,6 +864,95 @@
             return false;
         }
 
+        // ==================== 皮卡鱼 AI 对接核心组件 ====================
+
+        // 1. 将前端的二维 boardState 转换为皮卡鱼能读懂的标准 FEN 局面串
+        function generateFEN() {
+            let fenRows = [];
+            const typeMap = {
+                'red':   { '車': 'R', '馬': 'N', '相': 'B', '仕': 'A', '帥': 'K', '炮': 'C', '兵': 'P' },
+                'black': { '車': 'r', '馬': 'n', '象': 'b', '士': 'a', '將': 'k', '砲': 'c', '卒': 'p' }
+            };
+
+            for (let r = 0; r < 10; r++) {
+                let emptyCount = 0;
+                let rowStr = '';
+                for (let c = 0; c < 9; c++) {
+                    const p = boardState[r][c];
+                    if (!p) {
+                        emptyCount++;
+                    } else {
+                        if (emptyCount > 0) { rowStr += emptyCount; emptyCount = 0; }
+                        let t = p.type;
+                        // 洗涤清洗简繁体，防止字段映射错位
+                        if(p.color === 'red' && (t === '将' || t === '帅')) t = '帥';
+                        if(p.color === 'black' && (t === '帅' || t === '将')) t = '將';
+                        if(p.color === 'red' && t === '炮') t = '炮';
+                        if(p.color === 'black' && t === '炮') t = '砲';
+                        rowStr += (typeMap[p.color][t] || 'P');
+                    }
+                }
+                if (emptyCount > 0) rowStr += emptyCount;
+                fenRows.push(rowStr);
+            }
+            const fenBoard = fenRows.join('/');
+            const fenTurn = currentTurn === 'red' ? 'w' : 'b';
+            return `${fenBoard} ${fenTurn} - - 0 1`;
+        }
+
+        // 2. 将皮卡鱼返回的 "b2c4" 坐标系统翻译成前端格子的二维索引 {from, to}
+        const colMap = { 'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5, 'g':6, 'h':7, 'i':8 };
+        function uciToCoords(uciStr) {
+            const fromC = colMap[uciStr[0]];
+            const fromR = 9 - parseInt(uciStr[1]); // 反转Y轴对齐网格
+            const toC = colMap[uciStr[2]];
+            const toR = 9 - parseInt(uciStr[3]);
+            return { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
+        }
+
+        // 3. 全新重写的 AI 最佳走法获取函数（向 Express 后端索要战术）
+        function calculateBestMove() {
+            if (!currentTurn) return;
+            clearAssistHighlights();
+
+            // 动态构建 FEN
+            const currentFen = generateFEN();
+
+            // 发送异步网络请求到 3000 算力端口
+            fetch('http://localhost:3000/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fen: currentFen })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // A. 精准提取最佳走向，激活紫色流光提示
+                if (data.bestMove && data.bestMove !== '(none)' && data.bestMove !== '0000') {
+                    const coords = uciToCoords(data.bestMove);
+                    const sCell = document.querySelector(`[data-row='${coords.from.r}'][data-col='${coords.from.c}']`);
+                    const eCell = document.querySelector(`[data-row='${coords.to.r}'][data-col='${coords.to.c}']`);
+                    if(sCell) sCell.classList.add('assist-start');
+                    if(eCell) eCell.classList.add('assist-end');
+                }
+
+                // B. 接管原本静态的局势评估条，基于皮卡鱼的专业分值进行精确图形化渲染
+                let score = data.score;
+                // 皮卡鱼的分数默认以红方为正，将其映射到 5%~95% 胜率条区间上防止挤爆
+                let redRate = 50 + (score / 35); 
+                redRate = Math.max(5, Math.min(95, redRate)); 
+
+                document.getElementById('redEvalBar').style.width = redRate + '%';
+                document.getElementById('blackEvalBar').style.width = (100 - redRate) + '%';
+                document.getElementById('redEvalText').innerText = redRate.toFixed(0) + '% Red';
+                document.getElementById('blackEvalText').innerText = (100 - redRate).toFixed(0) + '% Black';
+            })
+            .catch(err => {
+                console.warn("未检测到本地皮卡鱼后端，请检查 node server.js 是否在运行中。将降级为本地简易评估。");
+                evaluateAndDisplayWinRateFallback();
+            });
+        }
+
+        // 本地降级局势评估算法
         function evaluateBoard() {
             let score = 0;
             for (let r = 0; r < 10; r++) {
@@ -887,13 +971,22 @@
             return score;
         }
 
-        function evaluateAndDisplayWinRate() {
+        function evaluateAndDisplayWinRateFallback() {
             const score = evaluateBoard();
             let redRate = 50 + (score / 45); redRate = Math.max(5, Math.min(95, redRate));
             document.getElementById('redEvalBar').style.width = redRate + '%';
             document.getElementById('blackEvalBar').style.width = (100 - redRate) + '%';
             document.getElementById('redEvalText').innerText = redRate.toFixed(0) + '% Red';
             document.getElementById('blackEvalText').innerText = (100 - redRate).toFixed(0) + '% Black';
+        }
+
+        // 统一分发触发点
+        function evaluateAndDisplayWinRate() {
+            if (assistModeActive) {
+                calculateBestMove();
+            } else {
+                evaluateAndDisplayWinRateFallback();
+            }
         }
 
         function toggleAssistMode(force) {
@@ -916,47 +1009,6 @@
         });
 
         function clearAssistHighlights() { document.querySelectorAll('.cell').forEach(el => el.classList.remove('assist-start', 'assist-end')); }
-
-        function calculateBestMove() {
-            if (!currentTurn) return;
-            clearAssistHighlights();
-            let bestMove = null;
-            let bestScore = currentTurn === 'red' ? -9999999 : 9999999;
-
-            for (let fr = 0; fr < 10; fr++) {
-                for (let fc = 0; fc < 9; fc++) {
-                    const p = boardState[fr][fc];
-                    if (p && p.color === currentTurn) {
-                        for (let tr = 0; tr < 10; tr++) {
-                            for (let tc = 0; tc < 9; tc++) {
-                                if (validateMove(fr, fc, tr, tc) && !isBlunderMove(fr, fc, tr, tc, currentTurn)) {
-                                    const orig = boardState[tr][tc];
-                                    boardState[tr][tc] = p; boardState[fr][fc] = null;
-                                    let score = evaluateBoard();
-                                    if(orig && ['将','將','帅','帥'].includes(orig.type)) {
-                                        score = currentTurn === 'red' ? 999999 : -999999;
-                                    }
-                                    boardState[fr][fc] = p; boardState[tr][tc] = orig;
-
-                                    if (currentTurn === 'red') {
-                                        if (score > bestScore) { bestScore = score; bestMove = {fr, fc, tr, tc}; }
-                                    } else {
-                                        if (score < bestScore) { bestScore = score; bestMove = {fr, fc, tr, tc}; }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (bestMove) {
-                const sCell = document.querySelector(`[data-row='${bestMove.fr}'][data-col='${bestMove.fc}']`);
-                const eCell = document.querySelector(`[data-row='${bestMove.tr}'][data-col='${bestMove.tc}']`);
-                if(sCell) sCell.classList.add('assist-start');
-                if(eCell) eCell.classList.add('assist-end');
-            }
-        }
 
         function updateConnectionUI(isConnected) {
             const badge = document.getElementById('connectionStatus'); const rBadge = document.getElementById('roleStatus');

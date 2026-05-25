@@ -2,247 +2,207 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Go Studio - Monochromatic Masterpiece Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P2P GO STUDIO Pro - 移动自适应版</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
-            --bg: #0a0a0c;
-            --surface: #141418;
-            --surface-sub: #1e1e24;
-            --border: #2c2c35;
-            --text-main: #f0f0f0;
-            --text-dim: #888899;
-            --board-line: #444455;
-            --star-point: #666677;
+            --bg: #09090b;
+            --surface: #18181b;
+            --surface-sub: #27272a;
+            --border: #3f3f46;
+            --text-main: #f4f4f5;
+            --text-dim: #a1a1aa;
+            --board-bg: #dcb37b; /* 经典木纹底色 */
+            --board-line: #3f2a14;
+            --star-point: #3f2a14;
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --success: #22c55e;
             --ease: cubic-bezier(0.16, 1, 0.3, 1);
-            --cell-size: 28px; /* Optimized scale for 19x19 standard board */
-            --board-pad: 20px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; flex-direction: row; }
 
-        /* Left Control Panel */
-        .sidebar { width: 340px; background-color: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px; justify-content: space-between; z-index: 10; }
-        .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 24px; background: linear-gradient(135deg, #fff 0%, #888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; }
-        .brand::before { content: ''; display: inline-block; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        /* 滚动条隐藏但可滚动 */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        /* ================= 布局系统 ================= */
+        .sidebar { width: 300px; background-color: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px; gap: 12px; overflow-y: auto; z-index: 10; }
+        .workspace { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 16px; overflow-y: auto; background: radial-gradient(circle at center, #18181b 0%, #09090b 100%); }
+
+        /* ================= 侧边栏 UI ================= */
+        .brand { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .brand::before { content: ''; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
-        .panel-section { background-color: var(--surface-sub); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-        .section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 0.5px; }
-        
-        .room-display { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: monospace; font-size: 15px; cursor: pointer; transition: all var(--ease); }
-        .room-display:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        .panel-section { background-color: var(--surface-sub); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .section-title { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
         
         .input-group { display: flex; gap: 8px; }
-        .modern-input { flex: 1; background-color: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; transition: all var(--ease); }
-        .modern-input:focus { outline: none; border-color: #555; background-color: rgba(0,0,0,0.5); }
+        .modern-input { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: #fff; font-size: 14px; width: 100%; transition: border var(--ease); }
+        .modern-input:focus { outline: none; border-color: var(--text-dim); }
         
-        .btn { background: #fff; color: #000; border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--ease); display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn:hover { background: #ececec; transform: translateY(-1px); }
-        .btn:active { transform: translateY(0); }
-        .btn-secondary { background: var(--surface-sub); color: var(--text-main); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: rgba(255,255,255,0.05); }
-        .btn-danger { background: #ff4d4d; color: #fff; }
-        .btn-danger:hover { background: #ff6666; }
-        
-        .status-container { display: flex; flex-direction: column; gap: 8px; }
-        .status-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .status-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-        .status-badge.connected { background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.3); color: #2ecc71; }
-        .status-badge.local-mode { background: rgba(52, 152, 219, 0.1); border-color: rgba(52, 152, 219, 0.3); color: #3498db; }
-        .status-badge.your-turn { background: rgba(241, 196, 15, 0.1); border-color: rgba(241, 196, 15, 0.3); color: #f1c40f; animation: pulse 2s infinite; }
+        .btn { background: #fff; color: #000; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s var(--ease); display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn:active { transform: scale(0.96); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border); }
+        .btn-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 
-        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 10px rgba(241,196,15,0.2); } 100% { opacity: 0.8; } }
+        .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.1); }
+        .status-badge.active { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .status-badge.warn { background: rgba(234, 179, 8, 0.15); color: #fde047; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-        .stat-item { background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02); }
-        .stat-val { font-size: 16px; font-weight: 700; margin-top: 2px; }
-        .stat-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
+        .stat-item { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; }
+        .stat-val { font-size: 16px; font-weight: 700; }
+        .stat-lbl { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
 
-        .log-panel { flex: 1; min-height: 100px; display: flex; flex-direction: column; }
-        .log-box { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #aaa; overflow-y: auto; line-height: 1.6; word-break: break-all; }
-
-        /* Toggle Switch */
+        /* AI 开关 */
         .switch-container { display: flex; align-items: center; justify-content: space-between; }
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch { position: relative; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); border: 1px solid var(--border); transition: .3s var(--ease); border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: #888; transition: .3s var(--ease); border-radius: 50%; }
-        input:checked + .slider { background-color: #fff; border-color: #fff; }
-        input:checked + .slider:before { transform: translateX(20px); background-color: #000; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); border-radius: 24px; transition: 0.3s; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: #a1a1aa; border-radius: 50%; transition: 0.3s; }
+        input:checked + .slider { background-color: #c084fc; }
+        input:checked + .slider:before { transform: translateX(20px); background-color: #fff; }
 
-        /* Main Workspace Container */
-        .workspace { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: radial-gradient(circle at center, #181820 0%, #0a0a0c 100%); }
-
-        /* Risk Interruption Banner */
-        .danger-banner { position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(to right, #ff4d4d, #cc1111); color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; transform: translateY(-100%); transition: transform 0.4s var(--ease); z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .danger-banner.active { transform: translateY(0); }
-        .danger-msg { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px; }
-        .danger-msg::before { content: '⚠️'; font-size: 18px; }
-        .danger-actions { display: flex; gap: 10px; }
-
-        /* Go Board Layout Archetype */
-        .board-container { position: relative; padding: var(--board-pad); background-color: #1a1a22; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 1px 1px rgba(255,255,255,0.1); border: 1px solid rgba(0,0,0,0.6); }
+        /* ================= 棋盘流式布局 (核心重构) ================= */
+        .board-container { width: 100%; max-width: 600px; aspect-ratio: 1 / 1; background-color: var(--board-bg); padding: 3%; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.2); position: relative; display: flex; }
+        .board-wrapper { position: relative; width: 100%; height: 100%; }
         
-        /* Calculated precise bound size for 19x19 spacing grid */
-        .board-wrapper { position: relative; width: calc((19 - 1) * 28px); height: calc((19 - 1) * 28px); }
-        
-        .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
         .dom-interaction-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* Coordinate hit-boxes deployed exactly focused over wireframe intersections */
-        .intersection { position: absolute; width: 26px; height: 26px; transform: translate(-50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 5; }
-        .intersection:hover::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); }
-        .intersection.has-stone:hover::after { display: none; }
+        .intersection { position: absolute; transform: translate(-50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; border-radius: 50%; }
+        /* 触摸反馈 */
+        @media (hover: hover) { .intersection:hover::before { content: ''; width: 30%; height: 30%; background: rgba(0,0,0,0.3); border-radius: 50%; position: absolute; } }
 
-        /* Stone Vector Modeling Geometry */
-        .stone { width: 23px; height: 23px; border-radius: 50%; animation: dropStone 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; shadow: 0 3px 6px rgba(0,0,0,0.4); position: relative; z-index: 6; }
-        .stone.black { background: radial-gradient(circle at 35% 35%, #3a3a44 0%, #0d0d11 60%, #000000 100%); box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(0,0,0,0.4); }
-        .stone.white { background: radial-gradient(circle at 30% 30%, #ffffff 0%, #eaeaea 50%, #b5b5bc 100%); box-shadow: 0 3px 6px rgba(0,0,0,0.3), inset 0 -1px 1px rgba(0,0,0,0.2); }
+        /* 棋子按百分比缩放 */
+        .stone { width: 92%; height: 92%; border-radius: 50%; position: relative; z-index: 6; animation: dropStone 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; box-shadow: 2px 4px 6px rgba(0,0,0,0.4); }
+        .stone.black { background: radial-gradient(circle at 30% 30%, #444 0%, #111 60%, #000 100%); }
+        .stone.white { background: radial-gradient(circle at 30% 30%, #fff 0%, #e4e4e7 60%, #a1a1aa 100%); }
         
-        @keyframes dropStone { 0% { transform: scale(1.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes dropStone { 0% { transform: scale(1.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* Last played move indicator ring marker */
-        .last-move::before { content: ''; width: 6px; height: 6px; border-radius: 50%; position: absolute; z-index: 10; pointer-events: none; }
-        .intersection.last-move .stone.black::before { background: #fff; left: calc(50% - 3px); top: calc(50% - 3px); }
-        .intersection.last-move .stone.white::before { background: #000; left: calc(50% - 3px); top: calc(50% - 3px); }
+        /* 最后一手标识 */
+        .intersection.last-move .stone::after { content: ''; width: 25%; height: 25%; border-radius: 50%; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10; border: 2px solid; }
+        .intersection.last-move .stone.black::after { border-color: rgba(255,255,255,0.6); }
+        .intersection.last-move .stone.white::after { border-color: rgba(0,0,0,0.5); }
 
-        /* Assist Engine Recommendation Indicator Ring Overlay */
-        .intersection.assist-suggest::after { content: ''; width: 14px; height: 14px; border: 2.5px solid #a855f7; border-radius: 50%; position: absolute; z-index: 12; animation: assistPulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite; pointer-events: none; }
-        @keyframes assistPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: 0.4; } }
+        /* AI 紫圈 */
+        .intersection.assist-suggest::after { content: ''; width: 100%; height: 100%; border: 3px dashed #c084fc; border-radius: 50%; position: absolute; z-index: 12; animation: assistPulse 1s linear infinite; pointer-events: none; }
+        @keyframes assistPulse { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.4; } 100% { transform: scale(0.9); opacity: 1; } }
 
-        /* Real-time Stone Balance Matrix Analytics Evaluator */
-        .evaluator-bar-container { width: calc(((19 - 1) * 28px) + (var(--board-pad) * 2)); background-color: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-top: 24px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-        .evaluator-meta { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .eval-lbl-black { color: #fff; display: flex; align-items: center; gap: 6px; }
-        .eval-lbl-black::before { content: ''; display:inline-block; width: 8px; height: 8px; background:#fff; border-radius:50%; }
-        .eval-lbl-white { color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
-        .eval-lbl-white::before { content: ''; display:inline-block; width: 8px; height: 8px; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); border-radius:50%; }
-        .eval-track { height: 6px; background-color: rgba(255,255,255,0.05); border-radius: 3px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
-        .eval-fill { height: 100%; transition: width 0.6s var(--ease); }
-        .eval-fill.black-fill { background-color: #fff; width: 50%; }
-        .eval-fill.white-fill { background-color: #33333c; width: 50%; }
+        /* ================= 底部状态栏与操作区 ================= */
+        .bottom-panel { width: 100%; max-width: 600px; margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+        
+        .evaluator-bar-container { background-color: var(--surface-sub); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .evaluator-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+        .eval-track { height: 8px; background-color: #111; border-radius: 4px; display: flex; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .eval-fill { height: 100%; transition: width 0.4s var(--ease); }
+        .eval-fill.black-fill { background-color: #3f3f46; width: 50%; }
+        .eval-fill.white-fill { background-color: #f4f4f5; width: 50%; }
 
-        /* Global Structural Utilities */
-        .flex-spacer { flex-grow: 1; }
-        .panel-footer-branding { text-align: center; font-size: 10px; color: rgba(255,255,255,0.15); font-family: monospace; border-top: 1px solid rgba(255,255,255,0.02); padding-top: 16px; margin-top: 16px; }
+        .action-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+        /* 警告横幅 */
+        .danger-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%) translateY(-150%); background: var(--danger); color: white; padding: 10px 20px; border-radius: 8px; display: flex; gap: 12px; align-items: center; transition: 0.3s var(--ease); z-index: 100; font-size: 13px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+        .danger-banner.active { transform: translateX(-50%) translateY(0); }
+
+        /* ================= 移动端适配 ================= */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; max-height: 250px; border-right: none; border-bottom: 1px solid var(--border); padding: 12px; }
+            .workspace { padding: 12px; justify-content: flex-start; }
+            .board-container { padding: 4%; } /* 移动端棋盘边距更大些以防误触边缘 */
+            .action-bar { grid-template-columns: repeat(2, 1fr); }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div>
-            <div class="brand">P2P GO STUDIO Pro</div>
-            
-            <div class="panel-section">
-                <div class="section-title">分布式网络棋室密钥</div>
-                <div class="room-display" onclick="copyRoomKey()" title="点击一键拷贝专属棋室钥匙">
-                    <span id="myIdDisplay">Generating Token...</span>
-                    <span style="font-size:12px; color:var(--text-dim)">📋</span>
-                </div>
-                <div class="section-title" style="margin-top: 14px; margin-bottom: 8px;">联入远程总线端点</div>
-                <div class="input-group">
-                    <input type="text" id="peerIdInput" class="modern-input" placeholder="输入对家棋室密钥...">
-                    <button class="btn" onclick="connectToPeer()">加入对局</button>
-                </div>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-title">实时拓扑状态总线</div>
-                <div class="status-container">
-                    <div class="status-row">
-                        <span>联通架构:</span>
-                        <span id="connectionStatus" class="status-badge local-mode">网络初始化...</span>
-                    </div>
-                    <div class="status-row">
-                        <span>分配阵营:</span>
-                        <span id="roleStatus" class="status-badge" style="display: none;">观战席位</span>
-                    </div>
-                    <div class="status-row">
-                        <span>控制权属:</span>
-                        <span id="turnStatus" class="status-badge">等待就绪</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel-section switch-container">
-                <div>
-                    <div style="font-size: 13px; font-weight: 600;">KataGo 引擎辅助</div>
-                    <div style="font-size: 11px; color: var(--text-dim); margin-top: 1px;">实时紫圈推荐与胜率分析</div>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-title">本地历史胜负结算</div>
-                <div class="stats-grid">
-                    <div class="stat-item"><div class="stat-lbl">胜场</div><div class="stat-val" id="statWins" style="color:#2ecc71">0</div></div>
-                    <div class="stat-item"><div class="stat-lbl">负场</div><div class="stat-val" id="statLosses" style="color:#ff4d4d">0</div></div>
-                    <div class="stat-item"><div class="stat-lbl">胜率</div><div class="stat-val" id="statRate">0%</div></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="log-panel">
-            <div class="section-title">控制台链路日志跟踪</div>
-            <div class="log-box" id="logBox">系统总线就绪。等待玩家策略部署...</div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button class="btn btn-secondary" onclick="requestUndo()">申请悔棋</button>
-                <button class="btn btn-secondary" onclick="sendPass()">过牌/停手</button>
-            </div>
-            <button class="btn btn-danger" onclick="initBoard()">清空盘面 / 重启棋局</button>
-            <div class="panel-footer-branding">ENGINE COUPLING ARCHITECTURE V2.1.0</div>
-        </div>
-    </div>
-
-    <div class="workspace">
+    <aside class="sidebar">
+        <div class="brand">P2P GO STUDIO Pro</div>
         
-        <div class="danger-banner" id="dangerBanner">
-            <div class="danger-msg">防自杀/无气风险拦截：检测到该落子交叉点处于“无气自杀”或非法禁着点状态。</div>
-            <div class="danger-actions">
-                <button class="btn btn-secondary" style="background: rgba(255,255,255,0.15); color: #fff; border: none;" onclick="cancelPendingMove()">撤销操作</button>
-                <button class="btn" id="dangerConfirmBtn" style="background: #fff; color: #000;">强行落子</button>
+        <div class="panel-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="section-title">我的房间密钥</span>
+                <span id="connectionStatus" class="status-badge">单机模式</span>
             </div>
+            <div class="input-group">
+                <input type="text" id="myIdDisplay" class="modern-input" readonly>
+                <button class="btn btn-secondary" onclick="copyRoomKey()">复制</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="peerIdInput" class="modern-input" placeholder="输入对手密钥联机...">
+                <button class="btn" onclick="connectToPeer()">加入</button>
+            </div>
+        </div>
+
+        <div class="panel-section" style="flex-direction: row; align-items: center; justify-content: space-between;">
+            <div>
+                <div style="font-size: 13px; font-weight: 600;">KataGo AI 辅助</div>
+                <div style="font-size: 11px; color: var(--text-dim);">实时显示推荐落子点</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="panel-section stats-grid">
+            <div class="stat-item"><div class="stat-val" id="statWins" style="color:var(--success)">0</div><div class="stat-lbl">胜场</div></div>
+            <div class="stat-item"><div class="stat-val" id="statLosses" style="color:var(--danger)">0</div><div class="stat-lbl">负场</div></div>
+            <div class="stat-item"><div class="stat-val" id="statRate">0%</div><div class="stat-lbl">胜率</div></div>
+        </div>
+    </aside>
+
+    <main class="workspace">
+        <div class="danger-banner" id="dangerBanner">
+            <span>⚠️ 规则拦截：无气禁着点</span>
+            <button class="btn btn-secondary" style="padding:4px 8px;" onclick="cancelPendingMove()">取消</button>
+            <button class="btn" style="padding:4px 8px; background:#fff; color:#000;" id="dangerConfirmBtn">强行落子</button>
         </div>
 
         <div class="board-container">
             <div class="board-wrapper" id="boardWrapper">
-                <div class="dom-interaction-grid" id="board">
-                    </div>
+                <div class="dom-interaction-grid" id="board"></div>
             </div>
         </div>
 
-        <div class="evaluator-bar-container">
-            <div class="evaluator-meta">
-                <div class="eval-lbl-black" id="blackEvalText">0 Black</div>
-                <div class="eval-lbl-white" id="whiteEvalText">0 White</div>
+        <div class="bottom-panel">
+            <div class="evaluator-bar-container">
+                <div class="evaluator-meta">
+                    <span style="color: #a1a1aa" id="blackEvalText">黑棋</span>
+                    <span id="turnStatus" class="status-badge warn">黑方回合</span>
+                    <span style="color: #fff" id="whiteEvalText">白棋</span>
+                </div>
+                <div class="eval-track">
+                    <div class="eval-fill black-fill" id="blackEvalBar"></div>
+                    <div class="eval-fill white-fill" id="whiteEvalBar"></div>
+                </div>
             </div>
-            <div class="eval-track">
-                <div class="eval-fill black-fill" id="blackEvalBar"></div>
-                <div class="eval-fill white-fill" id="whiteEvalBar"></div>
+
+            <div class="action-bar">
+                <button class="btn btn-secondary" onclick="requestUndo()">↺ 悔棋</button>
+                <button class="btn btn-secondary" onclick="sendPass()">停手 (Pass)</button>
+                <button class="btn btn-danger" onclick="requestResign()">⚐ 认输</button>
+                <button class="btn" style="background: var(--text-dim); color: #000;" onclick="initBoard()">重新开始</button>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
         const BOARD_SIZE = 19;
         let boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
         let myRole = null; 
-        let currentTurn = 'black'; // Black plays first in Go standard rule matrix
+        let currentTurn = 'black';
         let lastMove = null;
         let moveHistory = [];
         let assistModeActive = false;
         let pendingMoveContext = null;
 
-        // MQTT Network core variables
         let mqttClient = null;
         let currentRoomTopic = '';
         const myUniqueId = 'UID_' + Math.random().toString(36).substr(2, 9);
@@ -250,36 +210,21 @@
 
         let matchStats = JSON.parse(localStorage.getItem('go_p2p_stats')) || { wins: 0, losses: 0 };
 
-        // 9 Standard Star Points (星位) for 19x19 Grid Matrix
         const starPoints = [
             {r: 3, c: 3}, {r: 3, c: 9}, {r: 3, c: 15},
             {r: 9, c: 3}, {r: 9, c: 9}, {r: 9, c: 15},
             {r: 15, c: 3}, {r: 15, c: 9}, {r: 15, c: 15}
         ];
 
-        // ==========================================
-        // 围棋 GTP 标准坐标转换矩阵 (排除了混淆字母 "I")
-        // ==========================================
+        // GTP 坐标转换
         const GTP_LETTERS = "ABCDEFGHJKLMNOPQRST";
-
-        // 将前端 19x19 二维数组的 (r, c) 坐标转换为 KataGo 识别的 "D14"、"Q16" 等标准字符串
-        function coordsToGtp(r, c) {
-            const letter = GTP_LETTERS[c];
-            const number = 19 - r; // 数组第 0 行对应围棋最顶部的第 19 行
-            return letter + number;
-        }
-
-        // 将 KataGo 返回的 "D14" 还原为前端渲染所需的二维数组坐标 { r, c }
+        function coordsToGtp(r, c) { return GTP_LETTERS[c] + (19 - r); }
         function gtpToCoords(gtpStr) {
             if (!gtpStr || gtpStr === '(none)' || gtpStr === 'pass') return null;
             const letter = gtpStr[0].toUpperCase();
-            const number = parseInt(gtpStr.substring(1));
-            const c = GTP_LETTERS.indexOf(letter);
-            const r = 19 - number;
-            return { r, c };
+            return { r: 19 - parseInt(gtpStr.substring(1)), c: GTP_LETTERS.indexOf(letter) };
         }
 
-        // 获取当前棋局全量落子顺序数组，例如: ["D4", "Q16", "R10"]
         function getFullGtpMovesHistory() {
             return moveHistory.map((snapshot, index) => {
                 const nextSnapshot = moveHistory[index + 1];
@@ -288,69 +233,52 @@
             }).filter(m => m !== null);
         }
 
-        function renderSVGBoard() {
-            const CS = 28; 
-            const w = (BOARD_SIZE - 1) * CS; 
-            const h = (BOARD_SIZE - 1) * CS; 
-            const strokeColor = "var(--board-line)";
+        // ================= 核心渲染重构 (流式百分比) =================
+        function renderFluidBoard() {
+            const step = 100 / (BOARD_SIZE - 1); // 计算每个格子的百分比跨度
             
-            let svgStr = `<svg class="svg-layer" width="${w + 2}" height="${h + 2}" viewBox="-1 -1 ${w + 2} ${h + 2}" xmlns="http://www.w3.org/2000/svg">`;
-            
-            // Draw grid lines
+            // 1. 渲染 SVG 线条
+            let svgStr = `<svg class="svg-layer" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">`;
             for (let i = 0; i < BOARD_SIZE; i++) {
-                // Horizontal line
-                svgStr += `<line x1="0" y1="${i * CS}" x2="${w}" y2="${i * CS}" stroke="${strokeColor}" stroke-width="1"/>`;
-                // Vertical line
-                svgStr += `<line x1="${i * CS}" y1="0" x2="${i * CS}" y2="${h}" stroke="${strokeColor}" stroke-width="1"/>`;
+                const pos = (i * step).toFixed(2);
+                // vector-effect 保证线条在不同屏幕尺寸下粗细恒定
+                svgStr += `<line x1="0" y1="${pos}" x2="100" y2="${pos}" stroke="var(--board-line)" stroke-width="0.2" vector-effect="non-scaling-stroke"/>`;
+                svgStr += `<line x1="${pos}" y1="0" x2="${pos}" y2="100" stroke="var(--board-line)" stroke-width="0.2" vector-effect="non-scaling-stroke"/>`;
             }
-
-            // Draw star points (星位)
             starPoints.forEach(p => {
-                svgStr += `<circle cx="${p.c * CS}" cy="${p.r * CS}" r="3.5" fill="var(--star-point)"/>`;
+                svgStr += `<circle cx="${(p.c * step).toFixed(2)}" cy="${(p.r * step).toFixed(2)}" r="1" fill="var(--star-point)"/>`;
             });
-
             svgStr += `</svg>`;
             
-            // Cleanup old SVGs if exist
             const oldSvg = document.querySelector('.svg-layer');
             if (oldSvg) oldSvg.remove();
-            
             document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svgStr);
-        }
 
-        function createDOMGrid() {
+            // 2. 渲染 DOM 交互网格
             const boardDOM = document.getElementById('board'); 
             boardDOM.innerHTML = '';
-            const CS = 28;
-            
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const hitBox = document.createElement('div');
                     hitBox.className = 'intersection';
-                    hitBox.style.left = `${c * CS}px`;
-                    hitBox.style.top = `${r * CS}px`;
-                    hitBox.dataset.row = r;
-                    hitBox.dataset.col = c;
-                    
+                    // 使用百分比进行绝对定位
+                    hitBox.style.left = `${(c * step).toFixed(2)}%`;
+                    hitBox.style.top = `${(r * step).toFixed(2)}%`;
+                    hitBox.style.width = `${step}%`;
+                    hitBox.style.height = `${step}%`;
                     hitBox.addEventListener('click', () => handleIntersectionClick(r, c));
                     boardDOM.appendChild(hitBox);
                 }
             }
         }
 
+        // ================= 网络通联 =================
         function initNetwork() {
             myRoomId = 'GO-' + Math.floor(100000 + Math.random() * 900000);
-            document.getElementById('myIdDisplay').innerText = myRoomId;
+            document.getElementById('myIdDisplay').value = myRoomId;
             currentRoomTopic = `go/room/${myRoomId}`;
-
-            log("正在连接分布式数据通道...");
             mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-
-            mqttClient.on('connect', () => {
-                log("网关中转联通成功。正在守候远程节点...");
-                mqttClient.subscribe(currentRoomTopic);
-            });
-
+            mqttClient.on('connect', () => mqttClient.subscribe(currentRoomTopic));
             mqttClient.on('message', (topic, message) => {
                 try {
                     const data = JSON.parse(message.toString());
@@ -362,81 +290,56 @@
 
         function connectToPeer() {
             const remoteId = document.getElementById('peerIdInput').value.trim();
-            if (!remoteId) return alert("请输入合法的棋室密钥！");
-            if (remoteId === myRoomId) return alert("无法加入您本地的棋局房间！");
-
-            log(`切换网络信道至对端总线: ${remoteId}...`);
+            if (!remoteId) return alert("请输入联机密钥");
             mqttClient.unsubscribe(currentRoomTopic);
             currentRoomTopic = `go/room/${remoteId}`;
             mqttClient.subscribe(currentRoomTopic);
-
             myRole = 'white';
             sendMqttMessage('join');
         }
 
         function sendMqttMessage(type, extraPayload = {}) {
             if (!mqttClient || !currentRoomTopic) return;
-            const messageObj = { type: type, senderId: myUniqueId, ...extraPayload };
-            mqttClient.publish(currentRoomTopic, JSON.stringify(messageObj));
+            mqttClient.publish(currentRoomTopic, JSON.stringify({ type, senderId: myUniqueId, ...extraPayload }));
         }
 
         function handleNetworkData(data) {
             if (data.type === 'join') {
-                myRole = 'black';
-                updateConnectionUI(true);
-                initBoard();
-                log("对方已连入房间。你执黑子(先手)。");
-                sendMqttMessage('join_ack');
+                myRole = 'black'; updateConnectionUI(true); initBoard(); sendMqttMessage('join_ack'); toast("对手已进入，你执黑");
             } else if (data.type === 'join_ack') {
-                myRole = 'white';
-                updateConnectionUI(true);
-                initBoard();
-                log("已成功加入对战。你执白子(后手)。");
+                myRole = 'white'; updateConnectionUI(true); initBoard(); toast("加入成功，你执白");
             } else if (data.type === 'move') {
                 executeMoveSync(data.r, data.c);
             } else if (data.type === 'pass') {
-                log(`对方选择停手/过牌。`);
-                currentTurn = currentTurn === 'black' ? 'white' : 'black';
-                updateTurnUI();
+                toast("对方选择停手"); currentTurn = currentTurn === 'black' ? 'white' : 'black'; updateTurnUI();
             } else if (data.type === 'reset') {
-                resetBoardLocal(); log("对方重启了棋局。");
+                resetBoardLocal(); toast("对局已重置");
             } else if (data.type === 'undo_request') {
-                if (confirm("对方请求撤回一步，是否同意？")) {
-                    executeUndoLocal(); sendMqttMessage('undo_response', { accept: true });
-                } else { sendMqttMessage('undo_response', { accept: false }); }
+                if (confirm("对方请求悔棋，是否同意？")) { executeUndoLocal(); sendMqttMessage('undo_response', { accept: true }); }
+                else { sendMqttMessage('undo_response', { accept: false }); }
             } else if (data.type === 'undo_response') {
-                if (data.accept) { executeUndoLocal(); log("对方同意了你的悔棋申请。"); } else { log("悔棋被拒绝。"); }
+                if (data.accept) { executeUndoLocal(); toast("悔棋成功"); } else { alert("对方拒绝了你的悔棋请求。"); }
+            } else if (data.type === 'resign') {
+                handleGameOver(true, "对方认输");
             }
         }
 
+        // ================= 游戏逻辑 =================
         function initBoard() { resetBoardLocal(); sendMqttMessage('reset'); }
 
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-            currentTurn = 'black'; 
-            lastMove = null;
-            moveHistory = [];
-            renderStones();
-            updateTurnUI();
-            updateStonesCount();
-            clearAssistHighlights();
-            cancelPendingMove();
+            currentTurn = 'black'; lastMove = null; moveHistory = [];
+            renderStones(); updateTurnUI(); updateStonesCount(); clearAssistHighlights(); cancelPendingMove();
             if (assistModeActive) calculateBestMove();
         }
 
         function handleIntersectionClick(r, c) {
             if (myRole !== null && currentTurn !== myRole) return;
             if (pendingMoveContext || boardState[r][c] !== null) return;
-
-            // Rule matrix validation: Suicide check
             const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
-            
-            if (validation.isSuicide) {
-                // Risk interruption deployment
-                triggerRiskInterruption(r, c);
-            } else {
-                commitPlacement(r, c);
-            }
+            if (validation.isSuicide) triggerRiskInterruption(r, c);
+            else commitPlacement(r, c);
         }
 
         function triggerRiskInterruption(r, c) {
@@ -449,50 +352,31 @@
             document.getElementById('dangerBanner').classList.remove('active');
         }
 
-        // Action confirmation bound to risk trigger execution
         document.getElementById('dangerConfirmBtn').onclick = () => {
-            if (pendingMoveContext) {
-                const { r, c } = pendingMoveContext;
-                cancelPendingMove();
-                commitPlacement(r, c);
-            }
+            if (pendingMoveContext) { const { r, c } = pendingMoveContext; cancelPendingMove(); commitPlacement(r, c); }
         };
 
         function commitPlacement(r, c) {
-            if (myRole !== null) {
-                sendMqttMessage('move', { r, c });
-            }
+            if (myRole !== null) sendMqttMessage('move', { r, c });
             executeMoveSync(r, c);
         }
 
-        // BFS Core Rule Algorithm: Evaluate liberties (气) for specific group
+        // 提子计算核心算法
         function getGroupInfo(startR, startC, targetBoard) {
             const color = targetBoard[startR][startC];
             if (!color) return { stones: [], liberties: 0 };
-
             const visited = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(false));
-            const stones = [];
-            const libertiesSet = new Set();
-            const queue = [{r: startR, c: startC}];
-            
+            const stones = []; const libertiesSet = new Set(); const queue = [{r: startR, c: startC}];
             visited[startR][startC] = true;
-
             const dir = [{r:-1, c:0}, {r:1, c:0}, {r:0, c:-1}, {r:0, c:1}];
-
             while(queue.length > 0) {
-                const curr = queue.shift();
-                stones.push(curr);
-
+                const curr = queue.shift(); stones.push(curr);
                 for(let i=0; i<4; i++) {
-                    const nr = curr.r + dir[i].r;
-                    const nc = curr.c + dir[i].c;
-
+                    const nr = curr.r + dir[i].r; const nc = curr.c + dir[i].c;
                     if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-                        if (!targetBoard[nr][nc]) {
-                            libertiesSet.add(`${nr},${nc}`);
-                        } else if (targetBoard[nr][nc] === color && !visited[nr][nc]) {
-                            visited[nr][nc] = true;
-                            queue.push({r: nr, c: nc});
+                        if (!targetBoard[nr][nc]) libertiesSet.add(`${nr},${nc}`);
+                        else if (targetBoard[nr][nc] === color && !visited[nr][nc]) {
+                            visited[nr][nc] = true; queue.push({r: nr, c: nc});
                         }
                     }
                 }
@@ -500,84 +384,50 @@
             return { stones, liberties: libertiesSet.size };
         }
 
-        // Rule Matrix Check: Simulation mapping for captures and suicide conditions
         function simulatePlacementAndCheckCaptured(r, c, color) {
-            const simBoard = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-            for(let i=0; i<BOARD_SIZE; i++) {
-                for(let j=0; j<BOARD_SIZE; j++) simBoard[i][j] = boardState[i][j];
-            }
-
+            const simBoard = boardState.map(row => [...row]);
             simBoard[r][c] = color;
             const enemyColor = color === 'black' ? 'white' : 'black';
             const capturedStones = [];
-
             const dir = [{r:-1, c:0}, {r:1, c:0}, {r:0, c:-1}, {r:0, c:1}];
             for(let i=0; i<4; i++) {
-                const nr = r + dir[i].r;
-                const nc = c + dir[i].c;
-                if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-                    if (simBoard[nr][nc] === enemyColor) {
-                        const group = getGroupInfo(nr, nc, simBoard);
-                        if (group.liberties === 0) {
-                            group.stones.forEach(s => {
-                                if (!capturedStones.some(exist => exist.r === s.r && exist.c === s.c)) {
-                                    capturedStones.push(s);
-                                }
-                            });
-                        }
+                const nr = r + dir[i].r; const nc = c + dir[i].c;
+                if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && simBoard[nr][nc] === enemyColor) {
+                    const group = getGroupInfo(nr, nc, simBoard);
+                    if (group.liberties === 0) {
+                        group.stones.forEach(s => { if (!capturedStones.some(exist => exist.r === s.r && exist.c === s.c)) capturedStones.push(s); });
                     }
                 }
             }
-
             capturedStones.forEach(s => simBoard[s.r][s.c] = null);
-
-            const selfGroup = getGroupInfo(r, c, simBoard);
-            const isSuicide = (selfGroup.liberties === 0);
-
-            return { isSuicide, capturedStones };
+            return { isSuicide: (getGroupInfo(r, c, simBoard).liberties === 0), capturedStones };
         }
 
         function executeMoveSync(r, c) {
             const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
-            
             moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
-            
             boardState[r][c] = currentTurn;
-            
-            validation.capturedStones.forEach(s => {
-                boardState[s.r][s.c] = null;
-            });
-
+            validation.capturedStones.forEach(s => boardState[s.r][s.c] = null);
             lastMove = { r, c };
-            
-            renderStones();
-            updateStonesCount();
-            playStoneSound();
-
+            renderStones(); updateStonesCount(); playStoneSound();
             currentTurn = currentTurn === 'black' ? 'white' : 'black';
             updateTurnUI();
-
-            if (assistModeActive) setTimeout(calculateBestMove, 100);
+            if (assistModeActive) setTimeout(calculateBestMove, 50);
         }
 
+        // ================= 视图更新 =================
         function renderStones() {
+            const intersections = document.getElementById('board').children;
+            let i = 0;
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
-                    const hitBox = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
-                    const oldStone = hitBox.querySelector('.stone');
-                    if (oldStone) oldStone.remove();
-
-                    hitBox.classList.remove('last-move', 'has-stone');
-
-                    if (lastMove && lastMove.r === r && lastMove.c === c) {
-                        hitBox.classList.add('last-move');
-                    }
-
-                    const val = boardState[r][c];
-                    if (val) {
-                        hitBox.classList.add('has-stone');
+                    const hitBox = intersections[i++];
+                    hitBox.innerHTML = ''; // 清除旧棋子
+                    hitBox.classList.remove('last-move');
+                    if (lastMove && lastMove.r === r && lastMove.c === c) hitBox.classList.add('last-move');
+                    if (boardState[r][c]) {
                         const stoneDOM = document.createElement('div');
-                        stoneDOM.className = `stone ${val}`;
+                        stoneDOM.className = `stone ${boardState[r][c]}`;
                         hitBox.appendChild(stoneDOM);
                     }
                 }
@@ -586,190 +436,147 @@
 
         function updateStonesCount() {
             let bCount = 0, wCount = 0;
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (boardState[r][c] === 'black') bCount++;
-                    if (boardState[r][c] === 'white') wCount++;
-                }
-            }
-            
+            boardState.flat().forEach(val => { if (val === 'black') bCount++; else if (val === 'white') wCount++; });
             if (!assistModeActive) {
-                document.getElementById('blackEvalText').innerText = `${bCount} Black`;
-                document.getElementById('whiteEvalText').innerText = `${wCount} White`;
-                
+                document.getElementById('blackEvalText').innerText = `黑 ${bCount} 目`;
+                document.getElementById('whiteEvalText').innerText = `白 ${wCount} 目`;
                 const total = bCount + wCount;
-                if (total === 0) {
-                    document.getElementById('blackEvalBar').style.width = '50%';
-                    document.getElementById('whiteEvalBar').style.width = '50%';
-                } else {
-                    const bPercent = (bCount / total) * 100;
-                    document.getElementById('blackEvalBar').style.width = `${bPercent}%`;
-                    document.getElementById('whiteEvalBar').style.width = `${100 - bPercent}%`;
-                }
+                const bPercent = total === 0 ? 50 : (bCount / total) * 100;
+                document.getElementById('blackEvalBar').style.width = `${bPercent}%`;
+                document.getElementById('whiteEvalBar').style.width = `${100 - bPercent}%`;
             }
         }
 
+        // ================= 附加功能 (AI/声音/战绩) =================
         function playStoneSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.05);
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
                 osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
             } catch (e) {}
         }
 
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;
-            document.getElementById('assistToggle').checked = assistModeActive;
-            log(`[AI 辅助] 外部KataGo引擎推荐服务已${assistModeActive?'激活':'关闭'}。`);
             if(assistModeActive && currentTurn && (!myRole || myRole === currentTurn)) calculateBestMove();
-            else {
-                clearAssistHighlights();
-                updateStonesCount();
-            }
+            else { clearAssistHighlights(); updateStonesCount(); }
         }
 
         function clearAssistHighlights() {
-            document.querySelectorAll('.intersection').forEach(el => el.classList.remove('assist-suggest'));
+            Array.from(document.getElementById('board').children).forEach(el => el.classList.remove('assist-suggest'));
         }
 
-        // ========================================================
-        // 核心改动：调用 3000 端口本地后端，获取 KataGo 引擎真实算力数据
-        // ========================================================
         function calculateBestMove() {
             if (!currentTurn) return;
             clearAssistHighlights();
-
             let fullMoves = getFullGtpMovesHistory();
-            
             if (lastMove) {
                 const lastGtp = coordsToGtp(lastMove.r, lastMove.c);
-                if (fullMoves.length === 0 || fullMoves[fullMoves.length - 1] !== lastGtp) {
-                    fullMoves.push(lastGtp);
-                }
+                if (fullMoves.length === 0 || fullMoves[fullMoves.length - 1] !== lastGtp) fullMoves.push(lastGtp);
             }
-
             fetch('http://localhost:3000/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    moves: fullMoves,
-                    nextColor: currentTurn // 'black' 或 'white'
-                })
+                body: JSON.stringify({ moves: fullMoves, nextColor: currentTurn })
             })
             .then(res => res.json())
             .then(data => {
                 let isMyTurn = (myRole === null) || (myRole === currentTurn);
-                
                 if (isMyTurn && data.bestMove && data.bestMove !== '(none)' && data.bestMove !== 'pass') {
                     const coords = gtpToCoords(data.bestMove);
                     if (coords) {
-                        const cell = document.querySelector(`[data-row='${coords.r}'][data-col='${coords.c}']`);
-                        if (cell) {
-                            cell.classList.add('assist-suggest'); 
-                        }
+                        const index = coords.r * 19 + coords.c;
+                        const target = document.getElementById('board').children[index];
+                        if(target) target.classList.add('assist-suggest');
                     }
                 }
-
                 if (data.score !== undefined) {
-                    let blackWinRate = data.score; 
-                    let whiteWinRate = 100 - blackWinRate;
-
-                    document.getElementById('blackEvalBar').style.width = `${blackWinRate}%`;
-                    document.getElementById('whiteEvalBar').style.width = `${whiteWinRate}%`;
-                    
-                    document.getElementById('blackEvalText').innerText = `${blackWinRate.toFixed(1)}% 黑胜率`;
-                    document.getElementById('whiteEvalText').innerText = `${whiteWinRate.toFixed(1)}% 白胜率`;
+                    let bRate = data.score; let wRate = 100 - bRate;
+                    document.getElementById('blackEvalBar').style.width = `${bRate}%`;
+                    document.getElementById('whiteEvalBar').style.width = `${wRate}%`;
+                    document.getElementById('blackEvalText').innerText = `黑胜率 ${bRate.toFixed(1)}%`;
+                    document.getElementById('whiteEvalText').innerText = `白胜率 ${wRate.toFixed(1)}%`;
                 }
-            })
-            .catch(err => {
-                console.error("无法联通本地 KataGo 后端服务:", err);
-            });
+            }).catch(() => {});
         }
 
-        function sendPass() {
-            if (confirm("确定要在本回合停手过牌吗？(双方连续停手通常意味着终局计数)")) {
-                sendMqttMessage('pass');
-                currentTurn = currentTurn === 'black' ? 'white' : 'black';
-                updateTurnUI();
-                log("你选择了停手过牌。");
-                if (assistModeActive) setTimeout(calculateBestMove, 100);
-            }
-        }
-
+        // ================= 操作按钮 (悔棋/停手/认输) =================
         function requestUndo() {
-            if (moveHistory.length === 0) return alert("没有可以撤销的步骤。");
+            if (moveHistory.length === 0) return toast("无历史步数");
             if (myRole !== null) {
-                if (currentTurn === myRole) return alert("必须在对方回合期间才能申请悔棋！");
-                log("向对方发送悔棋申请..."); sendMqttMessage('undo_request');
-            } else { executeUndoLocal(); log("本地撤回上一步成功。"); }
+                if (currentTurn === myRole) return alert("必须在对方回合申请悔棋！");
+                sendMqttMessage('undo_request'); toast("等待对方同意悔棋...");
+            } else executeUndoLocal();
         }
 
         function executeUndoLocal() {
             if (moveHistory.length === 0) return;
             const prev = moveHistory.pop();
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
-            clearSelectionHighlights(); renderStones(); updateTurnUI(); updateStonesCount();
-            cancelPendingMove();
+            renderStones(); updateTurnUI(); updateStonesCount(); cancelPendingMove();
             if (assistModeActive) calculateBestMove();
         }
 
-        function clearSelectionHighlights() {
-            // Placeholder compatibility interface with previous standard logic parameters
+        function sendPass() {
+            if (confirm("确定停手吗？")) {
+                sendMqttMessage('pass'); currentTurn = currentTurn === 'black' ? 'white' : 'black'; updateTurnUI();
+                if (assistModeActive) setTimeout(calculateBestMove, 50);
+            }
         }
 
-        function updateConnectionUI(isConnected) {
-            const badge = document.getElementById('connectionStatus'); 
-            const rBadge = document.getElementById('roleStatus');
-            if (isConnected) {
-                badge.innerText = "网络对战"; badge.className = "status-badge connected";
-                rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'black' ? "黑子(先手)" : "白子(后手)";
-            } else {
-                badge.innerText = "离线单机"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
+        function requestResign() {
+            if (confirm("确定要认输吗？")) {
+                sendMqttMessage('resign');
+                handleGameOver(false, "你已认输");
             }
+        }
+
+        function handleGameOver(isWin, msg) {
+            alert(`${msg}！游戏结束。`);
+            if (isWin) matchStats.wins++; else matchStats.losses++;
+            saveStats();
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        }
+
+        // ================= 状态与统计 =================
+        function updateConnectionUI(isConnected) {
+            const badge = document.getElementById('connectionStatus');
+            if (isConnected) {
+                badge.innerText = `联机中 - 执${myRole==='black'?'黑':'白'}`;
+                badge.className = "status-badge active";
+            } else { badge.innerText = "单机模式"; badge.className = "status-badge"; }
             updateTurnUI();
         }
 
         function updateTurnUI() {
-            const turnBadge = document.getElementById('turnStatus'); 
-            if (!currentTurn) return;
-            const name = currentTurn === 'black' ? '黑方' : '白方'; 
-            turnBadge.innerText = `当前回合: ${name}`;
-            if (myRole !== null && currentTurn === myRole) { 
-                turnBadge.className = "status-badge your-turn"; 
-                turnBadge.innerText += " (轮到你)"; 
-            } else { 
-                turnBadge.className = "status-badge"; 
-            }
+            const turnBadge = document.getElementById('turnStatus');
+            const isMyTurn = (myRole !== null && currentTurn === myRole) || myRole === null;
+            turnBadge.innerText = `${currentTurn === 'black' ? '黑方' : '白方'}回合 ${isMyTurn ? '(到你)' : ''}`;
+            turnBadge.className = isMyTurn ? "status-badge warn" : "status-badge";
+        }
+
+        function saveStats() {
+            localStorage.setItem('go_p2p_stats', JSON.stringify(matchStats));
+            updateStatsUI();
         }
 
         function updateStatsUI() {
-            document.getElementById('statWins').innerText = matchStats.wins;
-            document.getElementById('statLosses').innerText = matchStats.losses;
+            document.getElementById('statWins').innerText = matchStats.wins; document.getElementById('statLosses').innerText = matchStats.losses;
             const total = matchStats.wins + matchStats.losses;
             document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
         }
 
-        function copyRoomKey() { 
-            const id = document.getElementById('myIdDisplay').innerText; 
-            if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("棋室钥匙复制成功！")); 
-        }
-        
-        function log(text) { 
-            const logBox = document.getElementById('logBox'); 
-            logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; 
-            logBox.scrollTop = logBox.scrollHeight; 
-        }
+        function copyRoomKey() { const id = document.getElementById('myIdDisplay'); id.select(); document.execCommand("copy"); toast("密钥已复制"); }
+        function toast(msg) { console.log(msg); /* 生产环境可替换为漂亮的 Toast UI */ }
 
-        renderSVGBoard(); 
-        createDOMGrid(); 
-        resetBoardLocal(); 
-        initNetwork(); 
-        updateStatsUI();
+        // 初始化
+        window.addEventListener('resize', renderFluidBoard); // 窗口大小改变时重绘网格以防形变
+        renderFluidBoard(); resetBoardLocal(); initNetwork(); updateStatsUI();
     </script>
 </body>
 </html>

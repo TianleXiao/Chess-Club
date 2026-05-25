@@ -194,7 +194,7 @@
                     <div class="switch-wrap" title="开启后会强制拦截高危白送棋子的走法">
                         <span style="font-size: 9px; color:#ff4d4d; font-weight: bold;">Risk Alert</span>
                         <label class="switch">
-                            <input type="checkbox" id="riskToggle" checked onchange="toggleRiskAlertMode(this.checked)">
+                            <input type="checkbox" id="riskToggle" onchange="toggleRiskAlertMode(this.checked)">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -272,6 +272,7 @@
     </div>
 
     <script>
+        // Use English comments globally inside javascript workspace configuration matrix
         let boardState = Array(10).fill(null).map(() => Array(9).fill(null));
         let selectedCell = null;
         let myRole = null; 
@@ -279,9 +280,12 @@
         let lastMove = { from: null, to: null };
         let moveHistory = [];
         let assistModeActive = false;
-        let riskAlertActive = true; 
+        let riskAlertActive = false; 
         
         let pendingMoveContext = null;
+
+        // Sequence locking to prevent overlapping asynchronous engine packet corruption
+        let currentPredictRequestId = 0; 
 
         let mqttClient = null;
         let currentRoomTopic = '';
@@ -334,7 +338,7 @@
 
             const drawFlower = (c, r, ignoreL, ignoreR) => {
                 const cx = c * CS + half; const cy = r * CS + half; const gap = 4; const len = 8; let m = "";
-                const drawAngle = (dx, dy) => `<polyline points="${cx+dx*gap+dx*len},${cy+dy*gap} ${cx+dx*gap},${cy+dy*gap} ${cx+dx*gap},${cy+dy*gap+dy*len}" fill="none" stroke="${strokeColor}" stroke-width="1"/>`;
+                const drawAngle = (dx, dy) => `<polyline points="${cx+dx*gap+dx*len},${cy+dy*gap} ${cx+dx*gap},${cy+dy*gap+dy*len}" fill="none" stroke="${strokeColor}" stroke-width="1"/>`;
                 if (!ignoreL) { m += drawAngle(-1, -1); m += drawAngle(-1, 1); }
                 if (!ignoreR) { m += drawAngle(1, -1); m += drawAngle(1, 1); }
                 return m;
@@ -779,7 +783,7 @@
             }
 
             currentTurn = currentTurn === 'red' ? 'black' : 'red'; updateTurnUI(); playChessSound();
-            if (assistModeActive) setTimeout(calculateBestMove, 100);
+            if (assistModeActive) setTimeout(calculateBestMove, 50);
         }
 
         function isBlunderMove(fromR, fromC, toR, toC, side) {
@@ -866,7 +870,7 @@
 
         // ==================== 皮卡鱼 AI 对接核心组件 ====================
 
-        // 1. 将前端的二维 boardState 转换为皮卡鱼能读懂的标准 FEN 局面串
+        // 1. Convert 2D board state array into standard FEN string format
         function generateFEN() {
             let fenRows = [];
             const typeMap = {
@@ -884,7 +888,6 @@
                     } else {
                         if (emptyCount > 0) { rowStr += emptyCount; emptyCount = 0; }
                         let t = p.type;
-                        // 洗涤清洗简繁体，防止字段映射错位
                         if(p.color === 'red' && (t === '将' || t === '帅')) t = '帥';
                         if(p.color === 'black' && (t === '帅' || t === '将')) t = '將';
                         if(p.color === 'red' && t === '炮') t = '炮';
@@ -900,25 +903,27 @@
             return `${fenBoard} ${fenTurn} - - 0 1`;
         }
 
-        // 2. 将皮卡鱼返回的 "b2c4" 坐标系统翻译成前端格子的二维索引 {from, to}
+        // 2. Map UCI coordinate indices back into 2D mesh layout references
         const colMap = { 'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5, 'g':6, 'h':7, 'i':8 };
         function uciToCoords(uciStr) {
             const fromC = colMap[uciStr[0]];
-            const fromR = 9 - parseInt(uciStr[1]); // 反转Y轴对齐网格
+            const fromR = 9 - parseInt(uciStr[1]); 
             const toC = colMap[uciStr[2]];
             const toR = 9 - parseInt(uciStr[3]);
             return { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
         }
 
-        // 3. 全新重写的 AI 最佳走法获取函数（向 Express 后端索要战术）
+        // 3. Asynchronously request analyze calculations from backend server ports
         function calculateBestMove() {
             if (!currentTurn) return;
             clearAssistHighlights();
 
-            // 动态构建 FEN
+            // Lock and increment request sequences to discard late packets during rapid local alternate moves
+            currentPredictRequestId++;
+            const trackedId = currentPredictRequestId;
+
             const currentFen = generateFEN();
 
-            // 发送异步网络请求到 3000 算力端口
             fetch('http://localhost:3000/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -926,8 +931,14 @@
             })
             .then(res => res.json())
             .then(data => {
-                // A. 精准提取最佳走向，激活紫色流光提示
-                if (data.bestMove && data.bestMove !== '(none)' && data.bestMove !== '0000') {
+                // Drop expired packet contexts if another turn was triggered locally before return
+                if (trackedId !== currentPredictRequestId) return; 
+
+                // 仅为当前持子方渲染AI紫圈路线推荐
+                // 逻辑：如果是单机模式(myRole 为 null) 或者 轮到自己的回合，才属于"持子方"
+                let isPieceHolder = (myRole === null) || (myRole === currentTurn);
+
+                if (isPieceHolder && data.bestMove && data.bestMove !== '(none)' && data.bestMove !== '0000') {
                     const coords = uciToCoords(data.bestMove);
                     const sCell = document.querySelector(`[data-row='${coords.from.r}'][data-col='${coords.from.c}']`);
                     const eCell = document.querySelector(`[data-row='${coords.to.r}'][data-col='${coords.to.c}']`);
@@ -935,9 +946,8 @@
                     if(eCell) eCell.classList.add('assist-end');
                 }
 
-                // B. 接管原本静态的局势评估条，基于皮卡鱼的专业分值进行精确图形化渲染
+                // Render dynamic master evaluation engine score matrixes smoothly
                 let score = data.score;
-                // 皮卡鱼的分数默认以红方为正，将其映射到 5%~95% 胜率条区间上防止挤爆
                 let redRate = 50 + (score / 35); 
                 redRate = Math.max(5, Math.min(95, redRate)); 
 
@@ -947,12 +957,14 @@
                 document.getElementById('blackEvalText').innerText = (100 - redRate).toFixed(0) + '% Black';
             })
             .catch(err => {
-                console.warn("未检测到本地皮卡鱼后端，请检查 node server.js 是否在运行中。将降级为本地简易评估。");
-                evaluateAndDisplayWinRateFallback();
+                console.warn("Express backend disconnected. Falling back to local simple evaluator context.");
+                if (trackedId === currentPredictRequestId) {
+                    evaluateAndDisplayWinRateFallback();
+                }
             });
         }
 
-        // 本地降级局势评估算法
+        // Fallback mathematical array weights evaluation handler
         function evaluateBoard() {
             let score = 0;
             for (let r = 0; r < 10; r++) {
@@ -980,7 +992,6 @@
             document.getElementById('blackEvalText').innerText = (100 - redRate).toFixed(0) + '% Black';
         }
 
-        // 统一分发触发点
         function evaluateAndDisplayWinRate() {
             if (assistModeActive) {
                 calculateBestMove();
@@ -993,7 +1004,7 @@
             assistModeActive = force !== undefined ? force : !assistModeActive;
             document.getElementById('assistToggle').checked = assistModeActive;
             log(`[AI 引擎] 智能走法路线规划已被${assistModeActive?'激活':'关闭'}。`);
-            if(assistModeActive && currentTurn && (!myRole || myRole === currentTurn || myRole === 'spectator')) calculateBestMove();
+            if(assistModeActive && currentTurn) calculateBestMove();
             else clearAssistHighlights();
         }
 

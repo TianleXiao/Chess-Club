@@ -22,242 +22,213 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        
-        .container { display: flex; gap: 30px; max-width: 1200px; width: 100%; align-items: center; justify-content: center; }
-        .sidebar { flex: 0 0 320px; width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; }
-        
-        h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
-        .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
-        .panel-section { background: #0f0f12; border: 1px solid var(--border); border-radius: 8px; padding: 12px; position: relative; }
-        
-        .eval-container { height: 4px; width: 100%; background: #22222a; border-radius: 2px; margin-top: 8px; display: flex; overflow: hidden; }
-        .eval-bar-black { height: 100%; background: #ffffff; width: 50%; transition: width 0.4s var(--ease); }
-        .eval-bar-white { height: 100%; background: #555566; width: 50%; transition: width 0.4s var(--ease); }
-        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
+        body { background-color: var(--bg); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        .peer-id-display { font-family: monospace; font-size: 0.9rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
+        /* Left Control Panel */
+        .sidebar { width: 340px; background-color: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px; justify-content: space-between; z-index: 10; }
+        .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 24px; background: linear-gradient(135deg, #fff 0%, #888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; }
+        .brand::before { content: ''; display: inline-block; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        
+        .panel-section { background-color: var(--surface-sub); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 0.5px; }
+        
+        .room-display { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: monospace; font-size: 15px; cursor: pointer; transition: all var(--ease); }
+        .room-display:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        
         .input-group { display: flex; gap: 8px; }
-        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.85rem; outline: none; }
-        input[type="text"]:focus { border-color: #555; }
-
-        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
-        .btn:hover { background: #e5e5e5; transform: translateY(-1px); }
-        .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
-        .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
+        .modern-input { flex: 1; background-color: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; transition: all var(--ease); }
+        .modern-input:focus { outline: none; border-color: #555; background-color: rgba(0,0,0,0.5); }
         
-        .btn-danger { background: #222; color: #ff4d4d; border: 1px solid #442222; }
-        .btn-danger:hover { background: #331111; border-color: #ff4d4d; }
-
-        .status-area { display: flex; flex-wrap: wrap; gap: 6px; }
-        .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #222; color: var(--text-dim); }
-        .status-badge.connected { background: #1b4332; color: #52b788; }
-        .status-badge.your-turn { background: #343444; color: #ffffff; animation: turnPulse 2s infinite; }
-        .status-badge.local-mode { background: #1a233a; color: #70a1ff; }
-
-        @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,255,255,0.2); } 100% { opacity: 0.8; } }
-
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
-        .stat-card { background: var(--surface-sub); padding: 6px; border-radius: 6px; border: 1px solid var(--border); }
-        .stat-val { font-size: 1rem; font-weight: bold; margin-top: 2px; }
-        .log-box { max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
-        .log-box::-webkit-scrollbar { width: 4px; }
-        .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-
-        .board-wrapper {
-            position: relative;
-            background: #18181c; 
-            padding: var(--board-pad);
-            border-radius: 8px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-            border: 1px solid var(--border);
-            user-select: none;
-        }
-
-        .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
+        .btn { background: #fff; color: #000; border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--ease); display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn:hover { background: #ececec; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn-secondary { background: var(--surface-sub); color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.05); }
+        .btn-danger { background: #ff4d4d; color: #fff; }
+        .btn-danger:hover { background: #ff6666; }
         
-        .go-board { 
-            position: relative; 
-            display: grid; 
-            grid-template-columns: repeat(19, var(--cell-size)); 
-            grid-template-rows: repeat(19, var(--cell-size)); 
-            z-index: 5; 
-            width: calc(18 * var(--cell-size));
-            height: calc(18 * var(--cell-size));
-        }
-        
-        /* Interactive grid hitboxes centered on line intersections */
-        .intersection { 
-            position: absolute; 
-            width: var(--cell-size); 
-            height: var(--cell-size); 
-            transform: translate(-50%, -50%); 
-            cursor: pointer; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 10;
-        }
+        .status-container { display: flex; flex-direction: column; gap: 8px; }
+        .status-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .status-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-badge.connected { background: rgba(46, 204, 113, 0.1); border-color: rgba(46, 204, 113, 0.3); color: #2ecc71; }
+        .status-badge.local-mode { background: rgba(52, 152, 219, 0.1); border-color: rgba(52, 152, 219, 0.3); color: #3498db; }
+        .status-badge.your-turn { background: rgba(241, 196, 15, 0.1); border-color: rgba(241, 196, 15, 0.3); color: #f1c40f; animation: pulse 2s infinite; }
 
-        .stone {
-            width: 24px; height: 24px; border-radius: 50%; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset -1px -2px 4px rgba(0,0,0,0.2);
-            transition: transform 0.15s var(--ease); pointer-events: none; z-index: 6;
-        }
-        
-        .stone.black { background: #33333c; border: 1px solid #33333c; }
-        .stone.white { background: #ffffff; border: 1px solid #ffffff; }
-        
-        /* Dynamic visual indicators */
-        .intersection.last-move::after { content: ""; position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ff4d4d; z-index: 8; }
-        .intersection:hover:not(.has-stone)::before { content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); z-index: 4; }
-        
-        .intersection.assist-suggest::before { content: ""; position: absolute; width: 22px; height: 22px; border: 1px dashed rgba(255, 255, 255, 0.45); border-radius: 50%; z-index: 2; animation: pulse 1.8s infinite; }
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 10px rgba(241,196,15,0.2); } 100% { opacity: 0.8; } }
 
-        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.4; } }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        .stat-item { background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02); }
+        .stat-val { font-size: 16px; font-weight: 700; margin-top: 2px; }
+        .stat-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
 
-        .switch-wrap { display: flex; align-items: center; gap: 6px; }
-        .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+        .log-panel { flex: 1; min-height: 100px; display: flex; flex-direction: column; }
+        .log-box { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #aaa; overflow-y: auto; line-height: 1.6; word-break: break-all; }
+
+        /* Toggle Switch */
+        .switch-container { display: flex; align-items: center; justify-content: space-between; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .3s; border-radius: 18px; border: 1px solid var(--border); }
-        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: #777; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: #ffffff; border-color: #ffffff; }
-        input:checked + .slider:before { transform: translateX(16px); background-color: #0a0a0c; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); border: 1px solid var(--border); transition: .3s var(--ease); border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: #888; transition: .3s var(--ease); border-radius: 50%; }
+        input:checked + .slider { background-color: #fff; border-color: #fff; }
+        input:checked + .slider:before { transform: translateX(20px); background-color: #000; }
 
-        /* Celebration Overlay Styles */
-        .celebration-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(10, 10, 12, 0.88); backdrop-filter: blur(12px);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 9999; opacity: 0; pointer-events: none;
-            transition: opacity 0.5s var(--ease);
-        }
-        .celebration-overlay.active { opacity: 1; pointer-events: auto; }
-        .celebration-card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 40px 50px; text-align: center;
-            box-shadow: 0 40px 80px rgba(0,0,0,0.8);
-            transform: scale(0.85); transition: transform 0.5s var(--ease);
-        }
-        .celebration-overlay.active .celebration-card { transform: scale(1); }
-        .celebration-title { font-size: 2.8rem; font-weight: 200; letter-spacing: 0.15em; margin-bottom: 12px; text-transform: uppercase; color: #ffffff; }
-        .celebration-subtitle { font-size: 1rem; color: var(--text-dim); margin-bottom: 24px; font-weight: 300; }
+        /* Main Workspace Container */
+        .workspace { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: radial-gradient(circle at center, #181820 0%, #0a0a0c 100%); }
 
-        /* Monochromatic Material Danger Banner Styles (Suicide Move Confirmation) */
-        .danger-banner {
-            position: absolute; top: var(--board-pad); left: var(--board-pad);
-            width: calc(100% - 2 * var(--board-pad)); height: calc(100% - 2 * var(--board-pad));
-            background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(6px);
-            border-radius: 6px; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 2000;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease);
-            border: 1px solid rgba(255, 77, 77, 0.15);
-        }
-        .danger-banner.active { opacity: 1; pointer-events: auto; }
-        .danger-content {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 12px; padding: 24px 32px; max-width: 380px; width: 90%;
-            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-        }
-        .danger-title { font-size: 1.1rem; font-weight: 600; color: #ff4d4d; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
-        .danger-desc { font-size: 0.85rem; color: var(--text-main); line-height: 1.6; margin-bottom: 20px; }
-        .danger-actions { display: flex; gap: 12px; justify-content: center; }
+        /* Risk Interruption Banner */
+        .danger-banner { position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(to right, #ff4d4d, #cc1111); color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; transform: translateY(-100%); transition: transform 0.4s var(--ease); z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .danger-banner.active { transform: translateY(0); }
+        .danger-msg { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px; }
+        .danger-msg::before { content: '⚠️'; font-size: 18px; }
+        .danger-actions { display: flex; gap: 10px; }
 
-        @media (max-width: 950px) {
-            body { padding: 10px; }
-            .container { flex-direction: column-reverse; gap: 20px; }
-            .sidebar { width: 100%; max-width: 550px; flex: none; }
-        }
+        /* Go Board Layout Archetype */
+        .board-container { position: relative; padding: var(--board-pad); background-color: #1a1a22; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 1px 1px rgba(255,255,255,0.1); border: 1px solid rgba(0,0,0,0.6); }
+        
+        /* Calculated precise bound size for 19x19 spacing grid */
+        .board-wrapper { position: relative; width: calc((19 - 1) * 28px); height: calc((19 - 1) * 28px); }
+        
+        .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .dom-interaction-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        /* Coordinate hit-boxes deployed exactly focused over wireframe intersections */
+        .intersection { position: absolute; width: 26px; height: 26px; transform: translate(-50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 5; }
+        .intersection:hover::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+        .intersection.has-stone:hover::after { display: none; }
+
+        /* Stone Vector Modeling Geometry */
+        .stone { width: 23px; height: 23px; border-radius: 50%; animation: dropStone 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; shadow: 0 3px 6px rgba(0,0,0,0.4); position: relative; z-index: 6; }
+        .stone.black { background: radial-gradient(circle at 35% 35%, #3a3a44 0%, #0d0d11 60%, #000000 100%); box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(0,0,0,0.4); }
+        .stone.white { background: radial-gradient(circle at 30% 30%, #ffffff 0%, #eaeaea 50%, #b5b5bc 100%); box-shadow: 0 3px 6px rgba(0,0,0,0.3), inset 0 -1px 1px rgba(0,0,0,0.2); }
+        
+        @keyframes dropStone { 0% { transform: scale(1.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* Last played move indicator ring marker */
+        .last-move::before { content: ''; width: 6px; height: 6px; border-radius: 50%; position: absolute; z-index: 10; pointer-events: none; }
+        .intersection.last-move .stone.black::before { background: #fff; left: calc(50% - 3px); top: calc(50% - 3px); }
+        .intersection.last-move .stone.white::before { background: #000; left: calc(50% - 3px); top: calc(50% - 3px); }
+
+        /* Assist Engine Recommendation Indicator Ring Overlay */
+        .intersection.assist-suggest::after { content: ''; width: 14px; height: 14px; border: 2.5px solid #a855f7; border-radius: 50%; position: absolute; z-index: 12; animation: assistPulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite; pointer-events: none; }
+        @keyframes assistPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: 0.4; } }
+
+        /* Real-time Stone Balance Matrix Analytics Evaluator */
+        .evaluator-bar-container { width: calc(((19 - 1) * 28px) + (var(--board-pad) * 2)); background-color: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-top: 24px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .evaluator-meta { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .eval-lbl-black { color: #fff; display: flex; align-items: center; gap: 6px; }
+        .eval-lbl-black::before { content: ''; display:inline-block; width: 8px; height: 8px; background:#fff; border-radius:50%; }
+        .eval-lbl-white { color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+        .eval-lbl-white::before { content: ''; display:inline-block; width: 8px; height: 8px; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); border-radius:50%; }
+        .eval-track { height: 6px; background-color: rgba(255,255,255,0.05); border-radius: 3px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
+        .eval-fill { height: 100%; transition: width 0.6s var(--ease); }
+        .eval-fill.black-fill { background-color: #fff; width: 50%; }
+        .eval-fill.white-fill { background-color: #33333c; width: 50%; }
+
+        /* Global Structural Utilities */
+        .flex-spacer { flex-grow: 1; }
+        .panel-footer-branding { text-align: center; font-size: 10px; color: rgba(255,255,255,0.15); font-family: monospace; border-top: 1px solid rgba(255,255,255,0.02); padding-top: 16px; margin-top: 16px; }
     </style>
 </head>
 <body>
 
-    <div id="celebrationOverlay" class="celebration-overlay">
-        <div class="celebration-card">
-            <div id="celebrationTitle" class="celebration-title">MATCH OVER</div>
-            <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
-            <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">返回局势</button>
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="sidebar">
-            <h1>
-                Go Studio Pro
-                <div class="switch-wrap">
-                    <span class="label-tiny" style="margin:0; font-size: 9px; color:#a0a0aa;">AI Suggest</span>
-                    <label class="switch">
-                        <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </h1>
+    <div class="sidebar">
+        <div>
+            <div class="brand">P2P GO STUDIO Pro</div>
             
             <div class="panel-section">
-                <span class="label-tiny">Match Stats</span>
-                <div class="stats-grid">
-                    <div class="stat-card" style="border-color: #52b788;"><span class="label-tiny">WIN</span><div class="stat-val" id="statWins" style="color: #52b788;">0</div></div>
-                    <div class="stat-card" style="border-color: #ff4d4d;"><span class="label-tiny">LOSE</span><div class="stat-val" id="statLosses" style="color: #ff4d4d;">0</div></div>
-                    <div class="stat-card"><span class="label-tiny">RATE</span><div class="stat-val" id="statRate">0%</div></div>
+                <div class="section-title">分布式网络棋室密钥</div>
+                <div class="room-display" onclick="copyRoomKey()" title="点击一键拷贝专属棋室钥匙">
+                    <span id="myIdDisplay">Generating Token...</span>
+                    <span style="font-size:12px; color:var(--text-dim)">📋</span>
                 </div>
-            </div>
-
-            <div class="panel-section">
-                <span class="label-tiny">Real-time Stone Balance</span>
-                <div class="eval-labels">
-                    <span id="blackEvalText" style="color: #ffffff; font-weight:bold;">0 Black</span>
-                    <span id="whiteEvalText" style="color: #888899; font-weight:bold;">0 White</span>
-                </div>
-                <div class="eval-container">
-                    <div class="eval-bar-black" id="blackEvalBar"></div>
-                    <div class="eval-bar-white" id="whiteEvalBar"></div>
-                </div>
-            </div>
-
-            <div class="panel-section">
-                <span class="label-tiny">Your Room Key</span>
-                <div class="peer-id-display" id="myIdDisplay">Generating...</div>
-                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Key</button>
-            </div>
-
-            <div class="panel-section">
-                <span class="label-tiny">Join Room</span>
+                <div class="section-title" style="margin-top: 14px; margin-bottom: 8px;">联入远程总线端点</div>
                 <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="Paste opponent key...">
-                    <button class="btn" onclick="connectToPeer()">Join</button>
+                    <input type="text" id="peerIdInput" class="modern-input" placeholder="输入对家棋室密钥...">
+                    <button class="btn" onclick="connectToPeer()">加入对局</button>
                 </div>
             </div>
 
             <div class="panel-section">
-                <span class="label-tiny">Game Status</span>
-                <div class="status-area" style="margin-top:4px;">
-                    <div id="connectionStatus" class="status-badge local-mode">Local Mode</div>
-                    <div id="turnStatus" class="status-badge">Turn: Black</div>
-                    <div id="roleStatus" class="status-badge" style="display:none;"></div>
-                </div>
-                <div class="log-box" id="logBox">Go 19x19 intersection matrix grid initialized.</div>
-            </div>
-            
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" style="flex: 1;" onclick="requestUndo()">申请悔棋</button>
-                <button class="btn btn-secondary" style="flex: 1;" onclick="sendPass()">认输/停手</button>
-            </div>
-            <button class="btn btn-secondary" style="width: 100%;" onclick="initBoard()">Reset Match</button>
-        </div>
-
-        <div class="board-wrapper" id="boardWrapper">
-            <div id="dangerBanner" class="danger-banner">
-                <div class="danger-content">
-                    <div class="danger-title">⚠️ 无气自杀提示</div>
-                    <div id="dangerDesc" class="danger-desc">该落子点没有“气”，且无法提掉对方任何棋子。执意落子将被视作无效或送死。确定落子吗？</div>
-                    <div class="danger-actions">
-                        <button class="btn btn-danger" id="dangerConfirmBtn">执意如此</button>
-                        <button class="btn btn-secondary" onclick="cancelPendingMove()">容我三思</button>
+                <div class="section-title">实时拓扑状态总线</div>
+                <div class="status-container">
+                    <div class="status-row">
+                        <span>联通架构:</span>
+                        <span id="connectionStatus" class="status-badge local-mode">网络初始化...</span>
+                    </div>
+                    <div class="status-row">
+                        <span>分配阵营:</span>
+                        <span id="roleStatus" class="status-badge" style="display: none;">观战席位</span>
+                    </div>
+                    <div class="status-row">
+                        <span>控制权属:</span>
+                        <span id="turnStatus" class="status-badge">等待就绪</span>
                     </div>
                 </div>
             </div>
-            
-            <div class="go-board" id="board"></div>
+
+            <div class="panel-section switch-container">
+                <div>
+                    <div style="font-size: 13px; font-weight: 600;">KataGo 引擎辅助</div>
+                    <div style="font-size: 11px; color: var(--text-dim); margin-top: 1px;">实时紫圈推荐与胜率分析</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">本地历史胜负结算</div>
+                <div class="stats-grid">
+                    <div class="stat-item"><div class="stat-lbl">胜场</div><div class="stat-val" id="statWins" style="color:#2ecc71">0</div></div>
+                    <div class="stat-item"><div class="stat-lbl">负场</div><div class="stat-val" id="statLosses" style="color:#ff4d4d">0</div></div>
+                    <div class="stat-item"><div class="stat-lbl">胜率</div><div class="stat-val" id="statRate">0%</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-panel">
+            <div class="section-title">控制台链路日志跟踪</div>
+            <div class="log-box" id="logBox">系统总线就绪。等待玩家策略部署...</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="btn btn-secondary" onclick="requestUndo()">申请悔棋</button>
+                <button class="btn btn-secondary" onclick="sendPass()">过牌/停手</button>
+            </div>
+            <button class="btn btn-danger" onclick="initBoard()">清空盘面 / 重启棋局</button>
+            <div class="panel-footer-branding">ENGINE COUPLING ARCHITECTURE V2.1.0</div>
+        </div>
+    </div>
+
+    <div class="workspace">
+        
+        <div class="danger-banner" id="dangerBanner">
+            <div class="danger-msg">防自杀/无气风险拦截：检测到该落子交叉点处于“无气自杀”或非法禁着点状态。</div>
+            <div class="danger-actions">
+                <button class="btn btn-secondary" style="background: rgba(255,255,255,0.15); color: #fff; border: none;" onclick="cancelPendingMove()">撤销操作</button>
+                <button class="btn" id="dangerConfirmBtn" style="background: #fff; color: #000;">强行落子</button>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div class="board-wrapper" id="boardWrapper">
+                <div class="dom-interaction-grid" id="board">
+                    </div>
+            </div>
+        </div>
+
+        <div class="evaluator-bar-container">
+            <div class="evaluator-meta">
+                <div class="eval-lbl-black" id="blackEvalText">0 Black</div>
+                <div class="eval-lbl-white" id="whiteEvalText">0 White</div>
+            </div>
+            <div class="eval-track">
+                <div class="eval-fill black-fill" id="blackEvalBar"></div>
+                <div class="eval-fill white-fill" id="whiteEvalBar"></div>
+            </div>
         </div>
     </div>
 
@@ -285,6 +256,37 @@
             {r: 9, c: 3}, {r: 9, c: 9}, {r: 9, c: 15},
             {r: 15, c: 3}, {r: 15, c: 9}, {r: 15, c: 15}
         ];
+
+        // ==========================================
+        // 围棋 GTP 标准坐标转换矩阵 (排除了混淆字母 "I")
+        // ==========================================
+        const GTP_LETTERS = "ABCDEFGHJKLMNOPQRST";
+
+        // 将前端 19x19 二维数组的 (r, c) 坐标转换为 KataGo 识别的 "D14"、"Q16" 等标准字符串
+        function coordsToGtp(r, c) {
+            const letter = GTP_LETTERS[c];
+            const number = 19 - r; // 数组第 0 行对应围棋最顶部的第 19 行
+            return letter + number;
+        }
+
+        // 将 KataGo 返回的 "D14" 还原为前端渲染所需的二维数组坐标 { r, c }
+        function gtpToCoords(gtpStr) {
+            if (!gtpStr || gtpStr === '(none)' || gtpStr === 'pass') return null;
+            const letter = gtpStr[0].toUpperCase();
+            const number = parseInt(gtpStr.substring(1));
+            const c = GTP_LETTERS.indexOf(letter);
+            const r = 19 - number;
+            return { r, c };
+        }
+
+        // 获取当前棋局全量落子顺序数组，例如: ["D4", "Q16", "R10"]
+        function getFullGtpMovesHistory() {
+            return moveHistory.map((snapshot, index) => {
+                const nextSnapshot = moveHistory[index + 1];
+                const lm = nextSnapshot ? nextSnapshot.lastMove : lastMove;
+                return lm ? coordsToGtp(lm.r, lm.c) : null;
+            }).filter(m => m !== null);
+        }
 
         function renderSVGBoard() {
             const CS = 28; 
@@ -500,7 +502,6 @@
 
         // Rule Matrix Check: Simulation mapping for captures and suicide conditions
         function simulatePlacementAndCheckCaptured(r, c, color) {
-            // Clone matrix state
             const simBoard = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
             for(let i=0; i<BOARD_SIZE; i++) {
                 for(let j=0; j<BOARD_SIZE; j++) simBoard[i][j] = boardState[i][j];
@@ -510,7 +511,6 @@
             const enemyColor = color === 'black' ? 'white' : 'black';
             const capturedStones = [];
 
-            // Check adjacent enemy nodes first to process potential captures
             const dir = [{r:-1, c:0}, {r:1, c:0}, {r:0, c:-1}, {r:0, c:1}];
             for(let i=0; i<4; i++) {
                 const nr = r + dir[i].r;
@@ -529,10 +529,8 @@
                 }
             }
 
-            // Remove dead stones from simulation matrix
             capturedStones.forEach(s => simBoard[s.r][s.c] = null);
 
-            // Re-evaluate self group for absolute suicide determination
             const selfGroup = getGroupInfo(r, c, simBoard);
             const isSuicide = (selfGroup.liberties === 0);
 
@@ -542,13 +540,10 @@
         function executeMoveSync(r, c) {
             const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
             
-            // Archive current layout snapshot
             moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
             
-            // Apply placement sequence
             boardState[r][c] = currentTurn;
             
-            // Process removals
             validation.capturedStones.forEach(s => {
                 boardState[s.r][s.c] = null;
             });
@@ -559,7 +554,6 @@
             updateStonesCount();
             playStoneSound();
 
-            // Alternate dynamic turn sequence
             currentTurn = currentTurn === 'black' ? 'white' : 'black';
             updateTurnUI();
 
@@ -599,17 +593,19 @@
                 }
             }
             
-            document.getElementById('blackEvalText').innerText = `${bCount} Black`;
-            document.getElementById('whiteEvalText').innerText = `${wCount} White`;
-            
-            const total = bCount + wCount;
-            if (total === 0) {
-                document.getElementById('blackEvalBar').style.width = '50%';
-                document.getElementById('whiteEvalBar').style.width = '50%';
-            } else {
-                const bPercent = (bCount / total) * 100;
-                document.getElementById('blackEvalBar').style.width = `${bPercent}%`;
-                document.getElementById('whiteEvalBar').style.width = `${100 - bPercent}%`;
+            if (!assistModeActive) {
+                document.getElementById('blackEvalText').innerText = `${bCount} Black`;
+                document.getElementById('whiteEvalText').innerText = `${wCount} White`;
+                
+                const total = bCount + wCount;
+                if (total === 0) {
+                    document.getElementById('blackEvalBar').style.width = '50%';
+                    document.getElementById('whiteEvalBar').style.width = '50%';
+                } else {
+                    const bPercent = (bCount / total) * 100;
+                    document.getElementById('blackEvalBar').style.width = `${bPercent}%`;
+                    document.getElementById('whiteEvalBar').style.width = `${100 - bPercent}%`;
+                }
             }
         }
 
@@ -629,53 +625,70 @@
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;
             document.getElementById('assistToggle').checked = assistModeActive;
-            log(`[AI 辅助] 局部气位与生存判定预测算法已${assistModeActive?'激活':'关闭'}。`);
+            log(`[AI 辅助] 外部KataGo引擎推荐服务已${assistModeActive?'激活':'关闭'}。`);
             if(assistModeActive && currentTurn && (!myRole || myRole === currentTurn)) calculateBestMove();
-            else clearAssistHighlights();
+            else {
+                clearAssistHighlights();
+                updateStonesCount();
+            }
         }
 
         function clearAssistHighlights() {
             document.querySelectorAll('.intersection').forEach(el => el.classList.remove('assist-suggest'));
         }
 
-        // Lightweight AI analysis heuristics engine optimized for local response matrices
+        // ========================================================
+        // 核心改动：调用 3000 端口本地后端，获取 KataGo 引擎真实算力数据
+        // ========================================================
         function calculateBestMove() {
             if (!currentTurn) return;
             clearAssistHighlights();
 
-            let bestPoint = null;
-            let highestScore = -9999;
-
-            // Sample step intervals if matrix exceeds rendering constraints
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (boardState[r][c] !== null) continue;
-
-                    const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
-                    if (validation.isSuicide) continue;
-
-                    let currentScore = 0;
-                    
-                    // Priority heuristic 1: Reward immediate capture weights
-                    if (validation.capturedStones.length > 0) {
-                        currentScore += validation.capturedStones.length * 15;
-                    }
-
-                    // Priority heuristic 2: Spatial structure preference (Star positions / Center clusters)
-                    if (starPoints.some(sp => sp.r === r && sp.c === c)) currentScore += 2;
-                    if (r >= 6 && r <= 12 && c >= 6 && c <= 12) currentScore += 1;
-
-                    if (currentScore > highestScore) {
-                        highestScore = currentScore;
-                        bestPoint = { r, c };
-                    }
+            let fullMoves = getFullGtpMovesHistory();
+            
+            if (lastMove) {
+                const lastGtp = coordsToGtp(lastMove.r, lastMove.c);
+                if (fullMoves.length === 0 || fullMoves[fullMoves.length - 1] !== lastGtp) {
+                    fullMoves.push(lastGtp);
                 }
             }
 
-            if (bestPoint) {
-                const cell = document.querySelector(`[data-row='${bestPoint.r}'][data-col='${bestPoint.c}']`);
-                if (cell) cell.classList.add('assist-suggest');
-            }
+            fetch('http://localhost:3000/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    moves: fullMoves,
+                    nextColor: currentTurn // 'black' 或 'white'
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                let isMyTurn = (myRole === null) || (myRole === currentTurn);
+                
+                if (isMyTurn && data.bestMove && data.bestMove !== '(none)' && data.bestMove !== 'pass') {
+                    const coords = gtpToCoords(data.bestMove);
+                    if (coords) {
+                        const cell = document.querySelector(`[data-row='${coords.r}'][data-col='${coords.c}']`);
+                        if (cell) {
+                            cell.classList.add('assist-suggest'); 
+                        }
+                    }
+                }
+
+                if (data.score !== undefined) {
+                    let blackWinRate = data.score; 
+                    let whiteWinRate = 100 - blackWinRate;
+
+                    document.getElementById('blackEvalBar').style.width = `${blackWinRate}%`;
+                    document.getElementById('whiteEvalBar').style.width = `${whiteWinRate}%`;
+                    
+                    document.getElementById('blackEvalText').innerText = `${blackWinRate.toFixed(1)}% 黑胜率`;
+                    document.getElementById('whiteEvalText').innerText = `${whiteWinRate.toFixed(1)}% 白胜率`;
+                }
+            })
+            .catch(err => {
+                console.error("无法联通本地 KataGo 后端服务:", err);
+            });
         }
 
         function sendPass() {
@@ -684,6 +697,7 @@
                 currentTurn = currentTurn === 'black' ? 'white' : 'black';
                 updateTurnUI();
                 log("你选择了停手过牌。");
+                if (assistModeActive) setTimeout(calculateBestMove, 100);
             }
         }
 

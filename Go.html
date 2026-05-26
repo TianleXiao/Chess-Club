@@ -76,7 +76,7 @@
         input:checked + .slider { background-color: #c084fc; }
         input:checked + .slider:before { transform: translateX(20px); background-color: #fff; }
 
-        /* ================= 棋盘流式布局 (核心重构) ================= */
+        /* ================= 棋盘流式布局 ================= */
         .board-container { width: 100%; max-width: 600px; aspect-ratio: 1 / 1; background-color: var(--board-bg); padding: 3%; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.2); position: relative; display: flex; }
         .board-wrapper { position: relative; width: 100%; height: 100%; }
         
@@ -84,10 +84,9 @@
         .dom-interaction-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
         .intersection { position: absolute; transform: translate(-50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; border-radius: 50%; }
-        /* 触摸反馈 */
         @media (hover: hover) { .intersection:hover::before { content: ''; width: 30%; height: 30%; background: rgba(0,0,0,0.3); border-radius: 50%; position: absolute; } }
 
-        /* 棋子按百分比缩放 */
+        /* 棋子缩放 */
         .stone { width: 92%; height: 92%; border-radius: 50%; position: relative; z-index: 6; animation: dropStone 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; box-shadow: 2px 4px 6px rgba(0,0,0,0.4); }
         .stone.black { background: radial-gradient(circle at 30% 30%, #444 0%, #111 60%, #000 100%); }
         .stone.white { background: radial-gradient(circle at 30% 30%, #fff 0%, #e4e4e7 60%, #a1a1aa 100%); }
@@ -99,7 +98,7 @@
         .intersection.last-move .stone.black::after { border-color: rgba(255,255,255,0.6); }
         .intersection.last-move .stone.white::after { border-color: rgba(0,0,0,0.5); }
 
-        /* AI 紫圈 */
+        /* AI 紫圈高亮提示 */
         .intersection.assist-suggest::after { content: ''; width: 100%; height: 100%; border: 3px dashed #c084fc; border-radius: 50%; position: absolute; z-index: 12; animation: assistPulse 1s linear infinite; pointer-events: none; }
         @keyframes assistPulse { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.4; } 100% { transform: scale(0.9); opacity: 1; } }
 
@@ -122,7 +121,7 @@
             body { flex-direction: column; overflow-y: auto; height: auto; }
             .sidebar { width: 100%; max-height: none; border-right: none; border-bottom: 1px solid var(--border); padding: 12px; overflow-y: visible; }
             .workspace { padding: 12px; justify-content: flex-start; height: auto; min-height: calc(100vh - 250px); }
-            .board-container { padding: 4%; } /* 移动端棋盘边距更大些以防误触边缘 */
+            .board-container { padding: 4%; }
         }
     </style>
 </head>
@@ -236,7 +235,6 @@
             {r: 15, c: 3}, {r: 15, c: 9}, {r: 15, c: 15}
         ];
 
-        // GTP 坐标转换
         const GTP_LETTERS = "ABCDEFGHJKLMNOPQRST";
         function coordsToGtp(r, c) { return GTP_LETTERS[c] + (19 - r); }
         function gtpToCoords(gtpStr) {
@@ -245,6 +243,7 @@
             return { r: 19 - parseInt(gtpStr.substring(1)), c: GTP_LETTERS.indexOf(letter) };
         }
 
+        // 提取全量GTP历史，用于喂给KataGo后台
         function getFullGtpMovesHistory() {
             return moveHistory.map((snapshot, index) => {
                 const nextSnapshot = moveHistory[index + 1];
@@ -253,11 +252,9 @@
             }).filter(m => m !== null);
         }
 
-        // ================= 核心渲染重构 (流式百分比) =================
+        // ================= 核心渲染 (流式百分比) =================
         function renderFluidBoard() {
-            const step = 100 / (BOARD_SIZE - 1); // 计算每个格子的百分比跨度
-            
-            // 1. 渲染 SVG 线条
+            const step = 100 / (BOARD_SIZE - 1);
             let svgStr = `<svg class="svg-layer" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">`;
             for (let i = 0; i < BOARD_SIZE; i++) {
                 const pos = (i * step).toFixed(2);
@@ -273,7 +270,6 @@
             if (oldSvg) oldSvg.remove();
             document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svgStr);
 
-            // 2. 渲染 DOM 交互网格
             const boardDOM = document.getElementById('board'); 
             boardDOM.innerHTML = '';
             for (let r = 0; r < BOARD_SIZE; r++) {
@@ -290,7 +286,7 @@
             }
         }
 
-        // ================= 网络通联 =================
+        // ================= 网络通讯 =================
         function initNetwork() {
             myRoomId = 'GO-' + Math.floor(100000 + Math.random() * 900000);
             document.getElementById('myIdDisplay').value = myRoomId;
@@ -346,111 +342,61 @@
                 let myTargetRole = oppRoleInSave === 'black' ? 'white' : 'black';
                 let roleText = oppRoleInSave === 'black' ? "黑方" : "白方";
 
-                if (confirm(`📩 对方申请导入外部战局文件 (.go)\n\n保存时对方是: ${roleText}\n\n【重要提示】同意导入后将自动将您的阵营重组为 [${myTargetRole === 'black'?'黑方':'白方'}] 并同步加载棋盘。是否同意？`)) {
+                if (confirm(`📩 对方申请导入外部战局文件 (.go)\n\n同意导入后将自动组队并同步加载棋盘。是否同意？`)) {
                     applySnapshotLocal(snap, myTargetRole);
-                    toast(`✅ 您同意了读档请求，阵营已对齐调整为 [${myTargetRole === 'black'?'黑方':'白方'}]`);
+                    toast(`✅ 您同意了读档请求`);
                     sendMqttMessage('load_response', { accept: true, snapshot: snap });
                 } else {
                     sendMqttMessage('load_response', { accept: false });
-                    toast("❌ 您拒绝了对方的外部导入申请。");
                 }
             } else if (data.type === 'load_response') {
                 if (data.accept) {
                     const snap = data.snapshot;
                     applySnapshotLocal(snap, snap.savedAsRole);
-                    toast(`🎉 对方已同意！战局加载完毕，您的阵营已同步至 [${snap.savedAsRole === 'black'?'黑方':'白方'}]`);
                     alert("对方已同意！战局加载完毕。");
                 } else {
-                    toast("❌ 对方拒绝了您的战局载入申请，回溯终止。");
                     alert("对方拒绝了读档申请！");
                 }
             }
         }
 
-        // ================= 数据存档与读档 =================
+        // ================= 存档/读档 =================
         function saveGame() {
             if (moveHistory.length === 0 && !lastMove) return alert("当前棋盘为空，无需保存！");
-            
-            const savePacket = {
-                boardState: boardState,
-                currentTurn: currentTurn,
-                lastMove: lastMove,
-                moveHistory: moveHistory,
-                savedAsRole: myRole 
-            };
-            
+            const savePacket = { boardState, currentTurn, lastMove, moveHistory, savedAsRole: myRole };
             const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const timeStr = new Date().toISOString().slice(0, 10);
-            
             a.href = url;
-            a.download = `Go_Studio_Archive_${timeStr}.go`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.download = `Go_Studio_Archive_${new Date().toISOString().slice(0, 10)}.go`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
-            toast("💾 [数据中心] 对局已导出为 .go 文件");
         }
 
         function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                try {
-                    const snapshot = JSON.parse(e.target.result);
-                    processLoadedSnapshot(snapshot);
-                } catch (err) {
-                    alert("战局文件格式解析错误或已被篡改！");
-                }
+                try { applySnapshotLocal(JSON.parse(e.target.result)); } catch (err) { alert("文件格式错误！"); }
             };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        function processLoadedSnapshot(snapshot) {
-            if (myRole === null) {
-                applySnapshotLocal(snapshot);
-                toast("📂 本地单机战术文件加载成功。");
-                alert("战局加载成功！");
-                return;
-            }
-            sendMqttMessage('load_request', { snapshot: snapshot });
-            toast("📡 已向对方发送读档握手请求...");
+            reader.readAsText(file); event.target.value = '';
         }
 
         function applySnapshotLocal(snapshot, targetRole) {
-            boardState = snapshot.boardState;
-            currentTurn = snapshot.currentTurn;
-            lastMove = snapshot.lastMove;
-            moveHistory = snapshot.moveHistory;
-            
-            if (targetRole !== undefined) {
-                myRole = targetRole;
-                updateConnectionUI(true);
-            }
-
-            cancelPendingMove();
-            clearAssistHighlights();
-            renderStones(); 
-            updateTurnUI();
-            updateStonesCount();
-            rebuildMoveHistoryLog();
-            
+            boardState = snapshot.boardState; currentTurn = snapshot.currentTurn;
+            lastMove = snapshot.lastMove; moveHistory = snapshot.moveHistory;
+            if (targetRole !== undefined) { myRole = targetRole; updateConnectionUI(true); }
+            cancelPendingMove(); clearAssistHighlights(); renderStones(); updateTurnUI(); updateStonesCount(); rebuildMoveHistoryLog();
             if (assistModeActive) calculateBestMove();
         }
 
-        // ================= 游戏逻辑 =================
+        // ================= 核心游戏逻辑 =================
         function initBoard() { resetBoardLocal(); sendMqttMessage('reset'); }
 
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
             currentTurn = 'black'; lastMove = null; moveHistory = [];
-            renderStones(); updateTurnUI(); updateStonesCount(); clearAssistHighlights(); cancelPendingMove();
-            rebuildMoveHistoryLog();
+            renderStones(); updateTurnUI(); updateStonesCount(); clearAssistHighlights(); cancelPendingMove(); rebuildMoveHistoryLog();
             if (assistModeActive) calculateBestMove();
         }
 
@@ -481,7 +427,6 @@
             executeMoveSync(r, c);
         }
 
-        // 提子计算核心算法
         function getGroupInfo(startR, startC, targetBoard) {
             const color = targetBoard[startR][startC];
             if (!color) return { stones: [], liberties: 0 };
@@ -531,20 +476,17 @@
             lastMove = { r, c };
             renderStones(); updateStonesCount(); playStoneSound();
             
-            // 添加具体落子部位历史日志
             addMoveHistoryLogItem(moveHistory.length, currentTurn, coordsToGtp(r, c));
 
             currentTurn = currentTurn === 'black' ? 'white' : 'black';
             updateTurnUI();
-            if (assistModeActive) setTimeout(calculateBestMove, 50);
+            if (assistModeActive) setTimeout(calculateBestMove, 50); // 【补全点：落子后自动驱动 AI 分析下一步】
         }
 
-        // ================= 落子历史渲染驱动 =================
+        // ================= 侧边栏历史日志刷新驱动 =================
         function addMoveHistoryLogItem(stepNum, color, gtpCoord) {
             const container = document.getElementById('moveHistoryLog');
-            if (stepNum === 1) container.innerHTML = ''; // 清除空提示
-            
-            // 清除旧的活动标签
+            if (stepNum === 1) container.innerHTML = '';
             Array.from(container.children).forEach(el => el.classList.remove('active-move'));
 
             const item = document.createElement('div');
@@ -552,7 +494,7 @@
             const colorText = color === 'black' ? '黑方' : '白方';
             item.innerHTML = `<span>第 ${stepNum} 手: ${colorText}</span> <span>${gtpCoord}</span>`;
             container.appendChild(item);
-            container.scrollTop = container.scrollHeight; // 滚动到底部
+            container.scrollTop = container.scrollHeight;
         }
 
         function logPassMove(color) {
@@ -576,8 +518,6 @@
                 container.innerHTML = '<div style="color: var(--text-dim); text-align: center; margin-top: 40px; font-style: italic;">暂无落子记录</div>';
                 return;
             }
-
-            // 通过克隆重建历史列表
             moveHistory.forEach((snapshot, index) => {
                 const nextSnapshot = moveHistory[index + 1];
                 const lm = nextSnapshot ? nextSnapshot.lastMove : lastMove;
@@ -597,7 +537,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // ================= 视图更新 =================
+        // ================= 视图更新与计数 =================
         function renderStones() {
             const intersections = document.getElementById('board').children;
             let i = 0;
@@ -629,24 +569,15 @@
             }
         }
 
-        // ================= 附加功能 (AI/声音/战绩) =================
-        function playStoneSound() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.05);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-            } catch (e) {}
-        }
-
+        // ================= AI 核心算法与开关交互驱动 =================
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;
-            if(assistModeActive && currentTurn && (!myRole || myRole === currentTurn)) calculateBestMove();
-            else { clearAssistHighlights(); updateStonesCount(); }
+            if(assistModeActive && currentTurn && (!myRole || myRole === currentTurn)) {
+                calculateBestMove(); // 【补全点：开启 AI 时，立刻进行第一次算力演算】
+            } else { 
+                clearAssistHighlights(); 
+                updateStonesCount(); 
+            }
         }
 
         function clearAssistHighlights() {
@@ -661,6 +592,7 @@
                 const lastGtp = coordsToGtp(lastMove.r, lastMove.c);
                 if (fullMoves.length === 0 || fullMoves[fullMoves.length - 1] !== lastGtp) fullMoves.push(lastGtp);
             }
+            // 向本地后端 API 交换算力数据
             fetch('http://localhost:3000/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -674,7 +606,7 @@
                     if (coords) {
                         const index = coords.r * 19 + coords.c;
                         const target = document.getElementById('board').children[index];
-                        if(target) target.classList.add('assist-suggest');
+                        if(target) target.classList.add('assist-suggest'); // 高亮紫圈闪烁提示点
                     }
                 }
                 if (data.score !== undefined) {
@@ -687,9 +619,9 @@
             }).catch(() => {});
         }
 
-        // ================= 操作按钮 (悔棋/停手/认输) =================
+        // ================= 控制交互 =================
         function requestUndo() {
-            if (moveHistory.length === 0) return toast("无历史步数");
+            if (moveHistory.length === 0) return;
             if (myRole !== null) {
                 if (currentTurn === myRole) return alert("必须在对方回合申请悔棋！");
                 sendMqttMessage('undo_request'); toast("等待对方同意悔棋...");
@@ -700,9 +632,8 @@
             if (moveHistory.length === 0) return;
             const prev = moveHistory.pop();
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
-            renderStones(); updateTurnUI(); updateStonesCount(); cancelPendingMove();
-            rebuildMoveHistoryLog(); // 悔棋时重构落子部位日志
-            if (assistModeActive) calculateBestMove();
+            renderStones(); updateTurnUI(); updateStonesCount(); cancelPendingMove(); rebuildMoveHistoryLog();
+            if (assistModeActive) calculateBestMove(); // 【补全点：悔棋回溯后，自动重算 AI 建议】
         }
 
         function sendPass() {
@@ -714,10 +645,7 @@
         }
 
         function requestResign() {
-            if (confirm("确定要认输吗？")) {
-                sendMqttMessage('resign');
-                handleGameOver(false, "你已认输");
-            }
+            if (confirm("确定要认输吗？")) { sendMqttMessage('resign'); handleGameOver(false, "你已认输"); }
         }
 
         function handleGameOver(isWin, msg) {
@@ -727,7 +655,6 @@
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
 
-        // ================= 状态与统计 =================
         function updateConnectionUI(isConnected) {
             const badge = document.getElementById('connectionStatus');
             if (isConnected) {
@@ -744,26 +671,17 @@
             turnBadge.className = isMyTurn ? "status-badge warn" : "status-badge";
         }
 
-        document.body.onkeydown = function(e){
-            // 绑定快捷键撤销 (Ctrl+Z) 方便单机复盘
-            if(e.ctrlKey && e.keyCode === 90){ e.preventDefault(); requestUndo(); }
-        }
-
-        function saveStats() {
-            localStorage.setItem('go_p2p_stats', JSON.stringify(matchStats));
-            updateStatsUI();
-        }
-
+        function saveStats() { localStorage.setItem('go_p2p_stats', JSON.stringify(matchStats)); updateStatsUI(); }
         function updateStatsUI() {
             document.getElementById('statWins').innerText = matchStats.wins; document.getElementById('statLosses').innerText = matchStats.losses;
             const total = matchStats.wins + matchStats.losses;
             document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
         }
 
-        function copyRoomKey() { const id = document.getElementById('myIdDisplay'); id.select(); document.execCommand("copy"); toast("密钥已复制"); }
+        function copyRoomKey() { const id = document.getElementById('myIdDisplay'); id.select(); document.execCommand("copy"); }
         function toast(msg) { console.log(msg); }
+        function playStoneSound() { try { const audioCtx = new(window.AudioContext||window.webkitAudioContext)(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.05); gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.05); } catch (e) {} }
 
-        // 初始化
         window.addEventListener('resize', renderFluidBoard); 
         renderFluidBoard(); resetBoardLocal(); initNetwork(); updateStatsUI();
     </script>

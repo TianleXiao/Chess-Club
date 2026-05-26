@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Chinese Chess - Masterpiece Pro (Archive Exchange Suite)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P2P Chinese Chess - Masterpiece Pro (Mobile Ready)</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -18,12 +18,16 @@
             --black-piece: #ffffff;
             --board-line: #444455;
             --ease: cubic-bezier(0.16, 1, 0.3, 1);
-            --cell-size: 64px; 
-            --board-pad: 20px;
+            
+            /* Responsive board sizing variables */
+            --board-max-width: 600px;
+            --board-width: min(100vw - 20px, var(--board-max-width));
+            --cell-size: calc(var(--board-width) / 9);
+            --board-pad: calc(var(--board-width) * 0.035);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px 20px; }
+        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px 10px; }
         
         .container { display: flex; gap: 40px; max-width: 1200px; width: 100%; align-items: center; justify-content: center; }
         .sidebar { flex: 0 0 360px; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 14px; }
@@ -40,10 +44,10 @@
 
         .peer-id-display { font-family: monospace; font-size: 0.95rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
         .input-group { display: flex; gap: 8px; }
-        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; }
+        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; width: 100%; }
         input[type="text"]:focus { border-color: #555; }
 
-        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 10px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 12px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; touch-action: manipulation; }
         .btn:hover { background: #e5e5e5; transform: translateY(-1px); }
         .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
         .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
@@ -63,7 +67,7 @@
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
         .stat-card { background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
         .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
-        .log-box { max-height: 110px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
+        .log-box { max-height: 110px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; word-break: break-all; }
         .log-box::-webkit-scrollbar { width: 4px; }
         .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
@@ -72,21 +76,45 @@
             background: #e4d8b8; 
             padding: var(--board-pad);
             border-radius: 8px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.15);
             border: 4px solid #bba374;
+            width: calc(var(--board-width) + 2 * var(--board-pad));
+            height: calc(var(--board-width) / 9 * 10 + 2 * var(--board-pad));
+            box-sizing: border-box;
         }
 
-        .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
-        .trajectory-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 6; width: calc(9 * var(--cell-size)); height: calc(10 * var(--cell-size)); }
+        .svg-layer { 
+            position: absolute; 
+            top: var(--board-pad); left: var(--board-pad); 
+            pointer-events: none; z-index: 1; 
+            width: var(--board-width); height: calc(var(--board-width) / 9 * 10);
+        }
         
-        .chess-board { position: relative; display: grid; grid-template-columns: repeat(9, var(--cell-size)); grid-template-rows: repeat(10, var(--cell-size)); z-index: 5; }
-        .cell { position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; width: var(--cell-size); height: var(--cell-size); }
+        .trajectory-layer { 
+            position: absolute; 
+            top: var(--board-pad); left: var(--board-pad); 
+            pointer-events: none; z-index: 6; 
+            width: var(--board-width); height: calc(var(--board-width) / 9 * 10);
+        }
+        
+        .chess-board { 
+            position: relative; 
+            display: grid; 
+            grid-template-columns: repeat(9, var(--cell-size)); 
+            grid-template-rows: repeat(10, var(--cell-size)); 
+            z-index: 5; 
+            width: var(--board-width); height: calc(var(--board-width) / 9 * 10);
+        }
+        
+        .cell { position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; width: var(--cell-size); height: var(--cell-size); touch-action: manipulation; }
 
         .piece {
-            width: 52px; height: 52px; border-radius: 50%; background: #f4ecce; border: 2px solid #443322;
+            width: calc(var(--cell-size) * 0.85); 
+            height: calc(var(--cell-size) * 0.85); 
+            border-radius: 50%; background: #f4ecce; border: 2px solid #443322;
             display: flex; justify-content: center; align-items: center;
-            font-size: 1.65rem; font-weight: bold; font-family: "Kaiti", "STKaiti", "Noto Serif SC", serif;
-            box-shadow: 2px 5px 8px rgba(0,0,0,0.35), inset -2px -4px 6px rgba(0,0,0,0.1);
+            font-size: calc(var(--cell-size) * 0.45); font-weight: bold; font-family: "Kaiti", "STKaiti", "Noto Serif SC", serif;
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.35), inset -1px -2px 4px rgba(0,0,0,0.1);
             user-select: none; transition: transform 0.25s var(--ease); pointer-events: none;
             line-height: 1; padding-bottom: 2px;
         }
@@ -94,23 +122,23 @@
         .piece.red { color: #c42222; border-color: #9c1515; background: #fcefe2; }
         .piece.black { color: #111111; border-color: #222222; background: #ebdcb9; }
         
-        .cell.selected .piece { transform: scale(1.16) translateY(-3px); box-shadow: 0 12px 20px rgba(0,0,0,0.4); border-color: #000; }
-        .cell.last-move::before { content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: rgba(160, 110, 40, 0.35); z-index: 4; }
-        .cell.valid-target::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: rgba(82, 183, 136, 0.7); z-index: 4; }
-        .cell.blunder-target::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 77, 77, 0.8); z-index: 4; }
+        .cell.selected .piece { transform: scale(1.12) translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.4); border-color: #000; }
+        .cell.last-move::before { content: ""; position: absolute; width: calc(var(--cell-size) * 0.2); height: calc(var(--cell-size) * 0.2); border-radius: 50%; background: rgba(160, 110, 40, 0.35); z-index: 4; }
+        .cell.valid-target::after { content: ""; position: absolute; width: calc(var(--cell-size) * 0.18); height: calc(var(--cell-size) * 0.18); border-radius: 50%; background: rgba(82, 183, 136, 0.7); z-index: 4; }
+        .cell.blunder-target::after { content: ""; position: absolute; width: calc(var(--cell-size) * 0.18); height: calc(var(--cell-size) * 0.18); border-radius: 50%; background: rgba(255, 77, 77, 0.8); z-index: 4; }
 
-        .cell.assist-start::before { content: ""; position: absolute; width: 54px; height: 54px; border: 2px dashed rgba(140, 80, 255, 0.7); border-radius: 50%; animation: spin 10s linear infinite; z-index: 2; }
-        .cell.assist-end::before { content: ""; position: absolute; width: 54px; height: 54px; border: 2px solid rgba(140, 80, 255, 0.8); border-radius: 50%; z-index: 2; animation: pulse 1.8s infinite; }
+        .cell.assist-start::before { content: ""; position: absolute; width: calc(var(--cell-size) * 0.88); height: calc(var(--cell-size) * 0.88); border: 2px dashed rgba(140, 80, 255, 0.7); border-radius: 50%; animation: spin 10s linear infinite; z-index: 2; }
+        .cell.assist-end::before { content: ""; position: absolute; width: calc(var(--cell-size) * 0.88); height: calc(var(--cell-size) * 0.88); border: 2px solid rgba(140, 80, 255, 0.8); border-radius: 50%; z-index: 2; animation: pulse 1.8s infinite; }
         
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.5; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.5; } }
         @keyframes dash { to { stroke-dashoffset: -20; } }
 
-        .trajectory-path { fill: none; stroke: #8a50ff; stroke-width: 2; stroke-dasharray: 4 5; animation: dash 1.2s linear infinite; opacity: 0.75; }
+        .trajectory-path { fill: none; stroke: #8a50ff; stroke-width: 2.5; stroke-dasharray: 4 5; animation: dash 1.2s linear infinite; opacity: 0.75; }
 
         .flipped-view { transform: rotate(180deg); }
         .flipped-view .piece { transform: rotate(180deg); }
-        .flipped-view .cell.selected .piece { transform: scale(1.16) translateY(-3px) rotate(180deg); }
+        .flipped-view .cell.selected .piece { transform: scale(1.12) translateY(-2px) rotate(180deg); }
         .flipped-view .svg-layer text { transform: rotate(180deg); transform-origin: center; }
         .flipped-view #dangerBanner { transform: rotate(180deg); }
 
@@ -132,13 +160,13 @@
         .celebration-overlay.active { opacity: 1; pointer-events: auto; }
         .celebration-card {
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 48px 64px; text-align: center;
+            border-radius: 16px; padding: 40px 30px; text-align: center; width: 90%; max-width: 450px;
             box-shadow: 0 40px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
             transform: scale(0.85); transition: transform 0.5s var(--ease);
         }
         .celebration-overlay.active .celebration-card { transform: scale(1); }
-        .celebration-title { font-size: 3.2rem; font-weight: 200; letter-spacing: 0.15em; margin-bottom: 12px; text-transform: uppercase; color: #ffffff; }
-        .celebration-subtitle { font-size: 1.1rem; color: var(--text-dim); margin-bottom: 32px; font-weight: 300; }
+        .celebration-title { font-size: clamp(2rem, 8vw, 3.2rem); font-weight: 200; letter-spacing: 0.15em; margin-bottom: 12px; text-transform: uppercase; color: #ffffff; }
+        .celebration-subtitle { font-size: 1rem; color: var(--text-dim); margin-bottom: 32px; font-weight: 300; }
 
         .danger-banner {
             position: absolute; top: var(--board-pad); left: var(--board-pad);
@@ -152,19 +180,27 @@
         .danger-banner.active { opacity: 1; pointer-events: auto; }
         .danger-content {
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 12px; padding: 28px 36px; max-width: 420px; width: 90%;
+            border-radius: 12px; padding: 24px 20px; max-width: 420px; width: 95%;
             text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.6);
             transform: translateY(15px); transition: transform 0.3s var(--ease);
         }
         .danger-banner.active .danger-content { transform: translateY(0); }
         .danger-title { font-size: 1.1rem; font-weight: 600; color: #ff4d4d; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
-        .danger-desc { font-size: 0.88rem; color: var(--text-main); line-height: 1.6; margin-bottom: 24px; }
-        .danger-actions { display: flex; gap: 12px; justify-content: center; }
+        .danger-desc { font-size: 0.85rem; color: var(--text-main); line-height: 1.6; margin-bottom: 24px; }
+        .danger-actions { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
 
+        /* Mobile specific media queries */
         @media (max-width: 950px) {
-            body { padding: 20px 10px; }
-            .container { flex-direction: column-reverse; gap: 20px; }
-            .sidebar { width: calc(9 * var(--cell-size) + 2 * var(--board-pad)); max-width: 100%; flex: none; }
+            .container { flex-direction: column-reverse; gap: 24px; align-items: stretch; }
+            .sidebar { width: 100%; max-width: 100%; flex: none; padding: 18px; }
+            .danger-actions { flex-direction: row; }
+        }
+        
+        @media (max-width: 450px) {
+            h1 { font-size: 1.05rem; }
+            .btn { font-size: 0.8rem; padding: 10px 12px; }
+            .celebration-card { padding: 30px 20px; }
+            .celebration-card .btn { padding: 12px; font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -174,7 +210,7 @@
         <div class="celebration-card">
             <div id="celebrationTitle" class="celebration-title">VICTORY</div>
             <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
-            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 12px; justify-content: center; margin-top: 20px;">
                 <button class="btn btn-secondary" onclick="openReplay()">复盘查看局势</button>
                 <button class="btn" id="nextMatchBtn" onclick="startNextMatchManual()">开始新局/攻守交替</button>
             </div>
@@ -234,8 +270,8 @@
                 <span class="label-tiny">Join Room</span>
                 <div class="input-group">
                     <input type="text" id="peerIdInput" placeholder="Paste opponent key...">
-                    <button class="btn" style="padding: 10px 10px;" onclick="connectToPeer('play')">对战</button>
-                    <button class="btn btn-secondary" style="padding: 10px 10px; border-color: #ffb03a; color: #ffb03a;" onclick="connectToPeer('spectate')">观棋</button>
+                    <button class="btn" style="padding: 10px 12px;" onclick="connectToPeer('play')">对战</button>
+                    <button class="btn btn-secondary" style="padding: 10px 12px; border-color: #ffb03a; color: #ffb03a;" onclick="connectToPeer('spectate')">观棋</button>
                 </div>
             </div>
 
@@ -273,7 +309,7 @@
                 </div>
             </div>
             
-            <svg class="trajectory-layer" id="trajectoryLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+            <svg class="trajectory-layer" id="trajectoryLayer" viewBox="0 0 576 640" style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg"></svg>
             <div class="chess-board" id="board"></div>
         </div>
     </div>
@@ -329,26 +365,29 @@
         const pieceValues = { '車': 950, '马': 430, '馬': 430, '炮': 450, '砲': 450, '相': 200, '象': 200, '仕': 200, '士': 200, '帥': 15000, '將': 15000, '兵': 80, '卒': 80 };
         
         function renderSVGBoard() {
+            // Logical coordinates base to ensure correct rendering regardless of physical display scale
             const CS = 64; const w = 9 * CS; const h = 10 * CS; const strokeColor = "var(--board-line)"; const half = CS / 2;
-            let svgStr = `<svg class="svg-layer" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
-            svgStr += `<rect x="${half}" y="${half}" width="${8 * CS}" height="${9 * CS}" fill="none" stroke="${strokeColor}" stroke-width="2.5"/>`;
+            
+            // Replaced static width/height with responsive inline styling and robust viewBox
+            let svgStr = `<svg class="svg-layer" viewBox="0 0 ${w} ${h}" style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">`;
+            svgStr += `<rect x="${half}" y="${half}" width="${8 * CS}" height="${9 * CS}" fill="none" stroke="${strokeColor}" stroke-width="3"/>`;
 
-            for (let r = 1; r < 9; r++) { const y = r * CS + half; svgStr += `<line x1="${half}" y1="${y}" x2="${w - half}" y2="${y}" stroke="${strokeColor}" stroke-width="1"/>`; }
+            for (let r = 1; r < 9; r++) { const y = r * CS + half; svgStr += `<line x1="${half}" y1="${y}" x2="${w - half}" y2="${y}" stroke="${strokeColor}" stroke-width="1.5"/>`; }
             for (let c = 1; c < 8; c++) {
                 const x = c * CS + half;
-                svgStr += `<line x1="${x}" y1="${half}" x2="${x}" y2="${4 * CS + half}" stroke="${strokeColor}" stroke-width="1"/>`;
-                svgStr += `<line x1="${x}" y1="${5 * CS + half}" x2="${x}" y2="${9 * CS + half}" stroke="${strokeColor}" stroke-width="1"/>`;
+                svgStr += `<line x1="${x}" y1="${half}" x2="${x}" y2="${4 * CS + half}" stroke="${strokeColor}" stroke-width="1.5"/>`;
+                svgStr += `<line x1="${x}" y1="${5 * CS + half}" x2="${x}" y2="${9 * CS + half}" stroke="${strokeColor}" stroke-width="1.5"/>`;
             }
 
             const pLines = [
                 { x1: 3*CS+half, y1: 0*CS+half, x2: 5*CS+half, y2: 2*CS+half }, { x1: 5*CS+half, y1: 0*CS+half, x2: 3*CS+half, y2: 2*CS+half },
                 { x1: 3*CS+half, y1: 7*CS+half, x2: 5*CS+half, y2: 9*CS+half }, { x1: 5*CS+half, y1: 7*CS+half, x2: 3*CS+half, y2: 9*CS+half }
             ];
-            pLines.forEach(l => { svgStr += `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${strokeColor}" stroke-width="1"/>`; });
+            pLines.forEach(l => { svgStr += `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${strokeColor}" stroke-width="1.5"/>`; });
 
             const drawFlower = (c, r, ignoreL, ignoreR) => {
-                const cx = c * CS + half; const cy = r * CS + half; const gap = 4; const len = 8; let m = "";
-                const drawAngle = (dx, dy) => `<polyline points="${cx+dx*gap+dx*len},${cy+dy*gap} ${cx+dx*gap},${cy+dy*gap+dy*len}" fill="none" stroke="${strokeColor}" stroke-width="1"/>`;
+                const cx = c * CS + half; const cy = r * CS + half; const gap = 4; const len = 10; let m = "";
+                const drawAngle = (dx, dy) => `<polyline points="${cx+dx*gap+dx*len},${cy+dy*gap} ${cx+dx*gap},${cy+dy*gap} ${cx+dx*gap},${cy+dy*gap+dy*len}" fill="none" stroke="${strokeColor}" stroke-width="1.5"/>`;
                 if (!ignoreL) { m += drawAngle(-1, -1); m += drawAngle(-1, 1); }
                 if (!ignoreR) { m += drawAngle(1, -1); m += drawAngle(1, 1); }
                 return m;
@@ -361,9 +400,9 @@
             ];
             markSpots.forEach(s => { svgStr += drawFlower(s.c, s.r, s.c === 0, s.c === 8); });
 
-            const textY = 4.5 * CS + half + 8; 
-            svgStr += `<text x="${2 * CS + half}" y="${textY}" font-family="Kaiti, STKaiti, serif" font-size="24" fill="#666" font-weight="bold" text-anchor="middle" letter-spacing="20">楚河</text>`;
-            svgStr += `<text x="${6 * CS + half}" y="${textY}" font-family="Kaiti, STKaiti, serif" font-size="24" fill="#666" font-weight="bold" text-anchor="middle" letter-spacing="20">漢界</text>`;
+            const textY = 4.5 * CS + half + 10; 
+            svgStr += `<text x="${2.2 * CS + half}" y="${textY}" font-family="Kaiti, STKaiti, serif" font-size="32" fill="#666" font-weight="bold" text-anchor="middle" letter-spacing="25">楚河</text>`;
+            svgStr += `<text x="${5.8 * CS + half}" y="${textY}" font-family="Kaiti, STKaiti, serif" font-size="32" fill="#666" font-weight="bold" text-anchor="middle" letter-spacing="25">漢界</text>`;
             svgStr += `</svg>`;
             document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svgStr);
         }
@@ -373,11 +412,11 @@
             document.getElementById('myIdDisplay').innerText = myRoomId;
             currentRoomTopic = `chess/room/${myRoomId}`;
 
-            log("正在连接云端分布式中转集群...");
+            log("Connecting to cloud distributed relay cluster...");
             mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
 
             mqttClient.on('connect', () => {
-                log("已成功桥接至实时数据节点。正在监听本地棋局房间...");
+                log("Successfully bridged to real-time data node. Listening to local room...");
                 mqttClient.subscribe(currentRoomTopic);
             });
 
@@ -393,16 +432,16 @@
 
             mqttClient.on('error', (err) => {
                 console.error('MQTT Global Socket Context Error:', err);
-                log(`❌ [网络故障] 中转数据传输阻断: ${err.message}`);
+                log(`❌ [Network Fault] Relay transmission blocked: ${err.message}`);
             });
         }
 
         function connectToPeer(mode = 'play') {
             const remoteId = document.getElementById('peerIdInput').value.trim();
-            if (!remoteId) return alert("请输入合法的棋室密钥！");
-            if (remoteId === myRoomId) return alert("无法加入您自己本地创建的棋局！");
+            if (!remoteId) return alert("Please enter a valid room key!");
+            if (remoteId === myRoomId) return alert("Cannot join your own local room!");
 
-            log(`正在切断本地信道，迁移至对端数据总线: ${remoteId}...`);
+            log(`Cutting local channel, migrating to peer data bus: ${remoteId}...`);
             
             mqttClient.unsubscribe(currentRoomTopic);
             currentRoomTopic = `chess/room/${remoteId}`;
@@ -411,7 +450,7 @@
             if (mode === 'spectate') {
                 myRole = 'spectator';
                 sendMqttMessage('spectator_join');
-                log("正在作为【观众】切入房间...");
+                log("Entering room as [Spectator]...");
             } else {
                 myRole = 'black';
                 sendMqttMessage('join');
@@ -431,13 +470,13 @@
         function handleNetworkData(data) {
             if (data.type === 'join') {
                 myRole = 'red'; updateConnectionUI(true); updateOrientation(); initBoard();
-                log("对家已加入网络对局房间。你执红方 (先手)。");
+                log("Opponent joined the room. You play Red (First to move).");
                 sendMqttMessage('join_ack');
             } else if (data.type === 'join_ack') {
                 myRole = 'black'; updateConnectionUI(true); updateOrientation(); initBoard();
-                log("对战棋室已成功构建！你执黑方 (后手)。");
+                log("Battle room constructed! You play Black (Second to move).");
             } else if (data.type === 'spectator_join') {
-                log("👁️ 有新观众进入了观棋席。");
+                log("👁️ New spectator has entered.");
                 if (myRole === 'red' || myRole === 'black') {
                     sendMqttMessage('sync_board_to_spectator', {
                         boardState: boardState, currentTurn: currentTurn, lastMove: lastMove
@@ -449,12 +488,12 @@
                     updateConnectionUI(true); renderPieces();
                     if (lastMove && lastMove.from) drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
                     else document.getElementById('trajectoryLayer').innerHTML = '';
-                    evaluateAndDisplayWinRate(); log("⚡ 成功同步当前的战场实时局势！");
+                    evaluateAndDisplayWinRate(); log("⚡ Synchronized current battlefield state!");
                 }
             } else if (data.type === 'move') {
                 executeMoveSync(data.from.r, data.from.c, data.to.r, data.to.c);
             } else if (data.type === 'reset') {
-                resetBoardLocal(); log("对方重启了棋盘。");
+                resetBoardLocal(); log("Opponent reset the board.");
             } else if (data.type === 'role_swap') {
                 if(myRole !== 'spectator' && myRole !== null) {
                     myRole = data.nextRole; 
@@ -462,26 +501,26 @@
                 }
                 updateConnectionUI(true); 
                 resetBoardLocal(); 
-                log(`[系统自动下一局] 攻守交替，换位换色并开局！`);
+                log(`[System Next Game] Sides swapped, colors changed and initialized!`);
             } else if (data.type === 'undo_request') {
                 if (myRole === 'spectator') return;
-                if (confirm("对方请求悔棋一步，是否高抬贵手？")) {
-                    executeUndoLocal(); sendMqttMessage('undo_response', { accept: true }); log("你同意了对方的悔棋。");
+                if (confirm("Opponent requested an undo. Do you accept?")) {
+                    executeUndoLocal(); sendMqttMessage('undo_response', { accept: true }); log("You accepted the undo request.");
                 } else {
-                    sendMqttMessage('undo_response', { accept: false }); log("你拒绝了对方的悔棋。");
+                    sendMqttMessage('undo_response', { accept: false }); log("You rejected the undo request.");
                 }
             } else if (data.type === 'undo_response') {
-                if (data.accept) { executeUndoLocal(); log("对方同意了你的悔棋申请。"); } else { log("悔棋被无情拒绝。"); }
+                if (data.accept) { executeUndoLocal(); log("Opponent accepted your undo request."); } else { log("Undo request was rejected."); }
             } else if (data.type === 'draw_request') {
                 if (myRole === 'spectator') return;
-                if (confirm("对方提议言和，接受言和吗？")) {
+                if (confirm("Opponent offers a draw. Do you accept?")) {
                     currentTurn = null; updateTurnUI(); sendMqttMessage('draw_response', { accept: true });
-                    showCelebration('draw'); log("握手言和，本局以平局告终。");
-                } else { sendMqttMessage('draw_response', { accept: false }); log("你拒绝了平局协议。"); }
+                    showCelebration('draw'); log("Match ended in a draw.");
+                } else { sendMqttMessage('draw_response', { accept: false }); log("You rejected the draw offer."); }
             } else if (data.type === 'draw_response') {
-                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); log("对方同意平局。"); } else { log("对方拒绝和棋。"); }
+                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); log("Opponent accepted the draw."); } else { log("Opponent rejected the draw offer."); }
             } else if (data.type === 'resign_notice') {
-                log(`🎉 对方宣布投子认输！你在本场对抗中胜出。`);
+                log(`🎉 Opponent resigned! You emerged victorious.`);
                 triggerGameOverDirectly(data.loser === 'red' ? 'black' : 'red');
             } 
             else if (data.type === 'load_request') {
@@ -490,26 +529,26 @@
                 const oppRoleInSave = snap.savedAsRole; 
                 
                 let myTargetRole = oppRoleInSave === 'red' ? 'black' : 'red';
-                let roleText = oppRoleInSave === 'red' ? "红方" : "黑方";
-                let turnText = snap.currentTurn === 'red' ? "红方" : "黑方";
+                let roleText = oppRoleInSave === 'red' ? "Red" : "Black";
+                let turnText = snap.currentTurn === 'red' ? "Red" : "Black";
 
-                if (confirm(`📩 对方申请导入外部战局文件 (.chess)\n\n保存时对方是: ${roleText}\n保存时当前轮到: ${turnText} 走子\n\n【重要提示】同意导入后将自动将您的阵营重组为 [${myTargetRole === 'red'?'红方':'黑方'}] 并同步加载历史和棋盘。是否同意继续？`)) {
+                if (confirm(`📩 Opponent wishes to load an external game file (.chess)\n\nSaved Role: ${roleText}\nSaved Turn: ${turnText}\n\n[NOTICE] Accepting will align your side to [${myTargetRole === 'red'?'Red':'Black'}]. Do you accept?`)) {
                     applySnapshotLocal(snap, myTargetRole);
-                    log(`✅ 您同意了对方的读档请求，阵营已对齐调整为 [${myTargetRole === 'red'?'红方':'黑方'}]`);
+                    log(`✅ You accepted the load request, alignment adjusted to [${myTargetRole === 'red'?'Red':'Black'}]`);
                     sendMqttMessage('load_response', { accept: true, snapshot: snap });
                 } else {
                     sendMqttMessage('load_response', { accept: false });
-                    log("❌ 您拒绝了对方的外部导入申请。");
+                    log("❌ You rejected the external load request.");
                 }
             } 
             else if (data.type === 'load_response') {
                 if (data.accept) {
                     const snap = data.snapshot;
                     applySnapshotLocal(snap, snap.savedAsRole); 
-                    log(`🎉 对方已点击同意！战局文件加载完毕，您的阵营已同步至 [${snap.savedAsRole === 'red'?'红方':'黑方'}]`);
+                    log(`🎉 Opponent accepted! File loaded, your side aligned to [${snap.savedAsRole === 'red'?'Red':'Black'}]`);
                 } else {
-                    log("❌ 对方拒绝了您的战局载入申请，回溯终止。");
-                    alert("对方拒绝了读档申请！");
+                    log("❌ Opponent rejected your load request. Revert terminated.");
+                    alert("Opponent rejected the load request!");
                 }
             }
         }
@@ -520,14 +559,14 @@
             const subtitleEl = document.getElementById('celebrationSubtitle');
             
             let titleText = "MATCH OVER";
-            let subtitleText = "对局结束。";
+            let subtitleText = "Match has ended.";
 
             if (winner === 'draw') {
                 titleText = "DRAW";
-                subtitleText = "棋逢对手，双方各展谋略、握手言和。";
+                subtitleText = "Well fought by both sides.";
             } else if (myRole === null || myRole === 'spectator') {
-                titleText = winner === 'red' ? "红方绝杀" : "黑方绝杀";
-                subtitleText = "主将已被攻陷。您可以关闭弹窗仔细复盘，或开启新局。";
+                titleText = winner === 'red' ? "Red Wins" : "Black Wins";
+                subtitleText = "The commander has fallen. Review or start anew.";
                 
                 let duration = 2 * 1000; let animationEnd = Date.now() + duration;
                 (function frame() {
@@ -537,7 +576,7 @@
                 }());
             } else if (winner === myRole) {
                 titleText = "VICTORY";
-                subtitleText = "算无遗策！可以点击下方开始新局切换阵营。";
+                subtitleText = "Perfect strategy! Switch sides and begin anew.";
 
                 let duration = 3.5 * 1000; let animationEnd = Date.now() + duration;
                 (function frame() {
@@ -547,7 +586,7 @@
                 }());
             } else {
                 titleText = "DEFEAT";
-                subtitleText = "棋差一招。可点击下方按钮切换阵营重新发起冲锋。";
+                subtitleText = "Close match. Click below to swap and fight again.";
             }
 
             titleEl.innerText = titleText;
@@ -567,10 +606,10 @@
                     myRole = 'red'; 
                     updateOrientation(); updateConnectionUI(true); resetBoardLocal();
                 }
-                log("[战局重置] 攻守交替，新一轮网络对抗已就绪。");
+                log("[Reset] Colors swapped, new network battle is ready.");
             } else {
                 resetBoardLocal();
-                log("[单机重开] 战场初始化完毕，新对局已启动。");
+                log("[Local Reset] Battlefield initialized, new game started.");
             }
         }
 
@@ -630,6 +669,7 @@
         }
 
         function drawTrajectory(fromR, fromC, toR, toC) {
+            // Internal path uses absolute 64px scale; rendering dynamically scales it
             const CS = 64; const half = CS / 2;
             let startX = fromC * CS + half; let startY = fromR * CS + half;
             let endX = toC * CS + half; let endY = toR * CS + half;
@@ -668,7 +708,8 @@
         }
 
         function handleCellClick(r, c) {
-            if (isReplayMode) return; // Disable clicks in replay mode
+            // Disable clicks in replay mode
+            if (isReplayMode) return; 
             if (myRole === 'spectator') return; 
             if (myRole !== null) {
                 if (currentTurn !== myRole) return;
@@ -685,7 +726,7 @@
 
                 if (validateMove(selectedCell.r, selectedCell.c, r, c)) {
                     if (isBlunderMove(selectedCell.r, selectedCell.c, r, c, currentTurn)) {
-                        log("⚠️ 送将或仍处于将军状态！此步走法不成立。");
+                        log("⚠️ Move exposes general or fails to escape check! Invalid move.");
                         clearSelectionHighlights(); return;
                     }
                     
@@ -704,7 +745,7 @@
             const movingPiece = boardState[fromR][fromC];
             pendingMoveContext = { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
             
-            document.getElementById('dangerDesc').innerText = `移动您的 [${movingPiece.type}] 到 (${toR}, ${toC}) 将直接暴露在对方火网中，有被吃子的风险！确定执意前进吗？`;
+            document.getElementById('dangerDesc').innerText = `Moving your [${movingPiece.type}] to (${toR}, ${toC}) exposes it to enemy fire. Risk of immediate capture detected. Are you sure?`;
             document.getElementById('dangerBanner').classList.add('active');
             
             document.getElementById('dangerConfirmBtn').onclick = () => {
@@ -786,7 +827,7 @@
 
             if (targetPiece && (['將', '帥', '将', '帅'].includes(targetPiece.type))) {
                 gameOver = true; winner = movingPiece.color;
-                log(`[绝杀] ${winner === 'red' ? '红方' : '黑方'} 达成绝杀获胜！`);
+                log(`[Checkmate] ${winner === 'red' ? 'Red' : 'Black'} has claimed victory!`);
             } else {
                 const nextPlayerColor = currentTurn === 'red' ? 'black' : 'red';
                 let hasLegalMove = false;
@@ -809,7 +850,7 @@
 
                 if (!hasLegalMove) {
                     gameOver = true; winner = currentTurn; 
-                    log(`[困毙] ${winner === 'red' ? '红方' : '黑方'} 达成无路可走，获得胜利！`);
+                    log(`[Stalemate] ${winner === 'red' ? 'Red' : 'Black'} has no moves left, victory claimed!`);
                 }
             }
 
@@ -837,13 +878,13 @@
         }
 
         function handleResign() {
-            if (!currentTurn) return alert("对局尚未开始或已经结束！");
-            if (!confirm("胜败乃兵家常事，确定要投子认输吗？")) return;
+            if (!currentTurn) return alert("Game hasn't started or has already ended!");
+            if (!confirm("Are you sure you want to resign?")) return;
 
             let loserColor = (myRole !== null) ? myRole : currentTurn;
             let winnerColor = loserColor === 'red' ? 'black' : 'red';
 
-            log(`🏳️ [认输] ${loserColor === 'red' ? '红方' : '黑方'} 宣布投子认输。`);
+            log(`🏳️ [Resign] ${loserColor === 'red' ? 'Red' : 'Black'} resigns the match.`);
             
             if (myRole !== null && myRole !== 'spectator') {
                 sendMqttMessage('resign_notice', { loser: myRole });
@@ -853,7 +894,7 @@
         }
 
         function saveGame() {
-            if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
+            if (!currentTurn) return alert("No active game to save!");
             
             const savePacket = {
                 boardState: boardState,
@@ -875,7 +916,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            log("💾 [数据中心] 当前棋盘全量回溯时空链已打包导出为 .chess 外部战术文件。");
+            log("💾 [Data Center] Board state successfully exported to .chess file.");
         }
 
         function handleFileSelect(event) {
@@ -888,7 +929,7 @@
                     const snapshot = JSON.parse(e.target.result);
                     processLoadedSnapshot(snapshot);
                 } catch (err) {
-                    alert("战术文件格式解析错误或已被恶意篡改！");
+                    alert("Tactics file parse error or corrupted format!");
                 }
             };
             reader.readAsText(file);
@@ -898,15 +939,15 @@
         function processLoadedSnapshot(snapshot) {
             if (myRole === null) {
                 applySnapshotLocal(snapshot);
-                log("📂 [数据中心] 本地单机外部战术文件加载成功。");
+                log("📂 [Data Center] Local external file loaded successfully.");
                 return;
             }
             if (myRole === 'spectator') {
-                alert("旁观者无权在公用棋室发起战局篡改/读档请求！");
+                alert("Spectators cannot initiate load operations!");
                 return;
             }
 
-            log("📡 [读档申请] 正在向对方节点发出【外部战局导入】双向握手确认...");
+            log("📡 [Load Request] Sending load handshake to peer...");
             sendMqttMessage('load_request', { snapshot: snapshot });
         }
 
@@ -1107,7 +1148,7 @@
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;
             document.getElementById('assistToggle').checked = assistModeActive;
-            log(`[AI 引擎] 智能走法路线规划已被${assistModeActive?'激活':'关闭'}。`);
+            log(`[AI Engine] Smart move planning is now ${assistModeActive?'ENABLED':'DISABLED'}.`);
             if(assistModeActive && currentTurn) calculateBestMove();
             else clearAssistHighlights();
         }
@@ -1115,7 +1156,7 @@
         function toggleRiskAlertMode(force) {
             riskAlertActive = force !== undefined ? force : !riskAlertActive;
             document.getElementById('riskToggle').checked = riskAlertActive;
-            log(`[系统提示] 战局失子风险拦截警报已${riskAlertActive?'开启':'关闭'}。`);
+            log(`[System] Blunder capture risk interception is now ${riskAlertActive?'ENABLED':'DISABLED'}.`);
             if(!riskAlertActive) cancelPendingMove();
         }
 
@@ -1170,29 +1211,29 @@
 
             if (isConnected) {
                 if(myRole === 'spectator') {
-                    badge.innerText = "实时观棋"; badge.className = "status-badge spectator-mode";
-                    rBadge.style.display = "inline-block"; rBadge.innerText = "旁观者";
-                    undoBtn.disabled = true; drawBtn.disabled = true; resetBtn.disabled = true; resignBtn.disabled = true;
-                    undoBtn.style.opacity = 0.4; drawBtn.style.opacity = 0.4; resetBtn.style.opacity = 0.4; resignBtn.style.opacity = 0.4;
+                    badge.innerText = "Real-time Spectate"; badge.className = "status-badge spectator-mode";
+                    rBadge.style.display = "inline-block"; rBadge.innerText = "Spectator";
+                    undoBtn.disabled = true; drawBtn.disabled = true; if(resetBtn) resetBtn.disabled = true; resignBtn.disabled = true;
+                    undoBtn.style.opacity = 0.4; drawBtn.style.opacity = 0.4; if(resetBtn) resetBtn.style.opacity = 0.4; resignBtn.style.opacity = 0.4;
                 } else {
-                    badge.innerText = "网络对战"; badge.className = "status-badge connected";
-                    rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'red' ? "红方(先手)" : "黑方(后手)";
-                    undoBtn.disabled = false; drawBtn.disabled = false; resetBtn.disabled = false; resignBtn.disabled = false;
-                    undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; resetBtn.style.opacity = 1; resignBtn.style.opacity = 1;
+                    badge.innerText = "Network Battle"; badge.className = "status-badge connected";
+                    rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'red' ? "Red (1st)" : "Black (2nd)";
+                    undoBtn.disabled = false; drawBtn.disabled = false; if(resetBtn) resetBtn.disabled = false; resignBtn.disabled = false;
+                    undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; if(resetBtn) resetBtn.style.opacity = 1; resignBtn.style.opacity = 1;
                 }
             } else {
-                badge.innerText = "离线单机"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
-                undoBtn.disabled = false; drawBtn.disabled = false; resetBtn.disabled = false; resignBtn.disabled = false;
-                undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; resetBtn.style.opacity = 1; resignBtn.style.opacity = 1;
+                badge.innerText = "Local Mode"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
+                undoBtn.disabled = false; drawBtn.disabled = false; if(resetBtn) resetBtn.disabled = false; resignBtn.disabled = false;
+                undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; if(resetBtn) resetBtn.style.opacity = 1; resignBtn.style.opacity = 1;
             }
             updateTurnUI();
         }
 
         function updateTurnUI() {
             const turnBadge = document.getElementById('turnStatus'); if (!currentTurn) { turnBadge.style.display = "none"; return; }
-            turnBadge.style.display = "inline-block"; const name = currentTurn === 'red' ? '红方' : '黑方'; turnBadge.innerText = `当前回合: ${name}`;
+            turnBadge.style.display = "inline-block"; const name = currentTurn === 'red' ? 'Red' : 'Black'; turnBadge.innerText = `Current Turn: ${name}`;
             if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { 
-                turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (轮到你)"; 
+                turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (You)"; 
             } else { 
                 turnBadge.className = "status-badge"; 
             }
@@ -1205,17 +1246,17 @@
             document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
         }
 
-        function copyRoomKey() { const id = document.getElementById('myIdDisplay').innerText; if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("钥匙复制成功，快发给好友吧！")); }
+        function copyRoomKey() { const id = document.getElementById('myIdDisplay').innerText; if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("Room key copied!")); }
         function log(text) { const logBox = document.getElementById('logBox'); logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; logBox.scrollTop = logBox.scrollHeight; }
 
         function requestUndo() {
             if (myRole === 'spectator') return;
-            if (!currentTurn) return alert("对局已结束！");
-            if (moveHistory.length === 0) return alert("没有可以撤销的步骤。");
+            if (!currentTurn) return alert("Match has ended!");
+            if (moveHistory.length === 0) return alert("No moves to undo.");
             if (myRole !== null) {
-                if (currentTurn === myRole) return alert("必须在对方回合期间才能申请悔棋！");
-                log("正在向对方发送悔棋请求..."); sendMqttMessage('undo_request');
-            } else { executeUndoLocal(); log("本地悔棋成功。"); }
+                if (currentTurn === myRole) return alert("You can only request an undo during opponent's turn!");
+                log("Sending undo request to opponent..."); sendMqttMessage('undo_request');
+            } else { executeUndoLocal(); log("Local undo successful."); }
         }
 
         function executeUndoLocal() {
@@ -1230,9 +1271,9 @@
 
         function requestDraw() {
             if (myRole === 'spectator') return;
-            if (!currentTurn) return alert("比赛已经结束。");
-            if (myRole !== null) { log("正在向对家发送和棋协议..."); sendMqttMessage('draw_request'); } 
-            else { log("单机演练：直接以平局闭幕。"); currentTurn = null; updateTurnUI(); showCelebration('draw'); }
+            if (!currentTurn) return alert("Match has ended.");
+            if (myRole !== null) { log("Sending draw request to opponent..."); sendMqttMessage('draw_request'); } 
+            else { log("Local Mode: Ending match in a draw directly."); currentTurn = null; updateTurnUI(); showCelebration('draw'); }
         }
 
         // ==================== Replay Mode Logic ====================
@@ -1268,7 +1309,6 @@
             // Hide normal gameplay buttons
             document.getElementById('undoBtn').parentElement.style.display = 'none';
             document.getElementById('resignBtn').parentElement.style.display = 'none';
-            document.getElementById('resetBtn').style.display = 'none';
 
             // Inject Next/Prev Replay controls
             const replayUI = document.createElement('div');

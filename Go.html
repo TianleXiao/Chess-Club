@@ -104,7 +104,7 @@
         .eval-fill.black-fill { background-color: #3f3f46; width: 50%; }
         .eval-fill.white-fill { background-color: #f4f4f5; width: 50%; }
 
-        .action-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .action-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
         /* 警告横幅 */
         .danger-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%) translateY(-150%); background: var(--danger); color: white; padding: 10px 20px; border-radius: 8px; display: flex; gap: 12px; align-items: center; transition: 0.3s var(--ease); z-index: 100; font-size: 13px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
@@ -186,8 +186,11 @@
 
             <div class="action-bar">
                 <button class="btn btn-secondary" onclick="requestUndo()">↺ 悔棋</button>
-                <button class="btn btn-secondary" onclick="sendPass()">停手 (Pass)</button>
+                <button class="btn btn-secondary" onclick="sendPass()">✋ 停手</button>
                 <button class="btn btn-danger" onclick="requestResign()">⚐ 认输</button>
+                <button class="btn btn-secondary" style="border-color: #c084fc; color: #c084fc;" onclick="saveGame()">💾 导出存档</button>
+                <button class="btn btn-secondary" style="border-color: #4ade80; color: #4ade80;" onclick="document.getElementById('fileLoadInput').click()">📂 导入存档</button>
+                <input type="file" id="fileLoadInput" accept=".go" style="display:none;" onchange="handleFileSelect(event)">
                 <button class="btn" style="background: var(--text-dim); color: #000;" onclick="initBoard()">重新开始</button>
             </div>
         </div>
@@ -321,7 +324,113 @@
                 if (data.accept) { executeUndoLocal(); toast("悔棋成功"); } else { alert("对方拒绝了你的悔棋请求。"); }
             } else if (data.type === 'resign') {
                 handleGameOver(true, "对方认输");
+            } else if (data.type === 'load_request') {
+                const snap = data.snapshot;
+                const oppRoleInSave = snap.savedAsRole;
+                
+                // 动态解算：为了让两边完美对齐存盘时的黑白视角
+                let myTargetRole = oppRoleInSave === 'black' ? 'white' : 'black';
+                let roleText = oppRoleInSave === 'black' ? "黑方" : "白方";
+
+                if (confirm(`📩 对方申请导入外部战局文件 (.go)\n\n保存时对方是: ${roleText}\n\n【重要提示】同意导入后将自动将您的阵营重组为 [${myTargetRole === 'black'?'黑方':'白方'}] 并同步加载棋盘。是否同意？`)) {
+                    applySnapshotLocal(snap, myTargetRole);
+                    toast(`✅ 您同意了读档请求，阵营已对齐调整为 [${myTargetRole === 'black'?'黑方':'白方'}]`);
+                    sendMqttMessage('load_response', { accept: true, snapshot: snap });
+                } else {
+                    sendMqttMessage('load_response', { accept: false });
+                    toast("❌ 您拒绝了对方的外部导入申请。");
+                }
+            } else if (data.type === 'load_response') {
+                if (data.accept) {
+                    const snap = data.snapshot;
+                    applySnapshotLocal(snap, snap.savedAsRole); // 发起人以自己存盘时的身份载入
+                    toast(`🎉 对方已同意！战局加载完毕，您的阵营已同步至 [${snap.savedAsRole === 'black'?'黑方':'白方'}]`);
+                    alert("对方已同意！战局加载完毕。");
+                } else {
+                    toast("❌ 对方拒绝了您的战局载入申请，回溯终止。");
+                    alert("对方拒绝了读档申请！");
+                }
             }
+        }
+
+        // ================= 数据存档与读档 =================
+        function saveGame() {
+            if (moveHistory.length === 0 && !lastMove) return alert("当前棋盘为空，无需保存！");
+            
+            const savePacket = {
+                boardState: boardState,
+                currentTurn: currentTurn,
+                lastMove: lastMove,
+                moveHistory: moveHistory,
+                savedAsRole: myRole  // 深度打包：写入存盘时的阵营标记
+            };
+            
+            // 使用前端 Blob 封装为可下载的文本二进制流
+            const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timeStr = new Date().toISOString().slice(0, 10);
+            
+            a.href = url;
+            a.download = `Go_Studio_Archive_${timeStr}.go`; // 围棋专属后缀
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            toast("💾 [数据中心] 对局已导出为 .go 文件");
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const snapshot = JSON.parse(e.target.result);
+                    processLoadedSnapshot(snapshot);
+                } catch (err) {
+                    alert("战局文件格式解析错误或已被篡改！");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 释放输入槽位
+        }
+
+        function processLoadedSnapshot(snapshot) {
+            // 单机模式直接强制覆盖
+            if (myRole === null) {
+                applySnapshotLocal(snapshot);
+                toast("📂 本地单机战术文件加载成功。");
+                alert("战局加载成功！");
+                return;
+            }
+            // 联机模式发起双向确认握手
+            sendMqttMessage('load_request', { snapshot: snapshot });
+            toast("📡 已向对方发送读档握手请求...");
+        }
+
+        // 基础图层渲染与时空还原驱动
+        function applySnapshotLocal(snapshot, targetRole) {
+            boardState = snapshot.boardState;
+            currentTurn = snapshot.currentTurn;
+            lastMove = snapshot.lastMove;
+            moveHistory = snapshot.moveHistory;
+            
+            // 如果联机模式指定了要对齐调整的角色身份，则强行覆盖调整
+            if (targetRole !== undefined) {
+                myRole = targetRole;
+                updateConnectionUI(true);
+            }
+
+            cancelPendingMove();
+            clearAssistHighlights();
+            renderStones(); 
+            updateTurnUI();
+            updateStonesCount();
+            
+            if (assistModeActive) calculateBestMove();
         }
 
         // ================= 游戏逻辑 =================

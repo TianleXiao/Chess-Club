@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Chinese Chess - Traditional Masterpiece Pro (Advanced Suite)</title>
+    <title>P2P Chinese Chess - Masterpiece Pro (Archive Exchange Suite)</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -108,7 +108,6 @@
 
         .trajectory-path { fill: none; stroke: #8a50ff; stroke-width: 2; stroke-dasharray: 4 5; animation: dash 1.2s linear infinite; opacity: 0.75; }
 
-        /* Inverted perspective for Black role view matrix */
         .flipped-view { transform: rotate(180deg); }
         .flipped-view .piece { transform: rotate(180deg); }
         .flipped-view .cell.selected .piece { transform: scale(1.16) translateY(-3px) rotate(180deg); }
@@ -175,7 +174,10 @@
         <div class="celebration-card">
             <div id="celebrationTitle" class="celebration-title">VICTORY</div>
             <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
-            <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">查看局势</button>
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">复盘查看局势</button>
+                <button class="btn" id="nextMatchBtn" onclick="startNextMatchManual()">开始新局/攻守交替</button>
+            </div>
         </div>
     </div>
 
@@ -251,7 +253,13 @@
                 <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">求情悔棋</button>
                 <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">提议言和</button>
             </div>
-            <button class="btn btn-secondary" style="width: 100%;" id="resetBtn" onclick="initBoard()">Reset Match</button>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="btn btn-danger" style="flex: 1;" id="resignBtn" onclick="handleResign()">投子认输</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #8a50ff; color: #8a50ff;" id="saveBtn" onclick="saveGame()">导出存档</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #52b788; color: #52b788;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">导入存档</button>
+                <input type="file" id="fileLoadInput" accept=".chess" style="display:none;" onchange="handleFileSelect(event)">
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">强制掀翻重开</button>
         </div>
 
         <div class="board-wrapper" id="boardWrapper">
@@ -272,7 +280,6 @@
     </div>
 
     <script>
-        // Use English comments globally inside javascript workspace configuration matrix
         let boardState = Array(10).fill(null).map(() => Array(9).fill(null));
         let selectedCell = null;
         let myRole = null; 
@@ -281,10 +288,9 @@
         let moveHistory = [];
         let assistModeActive = false;
         let riskAlertActive = false; 
+        let lastMatchWinner = null;
         
         let pendingMoveContext = null;
-
-        // Sequence locking to prevent overlapping asynchronous engine packet corruption
         let currentPredictRequestId = 0; 
 
         let mqttClient = null;
@@ -470,6 +476,41 @@
                 } else { sendMqttMessage('draw_response', { accept: false }); log("你拒绝了平局协议。"); }
             } else if (data.type === 'draw_response') {
                 if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); log("对方同意平局。"); } else { log("对方拒绝和棋。"); }
+            } else if (data.type === 'resign_notice') {
+                log(`🎉 对方宣布投子认输！你在本场对抗中胜出。`);
+                triggerGameOverDirectly(data.loser === 'red' ? 'black' : 'red');
+            } 
+            // 核心高阶信令：捕获对方的外部读档申请 (.chess)
+            else if (data.type === 'load_request') {
+                if (myRole === 'spectator') return;
+                const snap = data.snapshot;
+                const oppRoleInSave = snap.savedAsRole; // 对方存盘时的身份
+                
+                // 动态解算：为了让两边完美对齐存盘时的红黑视角
+                // 对方存盘时如果是红，那我这里应该自动调整为黑；反之亦然
+                let myTargetRole = oppRoleInSave === 'red' ? 'black' : 'red';
+                let roleText = oppRoleInSave === 'red' ? "红方" : "黑方";
+                let turnText = snap.currentTurn === 'red' ? "红方" : "黑方";
+
+                if (confirm(`📩 对方申请导入外部战局文件 (.chess)\n\n保存时对方是: ${roleText}\n保存时当前轮到: ${turnText} 走子\n\n【重要提示】同意导入后将自动将您的阵营重组为 [${myTargetRole === 'red'?'红方':'黑方'}] 并同步加载历史和棋盘。是否同意继续？`)) {
+                    applySnapshotLocal(snap, myTargetRole);
+                    log(`✅ 您同意了对方的读档请求，阵营已对齐调整为 [${myTargetRole === 'red'?'红方':'黑方'}]`);
+                    sendMqttMessage('load_response', { accept: true, snapshot: snap });
+                } else {
+                    sendMqttMessage('load_response', { accept: false });
+                    log("❌ 您拒绝了对方的外部导入申请。");
+                }
+            } 
+            // 核心高阶信令：接收对方对读档的审批答复
+            else if (data.type === 'load_response') {
+                if (data.accept) {
+                    const snap = data.snapshot;
+                    applySnapshotLocal(snap, snap.savedAsRole); // 发起人以自己存盘时的身份载入
+                    log(`🎉 对方已点击同意！战局文件加载完毕，您的阵营已同步至 [${snap.savedAsRole === 'red'?'红方':'黑方'}]`);
+                } else {
+                    log("❌ 对方拒绝了您的战局载入申请，回溯终止。");
+                    alert("对方拒绝了读档申请！");
+                }
             }
         }
 
@@ -486,7 +527,7 @@
                 subtitleText = "棋逢对手，双方各展谋略、握手言和。";
             } else if (myRole === null || myRole === 'spectator') {
                 titleText = winner === 'red' ? "红方绝杀" : "黑方绝杀";
-                subtitleText = "主将已被攻陷。3秒后自动开启下一局演练...";
+                subtitleText = "主将已被攻陷。您可以关闭弹窗仔细复盘，或开启新局。";
                 
                 let duration = 2 * 1000; let animationEnd = Date.now() + duration;
                 (function frame() {
@@ -496,7 +537,7 @@
                 }());
             } else if (winner === myRole) {
                 titleText = "VICTORY";
-                subtitleText = "算无遗策！3秒后将自动调换阵营并为您开启下一局。";
+                subtitleText = "算无遗策！可以点击下方开始新局切换阵营。";
 
                 let duration = 3.5 * 1000; let animationEnd = Date.now() + duration;
                 (function frame() {
@@ -506,16 +547,31 @@
                 }());
             } else {
                 titleText = "DEFEAT";
-                subtitleText = "棋差一招。3秒后将自动调换阵营并为您开启下一局。";
+                subtitleText = "棋差一招。可点击下方按钮切换阵营重新发起冲锋。";
             }
 
             titleEl.innerText = titleText;
             subtitleEl.innerText = subtitleText;
             overlay.classList.add('active');
+        }
 
-            setTimeout(() => {
-                overlay.classList.remove('active');
-            }, 3000);
+        function startNextMatchManual() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            
+            if (myRole !== null && myRole !== 'spectator') {
+                if (myRole === 'red') {
+                    sendMqttMessage('role_swap', { nextRole: myRole }); 
+                    myRole = 'black'; 
+                    updateOrientation(); updateConnectionUI(true); resetBoardLocal();
+                } else if (myRole === 'black') {
+                    myRole = 'red'; 
+                    updateOrientation(); updateConnectionUI(true); resetBoardLocal();
+                }
+                log("[战局重置] 攻守交替，新一轮网络对抗已就绪。");
+            } else {
+                resetBoardLocal();
+                log("[单机重开] 战场初始化完毕，新对局已启动。");
+            }
         }
 
         function createDOMGrid() {
@@ -757,33 +813,143 @@
             }
 
             if (gameOver) {
-                showCelebration(winner);
-                currentTurn = null; updateTurnUI(); playChessSound();
-
-                setTimeout(() => {
-                    if (myRole !== null && myRole !== 'spectator') {
-                        if (winner === myRole) matchStats.wins++; else matchStats.losses++;
-                        localStorage.setItem('chess_p2p_stats', JSON.stringify(matchStats));
-                        updateStatsUI();
-
-                        if (myRole === 'red') {
-                            sendMqttMessage('role_swap', { nextRole: myRole }); 
-                            myRole = 'black'; 
-                            updateOrientation(); updateConnectionUI(true); resetBoardLocal();
-                        } else if (myRole === 'black') {
-                            myRole = 'red'; 
-                            updateOrientation(); updateConnectionUI(true); resetBoardLocal();
-                        }
-                    } else if (myRole === null) {
-                        resetBoardLocal();
-                        log("[单机重开] 战场初始化完毕。");
-                    }
-                }, 3000);
+                triggerGameOverDirectly(winner);
                 return;
             }
 
             currentTurn = currentTurn === 'red' ? 'black' : 'red'; updateTurnUI(); playChessSound();
             if (assistModeActive) setTimeout(calculateBestMove, 50);
+        }
+
+        function triggerGameOverDirectly(winner) {
+            lastMatchWinner = winner;
+            showCelebration(winner);
+            currentTurn = null; 
+            updateTurnUI(); 
+            playChessSound();
+
+            if (myRole !== null && myRole !== 'spectator') {
+                if (winner === myRole) matchStats.wins++; else matchStats.losses++;
+                localStorage.setItem('chess_p2p_stats', JSON.stringify(matchStats));
+                updateStatsUI();
+            }
+        }
+
+        function handleResign() {
+            if (!currentTurn) return alert("对局尚未开始或已经结束！");
+            if (!confirm("胜败乃兵家常事，确定要投子认输吗？")) return;
+
+            let loserColor = (myRole !== null) ? myRole : currentTurn;
+            let winnerColor = loserColor === 'red' ? 'black' : 'red';
+
+            log(`🏳️ [认输] ${loserColor === 'red' ? '红方' : '黑方'} 宣布投子认输。`);
+            
+            if (myRole !== null && myRole !== 'spectator') {
+                sendMqttMessage('resign_notice', { loser: myRole });
+            }
+            
+            triggerGameOverDirectly(winnerColor);
+        }
+
+        // ==================== 专有高级数据文件存档模块 ====================
+
+        // 导出专属的 .chess 战术数据文件
+        function saveGame() {
+            if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
+            
+            const savePacket = {
+                boardState: boardState,
+                currentTurn: currentTurn,
+                lastMove: lastMove,
+                moveHistory: moveHistory,
+                savedAsRole: myRole  // 深度打包：写入存盘时的阵营标记
+            };
+            
+            // 使用前端 Blob 封装为可下载的文本二进制流
+            const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timeStr = new Date().toISOString().slice(0, 10);
+            
+            a.href = url;
+            a.download = `Chess_Studio_Archive_${timeStr}.chess`; // 导出专属后缀文件
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            log("💾 [数据中心] 当前棋盘全量回溯时空链已打包导出为 .chess 外部战术文件。");
+        }
+
+        // 捕获导入的文件并加载
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const snapshot = JSON.parse(e.target.result);
+                    processLoadedSnapshot(snapshot);
+                } catch (err) {
+                    alert("战术文件格式解析错误或已被恶意篡改！");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 释放槽位
+        }
+
+        // 识别导入文件的场景
+        function processLoadedSnapshot(snapshot) {
+            // 场景 A：离线单机模式，无须通过对方审批，直接时空重组
+            if (myRole === null) {
+                applySnapshotLocal(snapshot);
+                log("📂 [数据中心] 本地单机外部战术文件加载成功。");
+                return;
+            }
+            if (myRole === 'spectator') {
+                alert("旁观者无权在公用棋室发起战局篡改/读档请求！");
+                return;
+            }
+
+            // 场景 B：联机模式下发起“读档双向确认握手”
+            log("📡 [读档申请] 正在向对方节点发出【外部战局导入】双向握手确认...");
+            sendMqttMessage('load_request', { snapshot: snapshot });
+        }
+
+        // 基础图层渲染与时空还原驱动
+        function applySnapshotLocal(snapshot, targetRole) {
+            boardState = snapshot.boardState;
+            currentTurn = snapshot.currentTurn;
+            lastMove = snapshot.lastMove;
+            moveHistory = snapshot.moveHistory;
+            
+            // 如果联机模式指定了要对齐调整的角色身份，则强行覆盖调整
+            if (targetRole) {
+                myRole = targetRole;
+                updateOrientation();
+                updateConnectionUI(true);
+            }
+
+            clearSelectionHighlights(); 
+            renderPieces(); 
+            updateTurnUI();
+            cancelPendingMove();
+            
+            if (lastMove && lastMove.from && lastMove.from.r !== null) {
+                drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
+            } else {
+                document.getElementById('trajectoryLayer').innerHTML = '';
+            }
+            
+            evaluateAndDisplayWinRate();
+
+            // 若房间存在观众，立刻把最新残局广播同步给观众席
+            if (myRole === 'red' || myRole === 'black') {
+                sendMqttMessage('sync_board_to_spectator', {
+                    boardState: boardState, currentTurn: currentTurn, lastMove: lastMove
+                });
+            }
         }
 
         function isBlunderMove(fromR, fromC, toR, toC, side) {
@@ -832,45 +998,8 @@
             return true;
         }
 
-        function clearSelectionHighlights() {
-            selectedCell = null;
-            document.querySelectorAll('.cell').forEach(el => { el.classList.remove('selected', 'valid-target', 'blunder-target'); });
-        }
-
-        function validateMove(fromR, fromC, toR, toC, ignoreBlunderSim = false) {
-            const p = boardState[fromR][fromC]; const target = boardState[toR][toC];
-            if (!p || (target && target.color === p.color)) return false; 
-            const dr = toR - fromR; const dc = toC - fromC;
-            const absDr = Math.abs(dr); const absDc = Math.abs(dc);
-            
-            const countLine = (r1, c1, r2, c2) => {
-                let cnt = 0;
-                if (r1 === r2) {
-                    let minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
-                    for (let c = minC + 1; c < maxC; c++) if (boardState[r1][c]) cnt++;
-                } else if (c1 === c2) {
-                    let minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
-                    for (let r = minR + 1; r < maxR; r++) if (boardState[r][c1]) cnt++;
-                }
-                return cnt;
-            };
-
-            switch(p.type) {
-                case '车': case '車': if (fromR !== toR && fromC !== toC) return false; return countLine(fromR, fromC, toR, toC) === 0;
-                case '炮': case '砲': if (fromR !== toR && fromC !== toC) return false; let count = countLine(fromR, fromC, toR, toC); return !target ? count === 0 : count === 1;
-                case '马': case '馬': if ((absDr === 2 && absDc === 1) || (absDr === 1 && absDc === 2)) { if (absDr === 2 && boardState[fromR + dr/2][fromC]) return false; if (absDc === 2 && boardState[fromR][fromC + dc/2]) return false; return true; } return false;
-                case '象': case '相': if (absDr !== 2 || absDc !== 2) return false; if (p.color === 'red' && toR < 5) return false; if (p.color === 'black' && toR > 4) return false; return !boardState[fromR + dr/2][fromC + dc/2];
-                case '士': case '仕': if (absDr !== 1 || absDc !== 1 || toC < 3 || toC > 5) return false; return p.color === 'red' ? toR >= 7 : toR <= 2;
-                case '将': case '將': case '帅': case '帥': if (absDr + absDc !== 1 || toC < 3 || toC > 5) return false; return p.color === 'red' ? toR >= 7 : toR <= 2;
-                case '兵': if (dr === -1 && dc === 0) return true; if (fromR <= 4 && dr === 0 && absDc === 1) return true; return false;
-                case '卒': if (dr === 1 && dc === 0) return true; if (fromR >= 5 && dr === 0 && absDc === 1) return true; return false;
-            }
-            return false;
-        }
-
         // ==================== 皮卡鱼 AI 对接核心组件 ====================
 
-        // 1. Convert 2D board state array into standard FEN string format
         function generateFEN() {
             let fenRows = [];
             const typeMap = {
@@ -903,7 +1032,6 @@
             return `${fenBoard} ${fenTurn} - - 0 1`;
         }
 
-        // 2. Map UCI coordinate indices back into 2D mesh layout references
         const colMap = { 'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5, 'g':6, 'h':7, 'i':8 };
         function uciToCoords(uciStr) {
             const fromC = colMap[uciStr[0]];
@@ -913,15 +1041,12 @@
             return { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
         }
 
-        // 3. Asynchronously request analyze calculations from backend server ports
         function calculateBestMove() {
             if (!currentTurn) return;
             clearAssistHighlights();
 
-            // Lock and increment request sequences to discard late packets during rapid local alternate moves
             currentPredictRequestId++;
             const trackedId = currentPredictRequestId;
-
             const currentFen = generateFEN();
 
             fetch('http://localhost:3000/api/analyze', {
@@ -931,11 +1056,8 @@
             })
             .then(res => res.json())
             .then(data => {
-                // Drop expired packet contexts if another turn was triggered locally before return
                 if (trackedId !== currentPredictRequestId) return; 
 
-                // 仅为当前持子方渲染AI紫圈路线推荐
-                // 逻辑：如果是单机模式(myRole 为 null) 或者 轮到自己的回合，才属于"持子方"
                 let isPieceHolder = (myRole === null) || (myRole === currentTurn);
 
                 if (isPieceHolder && data.bestMove && data.bestMove !== '(none)' && data.bestMove !== '0000') {
@@ -946,7 +1068,6 @@
                     if(eCell) eCell.classList.add('assist-end');
                 }
 
-                // Render dynamic master evaluation engine score matrixes smoothly
                 let score = data.score;
                 let redRate = 50 + (score / 35); 
                 redRate = Math.max(5, Math.min(95, redRate)); 
@@ -964,7 +1085,6 @@
             });
         }
 
-        // Fallback mathematical array weights evaluation handler
         function evaluateBoard() {
             let score = 0;
             for (let r = 0; r < 10; r++) {
@@ -993,11 +1113,7 @@
         }
 
         function evaluateAndDisplayWinRate() {
-            if (assistModeActive) {
-                calculateBestMove();
-            } else {
-                evaluateAndDisplayWinRateFallback();
-            }
+            if (assistModeActive) { calculateBestMove(); } else { evaluateAndDisplayWinRateFallback(); }
         }
 
         function toggleAssistMode(force) {
@@ -1019,30 +1135,67 @@
             if (e.ctrlKey && e.key.toLowerCase() === 'w') { e.preventDefault(); toggleAssistMode(); }
         });
 
+        function clearSelectionHighlights() {
+            selectedCell = null;
+            document.querySelectorAll('.cell').forEach(el => { el.classList.remove('selected', 'valid-target', 'blunder-target'); });
+        }
+
         function clearAssistHighlights() { document.querySelectorAll('.cell').forEach(el => el.classList.remove('assist-start', 'assist-end')); }
+
+        function validateMove(fromR, fromC, toR, toC, ignoreBlunderSim = false) {
+            const p = boardState[fromR][fromC]; const target = boardState[toR][toC];
+            if (!p || (target && target.color === p.color)) return false; 
+            const dr = toR - fromR; const dc = toC - fromC;
+            const absDr = Math.abs(dr); const absDc = Math.abs(dc);
+            
+            const countLine = (r1, c1, r2, c2) => {
+                let cnt = 0;
+                if (r1 === r2) {
+                    let minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+                    for (let c = minC + 1; c < maxC; c++) if (boardState[r1][c]) cnt++;
+                } else if (c1 === c2) {
+                    let minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
+                    for (let r = minR + 1; r < maxR; r++) if (boardState[r][c1]) cnt++;
+                }
+                return cnt;
+            };
+
+            switch(p.type) {
+                case '车': case '車': if (fromR !== toR && fromC !== toC) return false; return countLine(fromR, fromC, toR, toC) === 0;
+                case '炮': case '砲': if (fromR !== toR && fromC !== toC) return false; let count = countLine(fromR, fromC, toR, toC); return !target ? count === 0 : count === 1;
+                case '马': case '馬': if ((absDr === 2 && absDc === 1) || (absDr === 1 && absDc === 2)) { if (absDr === 2 && boardState[fromR + dr/2][fromC]) return false; if (absDc === 2 && boardState[fromR][fromC + dc/2]) return false; return true; } return false;
+                case '象': case '相': if (absDr !== 2 || absDc !== 2) return false; if (p.color === 'red' && toR < 5) return false; if (p.color === 'black' && toR > 4) return false; return !boardState[fromR + dr/2][fromC + dc/2];
+                case '士': case '仕': if (absDr !== 1 || absDc !== 1 || toC < 3 || toC > 5) return false; return p.color === 'red' ? toR >= 7 : toR <= 2;
+                case '将': case '將': case '帅': case '帥': if (absDr + absDc !== 1 || toC < 3 || toC > 5) return false; return p.color === 'red' ? toR >= 7 : toR <= 2;
+                case '兵': if (dr === -1 && dc === 0) return true; if (fromR <= 4 && dr === 0 && absDc === 1) return true; return false;
+                case '卒': if (dr === 1 && dc === 0) return true; if (fromR >= 5 && dr === 0 && absDc === 1) return true; return false;
+            }
+            return false;
+        }
 
         function updateConnectionUI(isConnected) {
             const badge = document.getElementById('connectionStatus'); const rBadge = document.getElementById('roleStatus');
             const undoBtn = document.getElementById('undoBtn');
             const drawBtn = document.getElementById('drawBtn');
             const resetBtn = document.getElementById('resetBtn');
+            const resignBtn = document.getElementById('resignBtn');
 
             if (isConnected) {
                 if(myRole === 'spectator') {
                     badge.innerText = "实时观棋"; badge.className = "status-badge spectator-mode";
                     rBadge.style.display = "inline-block"; rBadge.innerText = "旁观者";
-                    undoBtn.disabled = true; drawBtn.disabled = true; resetBtn.disabled = true;
-                    undoBtn.style.opacity = 0.4; drawBtn.style.opacity = 0.4; resetBtn.style.opacity = 0.4;
+                    undoBtn.disabled = true; drawBtn.disabled = true; resetBtn.disabled = true; resignBtn.disabled = true;
+                    undoBtn.style.opacity = 0.4; drawBtn.style.opacity = 0.4; resetBtn.style.opacity = 0.4; resignBtn.style.opacity = 0.4;
                 } else {
                     badge.innerText = "网络对战"; badge.className = "status-badge connected";
                     rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'red' ? "红方(先手)" : "黑方(后手)";
-                    undoBtn.disabled = false; drawBtn.disabled = false; resetBtn.disabled = false;
-                    undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; resetBtn.style.opacity = 1;
+                    undoBtn.disabled = false; drawBtn.disabled = false; resetBtn.disabled = false; resignBtn.disabled = false;
+                    undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; resetBtn.style.opacity = 1; resignBtn.style.opacity = 1;
                 }
             } else {
                 badge.innerText = "离线单机"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
-                undoBtn.disabled = false; drawBtn.disabled = false; resetBtn.disabled = false;
-                undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; resetBtn.style.opacity = 1;
+                undoBtn.disabled = false; drawBtn.disabled = false; resetBtn.disabled = false; resignBtn.disabled = false;
+                undoBtn.style.opacity = 1; drawBtn.style.opacity = 1; resetBtn.style.opacity = 1; resignBtn.style.opacity = 1;
             }
             updateTurnUI();
         }

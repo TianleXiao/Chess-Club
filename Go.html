@@ -30,11 +30,11 @@
         ::-webkit-scrollbar { width: 0px; background: transparent; }
 
         /* ================= 布局系统 ================= */
-        .sidebar { width: 300px; background-color: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px; gap: 12px; overflow-y: auto; z-index: 10; }
+        .sidebar { width: 320px; background-color: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px; gap: 12px; overflow-y: auto; z-index: 10; flex-shrink: 0; }
         .workspace { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 16px; overflow-y: auto; background: radial-gradient(circle at center, #18181b 0%, #09090b 100%); }
 
         /* ================= 侧边栏 UI ================= */
-        .brand { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .brand { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
         .brand::before { content: ''; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
         .panel-section { background-color: var(--surface-sub); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; border: 1px solid rgba(255,255,255,0.05); }
@@ -57,6 +57,15 @@
         .stat-item { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; }
         .stat-val { font-size: 16px; font-weight: 700; }
         .stat-lbl { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+        /* 操作面板网格 */
+        .sidebar-action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .sidebar-action-grid .btn-full { grid-column: span 2; }
+
+        /* 历史落子记录面板 */
+        .history-panel { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 6px; height: 120px; overflow-y: auto; padding: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .history-item { display: flex; justify-content: space-between; color: var(--text-dim); padding: 2px 4px; border-radius: 4px; }
+        .history-item.active-move { background: rgba(255,255,255,0.05); color: #fff; font-weight: bold; }
 
         /* AI 开关 */
         .switch-container { display: flex; align-items: center; justify-content: space-between; }
@@ -104,19 +113,16 @@
         .eval-fill.black-fill { background-color: #3f3f46; width: 50%; }
         .eval-fill.white-fill { background-color: #f4f4f5; width: 50%; }
 
-        .action-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-
         /* 警告横幅 */
         .danger-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%) translateY(-150%); background: var(--danger); color: white; padding: 10px 20px; border-radius: 8px; display: flex; gap: 12px; align-items: center; transition: 0.3s var(--ease); z-index: 100; font-size: 13px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
         .danger-banner.active { transform: translateX(-50%) translateY(0); }
 
         /* ================= 移动端适配 ================= */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { width: 100%; max-height: 250px; border-right: none; border-bottom: 1px solid var(--border); padding: 12px; }
-            .workspace { padding: 12px; justify-content: flex-start; }
+            body { flex-direction: column; overflow-y: auto; height: auto; }
+            .sidebar { width: 100%; max-height: none; border-right: none; border-bottom: 1px solid var(--border); padding: 12px; overflow-y: visible; }
+            .workspace { padding: 12px; justify-content: flex-start; height: auto; min-height: calc(100vh - 250px); }
             .board-container { padding: 4%; } /* 移动端棋盘边距更大些以防误触边缘 */
-            .action-bar { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -137,6 +143,27 @@
             <div class="input-group">
                 <input type="text" id="peerIdInput" class="modern-input" placeholder="输入对手密钥联机...">
                 <button class="btn" onclick="connectToPeer()">加入</button>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <span class="section-title">对局控制</span>
+            <div class="sidebar-action-grid">
+                <button class="btn btn-secondary" onclick="requestUndo()">↺ 悔棋</button>
+                <button class="btn btn-secondary" onclick="sendPass()">✋ 停手</button>
+                <button class="btn btn-danger" onclick="requestResign()">⚐ 认输</button>
+                <button class="btn" style="background: var(--text-dim); color: #000;" onclick="initBoard()">重新开始</button>
+                
+                <button class="btn btn-secondary" style="border-color: #c084fc; color: #c084fc;" onclick="saveGame()">💾 导出存档</button>
+                <button class="btn btn-secondary" style="border-color: #4ade80; color: #4ade80;" onclick="document.getElementById('fileLoadInput').click()">📂 导入存档</button>
+                <input type="file" id="fileLoadInput" accept=".go" style="display:none;" onchange="handleFileSelect(event)">
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <span class="section-title">落子部位记录</span>
+            <div class="history-panel" id="moveHistoryLog">
+                <div style="color: var(--text-dim); text-align: center; margin-top: 40px; font-style: italic;">暂无落子记录</div>
             </div>
         </div>
 
@@ -182,16 +209,6 @@
                     <div class="eval-fill black-fill" id="blackEvalBar"></div>
                     <div class="eval-fill white-fill" id="whiteEvalBar"></div>
                 </div>
-            </div>
-
-            <div class="action-bar">
-                <button class="btn btn-secondary" onclick="requestUndo()">↺ 悔棋</button>
-                <button class="btn btn-secondary" onclick="sendPass()">✋ 停手</button>
-                <button class="btn btn-danger" onclick="requestResign()">⚐ 认输</button>
-                <button class="btn btn-secondary" style="border-color: #c084fc; color: #c084fc;" onclick="saveGame()">💾 导出存档</button>
-                <button class="btn btn-secondary" style="border-color: #4ade80; color: #4ade80;" onclick="document.getElementById('fileLoadInput').click()">📂 导入存档</button>
-                <input type="file" id="fileLoadInput" accept=".go" style="display:none;" onchange="handleFileSelect(event)">
-                <button class="btn" style="background: var(--text-dim); color: #000;" onclick="initBoard()">重新开始</button>
             </div>
         </div>
     </main>
@@ -244,7 +261,6 @@
             let svgStr = `<svg class="svg-layer" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">`;
             for (let i = 0; i < BOARD_SIZE; i++) {
                 const pos = (i * step).toFixed(2);
-                // vector-effect 保证线条在不同屏幕尺寸下粗细恒定
                 svgStr += `<line x1="0" y1="${pos}" x2="100" y2="${pos}" stroke="var(--board-line)" stroke-width="0.2" vector-effect="non-scaling-stroke"/>`;
                 svgStr += `<line x1="${pos}" y1="0" x2="${pos}" y2="100" stroke="var(--board-line)" stroke-width="0.2" vector-effect="non-scaling-stroke"/>`;
             }
@@ -264,7 +280,6 @@
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const hitBox = document.createElement('div');
                     hitBox.className = 'intersection';
-                    // 使用百分比进行绝对定位
                     hitBox.style.left = `${(c * step).toFixed(2)}%`;
                     hitBox.style.top = `${(r * step).toFixed(2)}%`;
                     hitBox.style.width = `${step}%`;
@@ -314,6 +329,7 @@
             } else if (data.type === 'move') {
                 executeMoveSync(data.r, data.c);
             } else if (data.type === 'pass') {
+                logPassMove(currentTurn);
                 toast("对方选择停手"); currentTurn = currentTurn === 'black' ? 'white' : 'black'; updateTurnUI();
             } else if (data.type === 'reset') {
                 resetBoardLocal(); toast("对局已重置");
@@ -327,8 +343,6 @@
             } else if (data.type === 'load_request') {
                 const snap = data.snapshot;
                 const oppRoleInSave = snap.savedAsRole;
-                
-                // 动态解算：为了让两边完美对齐存盘时的黑白视角
                 let myTargetRole = oppRoleInSave === 'black' ? 'white' : 'black';
                 let roleText = oppRoleInSave === 'black' ? "黑方" : "白方";
 
@@ -343,7 +357,7 @@
             } else if (data.type === 'load_response') {
                 if (data.accept) {
                     const snap = data.snapshot;
-                    applySnapshotLocal(snap, snap.savedAsRole); // 发起人以自己存盘时的身份载入
+                    applySnapshotLocal(snap, snap.savedAsRole);
                     toast(`🎉 对方已同意！战局加载完毕，您的阵营已同步至 [${snap.savedAsRole === 'black'?'黑方':'白方'}]`);
                     alert("对方已同意！战局加载完毕。");
                 } else {
@@ -362,17 +376,16 @@
                 currentTurn: currentTurn,
                 lastMove: lastMove,
                 moveHistory: moveHistory,
-                savedAsRole: myRole  // 深度打包：写入存盘时的阵营标记
+                savedAsRole: myRole 
             };
             
-            // 使用前端 Blob 封装为可下载的文本二进制流
             const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             const timeStr = new Date().toISOString().slice(0, 10);
             
             a.href = url;
-            a.download = `Go_Studio_Archive_${timeStr}.go`; // 围棋专属后缀
+            a.download = `Go_Studio_Archive_${timeStr}.go`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -395,30 +408,26 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; // 释放输入槽位
+            event.target.value = '';
         }
 
         function processLoadedSnapshot(snapshot) {
-            // 单机模式直接强制覆盖
             if (myRole === null) {
                 applySnapshotLocal(snapshot);
                 toast("📂 本地单机战术文件加载成功。");
                 alert("战局加载成功！");
                 return;
             }
-            // 联机模式发起双向确认握手
             sendMqttMessage('load_request', { snapshot: snapshot });
             toast("📡 已向对方发送读档握手请求...");
         }
 
-        // 基础图层渲染与时空还原驱动
         function applySnapshotLocal(snapshot, targetRole) {
             boardState = snapshot.boardState;
             currentTurn = snapshot.currentTurn;
             lastMove = snapshot.lastMove;
             moveHistory = snapshot.moveHistory;
             
-            // 如果联机模式指定了要对齐调整的角色身份，则强行覆盖调整
             if (targetRole !== undefined) {
                 myRole = targetRole;
                 updateConnectionUI(true);
@@ -429,6 +438,7 @@
             renderStones(); 
             updateTurnUI();
             updateStonesCount();
+            rebuildMoveHistoryLog();
             
             if (assistModeActive) calculateBestMove();
         }
@@ -440,6 +450,7 @@
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
             currentTurn = 'black'; lastMove = null; moveHistory = [];
             renderStones(); updateTurnUI(); updateStonesCount(); clearAssistHighlights(); cancelPendingMove();
+            rebuildMoveHistoryLog();
             if (assistModeActive) calculateBestMove();
         }
 
@@ -514,14 +525,76 @@
 
         function executeMoveSync(r, c) {
             const validation = simulatePlacementAndCheckCaptured(r, c, currentTurn);
-            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
+            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null, type: 'stone' });
             boardState[r][c] = currentTurn;
             validation.capturedStones.forEach(s => boardState[s.r][s.c] = null);
             lastMove = { r, c };
             renderStones(); updateStonesCount(); playStoneSound();
+            
+            // 添加具体落子部位历史日志
+            addMoveHistoryLogItem(moveHistory.length, currentTurn, coordsToGtp(r, c));
+
             currentTurn = currentTurn === 'black' ? 'white' : 'black';
             updateTurnUI();
             if (assistModeActive) setTimeout(calculateBestMove, 50);
+        }
+
+        // ================= 落子历史渲染驱动 =================
+        function addMoveHistoryLogItem(stepNum, color, gtpCoord) {
+            const container = document.getElementById('moveHistoryLog');
+            if (stepNum === 1) container.innerHTML = ''; // 清除空提示
+            
+            // 清除旧的活动标签
+            Array.from(container.children).forEach(el => el.classList.remove('active-move'));
+
+            const item = document.createElement('div');
+            item.className = 'history-item active-move';
+            const colorText = color === 'black' ? '黑方' : '白方';
+            item.innerHTML = `<span>第 ${stepNum} 手: ${colorText}</span> <span>${gtpCoord}</span>`;
+            container.appendChild(item);
+            container.scrollTop = container.scrollHeight; // 滚动到底部
+        }
+
+        function logPassMove(color) {
+            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null, type: 'pass' });
+            const container = document.getElementById('moveHistoryLog');
+            if (moveHistory.length === 1) container.innerHTML = '';
+            Array.from(container.children).forEach(el => el.classList.remove('active-move'));
+
+            const item = document.createElement('div');
+            item.className = 'history-item active-move';
+            const colorText = color === 'black' ? '黑方' : '白方';
+            item.innerHTML = `<span>第 ${moveHistory.length} 手: ${colorText}</span> <span style="color:var(--text-dim)">✋ 停手</span>`;
+            container.appendChild(item);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function rebuildMoveHistoryLog() {
+            const container = document.getElementById('moveHistoryLog');
+            container.innerHTML = '';
+            if (moveHistory.length === 0 && !lastMove) {
+                container.innerHTML = '<div style="color: var(--text-dim); text-align: center; margin-top: 40px; font-style: italic;">暂无落子记录</div>';
+                return;
+            }
+
+            // 通过克隆重建历史列表
+            moveHistory.forEach((snapshot, index) => {
+                const nextSnapshot = moveHistory[index + 1];
+                const lm = nextSnapshot ? nextSnapshot.lastMove : lastMove;
+                const isLast = (index === moveHistory.length - 1);
+                
+                const item = document.createElement('div');
+                item.className = `history-item ${isLast ? 'active-move' : ''}`;
+                const colorText = snapshot.turn === 'black' ? '黑方' : '白方';
+                
+                if (snapshot.type === 'pass' || (!lm && snapshot.type !== 'stone')) {
+                    item.innerHTML = `<span>第 ${index + 1} 手: ${colorText}</span> <span style="color:var(--text-dim)">✋ 停手</span>`;
+                } else if (lm) {
+                    item.innerHTML = `<span>第 ${index + 1} 手: ${colorText}</span> <span>${coordsToGtp(lm.r, lm.c)}</span>`;
+                }
+                container.appendChild(item);
+            });
+            container.scrollTop = container.scrollHeight;
         }
 
         // ================= 视图更新 =================
@@ -531,7 +604,7 @@
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const hitBox = intersections[i++];
-                    hitBox.innerHTML = ''; // 清除旧棋子
+                    hitBox.innerHTML = ''; 
                     hitBox.classList.remove('last-move');
                     if (lastMove && lastMove.r === r && lastMove.c === c) hitBox.classList.add('last-move');
                     if (boardState[r][c]) {
@@ -628,11 +701,13 @@
             const prev = moveHistory.pop();
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             renderStones(); updateTurnUI(); updateStonesCount(); cancelPendingMove();
+            rebuildMoveHistoryLog(); // 悔棋时重构落子部位日志
             if (assistModeActive) calculateBestMove();
         }
 
         function sendPass() {
             if (confirm("确定停手吗？")) {
+                logPassMove(currentTurn);
                 sendMqttMessage('pass'); currentTurn = currentTurn === 'black' ? 'white' : 'black'; updateTurnUI();
                 if (assistModeActive) setTimeout(calculateBestMove, 50);
             }
@@ -669,6 +744,11 @@
             turnBadge.className = isMyTurn ? "status-badge warn" : "status-badge";
         }
 
+        document.body.onkeydown = function(e){
+            // 绑定快捷键撤销 (Ctrl+Z) 方便单机复盘
+            if(e.ctrlKey && e.keyCode === 90){ e.preventDefault(); requestUndo(); }
+        }
+
         function saveStats() {
             localStorage.setItem('go_p2p_stats', JSON.stringify(matchStats));
             updateStatsUI();
@@ -681,10 +761,10 @@
         }
 
         function copyRoomKey() { const id = document.getElementById('myIdDisplay'); id.select(); document.execCommand("copy"); toast("密钥已复制"); }
-        function toast(msg) { console.log(msg); /* 生产环境可替换为漂亮的 Toast UI */ }
+        function toast(msg) { console.log(msg); }
 
         // 初始化
-        window.addEventListener('resize', renderFluidBoard); // 窗口大小改变时重绘网格以防形变
+        window.addEventListener('resize', renderFluidBoard); 
         renderFluidBoard(); resetBoardLocal(); initNetwork(); updateStatsUI();
     </script>
 </body>

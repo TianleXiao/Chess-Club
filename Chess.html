@@ -175,7 +175,7 @@
             <div id="celebrationTitle" class="celebration-title">VICTORY</div>
             <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
             <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">复盘查看局势</button>
+                <button class="btn btn-secondary" onclick="openReplay()">复盘查看局势</button>
                 <button class="btn" id="nextMatchBtn" onclick="startNextMatchManual()">开始新局/攻守交替</button>
             </div>
         </div>
@@ -292,6 +292,11 @@
         
         let pendingMoveContext = null;
         let currentPredictRequestId = 0; 
+
+        // Replay Mode Variables
+        let isReplayMode = false;
+        let replayStates = [];
+        let currentReplayStep = 0;
 
         let mqttClient = null;
         let currentRoomTopic = '';
@@ -480,14 +485,11 @@
                 log(`🎉 对方宣布投子认输！你在本场对抗中胜出。`);
                 triggerGameOverDirectly(data.loser === 'red' ? 'black' : 'red');
             } 
-            // 核心高阶信令：捕获对方的外部读档申请 (.chess)
             else if (data.type === 'load_request') {
                 if (myRole === 'spectator') return;
                 const snap = data.snapshot;
-                const oppRoleInSave = snap.savedAsRole; // 对方存盘时的身份
+                const oppRoleInSave = snap.savedAsRole; 
                 
-                // 动态解算：为了让两边完美对齐存盘时的红黑视角
-                // 对方存盘时如果是红，那我这里应该自动调整为黑；反之亦然
                 let myTargetRole = oppRoleInSave === 'red' ? 'black' : 'red';
                 let roleText = oppRoleInSave === 'red' ? "红方" : "黑方";
                 let turnText = snap.currentTurn === 'red' ? "红方" : "黑方";
@@ -501,11 +503,10 @@
                     log("❌ 您拒绝了对方的外部导入申请。");
                 }
             } 
-            // 核心高阶信令：接收对方对读档的审批答复
             else if (data.type === 'load_response') {
                 if (data.accept) {
                     const snap = data.snapshot;
-                    applySnapshotLocal(snap, snap.savedAsRole); // 发起人以自己存盘时的身份载入
+                    applySnapshotLocal(snap, snap.savedAsRole); 
                     log(`🎉 对方已点击同意！战局文件加载完毕，您的阵营已同步至 [${snap.savedAsRole === 'red'?'红方':'黑方'}]`);
                 } else {
                     log("❌ 对方拒绝了您的战局载入申请，回溯终止。");
@@ -668,6 +669,7 @@
         }
 
         function handleCellClick(r, c) {
+            if (isReplayMode) return; // Disable clicks in replay mode
             if (myRole === 'spectator') return; 
             if (myRole !== null) {
                 if (currentTurn !== myRole) return;
@@ -851,9 +853,6 @@
             triggerGameOverDirectly(winnerColor);
         }
 
-        // ==================== 专有高级数据文件存档模块 ====================
-
-        // 导出专属的 .chess 战术数据文件
         function saveGame() {
             if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
             
@@ -862,17 +861,16 @@
                 currentTurn: currentTurn,
                 lastMove: lastMove,
                 moveHistory: moveHistory,
-                savedAsRole: myRole  // 深度打包：写入存盘时的阵营标记
+                savedAsRole: myRole 
             };
             
-            // 使用前端 Blob 封装为可下载的文本二进制流
             const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             const timeStr = new Date().toISOString().slice(0, 10);
             
             a.href = url;
-            a.download = `Chess_Studio_Archive_${timeStr}.chess`; // 导出专属后缀文件
+            a.download = `Chess_Studio_Archive_${timeStr}.chess`; 
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -881,7 +879,6 @@
             log("💾 [数据中心] 当前棋盘全量回溯时空链已打包导出为 .chess 外部战术文件。");
         }
 
-        // 捕获导入的文件并加载
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -896,12 +893,10 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; // 释放槽位
+            event.target.value = ''; 
         }
 
-        // 识别导入文件的场景
         function processLoadedSnapshot(snapshot) {
-            // 场景 A：离线单机模式，无须通过对方审批，直接时空重组
             if (myRole === null) {
                 applySnapshotLocal(snapshot);
                 log("📂 [数据中心] 本地单机外部战术文件加载成功。");
@@ -912,19 +907,16 @@
                 return;
             }
 
-            // 场景 B：联机模式下发起“读档双向确认握手”
             log("📡 [读档申请] 正在向对方节点发出【外部战局导入】双向握手确认...");
             sendMqttMessage('load_request', { snapshot: snapshot });
         }
 
-        // 基础图层渲染与时空还原驱动
         function applySnapshotLocal(snapshot, targetRole) {
             boardState = snapshot.boardState;
             currentTurn = snapshot.currentTurn;
             lastMove = snapshot.lastMove;
             moveHistory = snapshot.moveHistory;
             
-            // 如果联机模式指定了要对齐调整的角色身份，则强行覆盖调整
             if (targetRole) {
                 myRole = targetRole;
                 updateOrientation();
@@ -944,7 +936,6 @@
             
             evaluateAndDisplayWinRate();
 
-            // 若房间存在观众，立刻把最新残局广播同步给观众席
             if (myRole === 'red' || myRole === 'black') {
                 sendMqttMessage('sync_board_to_spectator', {
                     boardState: boardState, currentTurn: currentTurn, lastMove: lastMove
@@ -997,8 +988,6 @@
             for (let r = minR + 1; r < maxR; r++) { if (boardState[r][rKing.c]) return false; }
             return true;
         }
-
-        // ==================== 皮卡鱼 AI 对接核心组件 ====================
 
         function generateFEN() {
             let fenRows = [];
@@ -1247,7 +1236,118 @@
             else { log("单机演练：直接以平局闭幕。"); currentTurn = null; updateTurnUI(); showCelebration('draw'); }
         }
 
-        renderSVGBoard(); createDOMGrid(); initBoard(); initNetwork(); updateStatsUI();
+        // ==================== Replay Mode Logic ====================
+
+        // Open replay tab with current match data
+        function openReplay() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            
+            // Generate snapshot of the full timeline including the final state
+            const states = [...moveHistory, { 
+                board: JSON.parse(JSON.stringify(boardState)), 
+                turn: currentTurn, 
+                lastMove: JSON.parse(JSON.stringify(lastMove)) 
+            }];
+            localStorage.setItem('chess_replay_data', JSON.stringify(states));
+            
+            // Open new tab in replay mode
+            window.open(window.location.href.split('?')[0] + '?mode=replay', '_blank');
+        }
+
+        // Initialize UI for replay mode
+        function initReplayMode() {
+            isReplayMode = true;
+            document.querySelector('h1').innerHTML = 'Replay Room <div class="status-badge spectator-mode">Replay Mode</div>';
+            
+            // Hide connection and peer elements
+            const panels = document.querySelectorAll('.panel-section');
+            if (panels.length >= 4) {
+                panels[2].style.display = 'none'; // Your Room Key
+                panels[3].style.display = 'none'; // Join Room
+            }
+
+            // Hide normal gameplay buttons
+            document.getElementById('undoBtn').parentElement.style.display = 'none';
+            document.getElementById('resignBtn').parentElement.style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+
+            // Inject Next/Prev Replay controls
+            const replayUI = document.createElement('div');
+            replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
+            replayUI.innerHTML = `
+                <button class="btn btn-secondary" style="flex: 1; color: #8a50ff; border-color: #8a50ff;" onclick="replayPrev()">上一步 (Prev)</button>
+                <button class="btn btn-secondary" style="flex: 1; color: #52b788; border-color: #52b788;" onclick="replayNext()">下一步 (Next)</button>
+            `;
+            document.querySelector('.sidebar').appendChild(replayUI);
+
+            // Fetch match data
+            try {
+                replayStates = JSON.parse(localStorage.getItem('chess_replay_data')) || [];
+                if (replayStates.length === 0) throw new Error("No data");
+            } catch (e) {
+                alert("Replay data not found!");
+                return;
+            }
+
+            // Start replay at the final state
+            currentReplayStep = replayStates.length - 1;
+            applyReplayState(currentReplayStep);
+            
+            log("📺 Entered Replay Mode. Use buttons below to navigate history.");
+            const connStatus = document.getElementById('connectionStatus');
+            connStatus.innerText = "Replay Mode";
+            connStatus.className = "status-badge spectator-mode";
+        }
+
+        // Apply a specific historical state to the board
+        function applyReplayState(index) {
+            if (index < 0 || index >= replayStates.length) return;
+            const state = replayStates[index];
+            boardState = state.board;
+            currentTurn = state.turn;
+            lastMove = state.lastMove;
+            
+            clearSelectionHighlights();
+            renderPieces();
+            if (lastMove && lastMove.from && lastMove.from.r !== null) {
+                drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
+            } else {
+                document.getElementById('trajectoryLayer').innerHTML = '';
+            }
+            
+            updateTurnUI();
+            evaluateAndDisplayWinRateFallback(); // Use fallback to prevent unnecessary API calls
+            log(`[Replay] Step: ${index} / ${replayStates.length - 1}`);
+        }
+
+        // Replay specific step controls
+        function replayPrev() {
+            if (currentReplayStep > 0) {
+                currentReplayStep--;
+                applyReplayState(currentReplayStep);
+            }
+        }
+
+        function replayNext() {
+            if (currentReplayStep < replayStates.length - 1) {
+                currentReplayStep++;
+                applyReplayState(currentReplayStep);
+            }
+        }
+
+        // ==================== Initialization ====================
+
+        renderSVGBoard(); 
+        createDOMGrid(); 
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'replay') {
+            initReplayMode();
+        } else {
+            initBoard(); 
+            initNetwork(); 
+            updateStatsUI();
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naval Tactical Fleet - Masterpiece Pro (Sonar Exchange Suite)</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg: #05070f;
+            --surface: #0b0f1f;
+            --surface-sub: #131933;
+            --border: #1f294d;
+            --text-main: #e2e8f0;
+            --text-dim: #64748b;
+            --red-piece: #ff3f6c;
+            --blue-piece: #00f5d4;
+            --board-line: #182246;
+            --radar-line: rgba(0, 245, 212, 0.15);
+            --ease: cubic-bezier(0.16, 1, 0.3, 1);
+            --cell-w: 74px; 
+            --cell-h: 64px;
+            --board-pad: 20px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px 20px; }
+        
+        .container { display: flex; gap: 40px; max-width: 1300px; width: 100%; align-items: center; justify-content: center; }
+        .sidebar { flex: 0 0 360px; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 14px; }
+        
+        h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; color: #00f5d4; }
+        .switches-header { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+        .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .panel-section { background: #070a16; border: 1px solid var(--border); border-radius: 8px; padding: 14px; position: relative; }
+        
+        .eval-container { height: 4px; width: 100%; background: #10162e; border-radius: 2px; margin-top: 8px; display: flex; overflow: hidden; }
+        .eval-bar-red { height: 100%; background: var(--red-piece); width: 50%; transition: width 0.4s var(--ease); }
+        .eval-bar-blue { height: 100%; background: var(--blue-piece); width: 50%; transition: width 0.4s var(--ease); }
+        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
+
+        .peer-id-display { font-family: monospace; font-size: 0.95rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
+        .input-group { display: flex; gap: 8px; }
+        input[type=\"text\"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; }
+        input[type=\"text\"]:focus { border-color: #00f5d4; }
+
+        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 10px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn:hover { background: #fff; transform: translateY(-1px); }
+        .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+        .btn-secondary:hover { color: #fff; border-color: #00f5d4; background: rgba(0,245,212,0.02); }
+        
+        .btn-danger { background: #1a0b12; color: #ff3f6c; border: 1px solid #4a1525; }
+        .btn-danger:hover { background: #33111c; border-color: #ff3f6c; }
+
+        .status-area { display: flex; flex-wrap: wrap; gap: 6px; }
+        .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #0d1329; color: var(--text-dim); }
+        .status-badge.connected { background: #062e29; color: #00f5d4; }
+        .status-badge.your-turn { background: #3d1424; color: #ff3f6c; animation: turnPulse 2s infinite; }
+        .status-badge.local-mode { background: #161a36; color: #70a1ff; }
+        .status-badge.spectator-mode { background: #2e1f0d; color: #ffb03a; }
+
+        @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,63,108,0.3); } 100% { opacity: 0.8; } }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        .stat-card { background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
+        .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+        .log-box { max-height: 110px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #161f3d; padding-top: 6px; }
+        .log-box::-webkit-scrollbar { width: 4px; }
+        .log-box::-webkit-scrollbar-thumb { background: #1b264f; border-radius: 2px; }
+
+        .board-wrapper {
+            position: relative;
+            background: #04060c; 
+            padding: var(--board-pad);
+            border-radius: 12px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,0,0,0.9);
+            border: 1px solid var(--border);
+        }
+
+        .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
+        .trajectory-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 6; width: calc(7 * var(--cell-w)); height: calc(9 * var(--cell-h)); }
+        
+        .chess-board { position: relative; display: grid; grid-template-columns: repeat(7, var(--cell-w)); grid-template-rows: repeat(9, var(--cell-h)); z-index: 5; }
+        .cell { position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; width: var(--cell-w); height: var(--cell-h); }
+
+        .piece {
+            width: 64px; height: 50px; border-radius: 4px; background: #0c1124; border: 1px solid var(--border);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 0.88rem; font-weight: 500; letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+            user-select: none; transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease); pointer-events: none;
+            line-height: 1;
+        }
+        
+        .piece.red { color: var(--red-piece); border-color: #591b2b; background: #1c0e14; }
+        .piece.blue { color: var(--blue-piece); border-color: #104e47; background: #091a18; }
+        .piece.fog { color: #475569; border-color: #334155; background: #1e293b; font-weight: bold; }
+        
+        .cell.selected .piece { transform: scale(1.08) translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.7); border-color: #00f5d4; }
+        .cell.last-move::before { content: ""; position: absolute; width: 8px; height: 8px; border-radius: 50%; background: rgba(0, 245, 212, 0.4); z-index: 4; }
+        .cell.valid-target::after { content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(0, 245, 212, 0.6); z-index: 4; }
+        .cell.strike-target::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 2px; background: rgba(255, 63, 108, 0.7); z-index: 4; transform: rotate(45deg); }
+
+        .flipped-view { transform: rotate(180deg); }
+        .flipped-view .piece { transform: rotate(180deg); }
+        .flipped-view .cell.selected .piece { transform: scale(1.08) translateY(-2px) rotate(180deg); }
+        .flipped-view .svg-layer text { transform: rotate(180deg); transform-origin: center; }
+
+        .celebration-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(4, 6, 12, 0.9); backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s var(--ease);
+        }
+        .celebration-overlay.active { opacity: 1; pointer-events: auto; }
+        .celebration-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 48px 64px; text-align: center;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+            transform: scale(0.85); transition: transform 0.5s var(--ease);
+        }
+        .celebration-overlay.active .celebration-card { transform: scale(1); }
+        .celebration-title { font-size: 3rem; font-weight: 200; letter-spacing: 0.1em; margin-bottom: 12px; text-transform: uppercase; color: #fff; }
+        .celebration-subtitle { font-size: 1.05rem; color: var(--text-dim); margin-bottom: 32px; font-weight: 300; }
+
+        .trajectory-path { fill: none; stroke: #00f5d4; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.8; }
+        .strike-path { fill: none; stroke: var(--red-piece); stroke-width: 2; stroke-dasharray: 1 3; opacity: 0.9; }
+
+        @media (max-width: 950px) {
+            body { padding: 20px 10px; }
+            .container { flex-direction: column-reverse; gap: 20px; }
+            .sidebar { width: calc(7 * var(--cell-w) + 2 * var(--board-pad)); max-width: 100%; flex: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="celebrationOverlay" class="celebration-overlay">
+        <div class="celebration-card">
+            <div id="celebrationTitle" class="celebration-title">FLEET DOMINANCE</div>
+            <div id="celebrationSubtitle" class="celebration-subtitle">Enemy flagship neutralized successfully.</div>
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="openReplay()">战局时空复盘</button>
+                <button class="btn" onclick="startNextMatchManual()">开始新局/攻守交替</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h1>
+                Naval Command
+                <div class="switches-header">
+                    <span style="font-size: 9px; color:var(--blue-piece); font-weight: bold; letter-spacing: 1px;">SONAR ACTIVE</span>
+                </div>
+            </h1>
+            
+            <div class="panel-section">
+                <span class="label-tiny">Fleet Engagements</span>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-color: var(--blue-piece);"><span class="label-tiny">WINS</span><div class="stat-val" id="statWins" style="color: var(--blue-piece);">0</div></div>
+                    <div class="stat-card" style="border-color: var(--red-piece);"><span class="label-tiny">LOSSES</span><div class="stat-val" id="statLosses" style="color: var(--red-piece);">0</div></div>
+                    <div class="stat-card"><span class="label-tiny">RATIO</span><div class="stat-val" id="statRate">0%</div></div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Fleet Power Ratio</span>
+                <div class="eval-labels">
+                    <span id="redEvalText" style="color: var(--red-piece); font-weight:bold;">50% Red</span>
+                    <span id="blueEvalText" style="color: var(--blue-piece); font-weight:bold;">50% Blue</span>
+                </div>
+                <div class="eval-container">
+                    <div class="eval-bar-red" id="redEvalBar"></div>
+                    <div class="eval-bar-blue" id="blueEvalBar"></div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Naval Encryption Room Key</span>
+                <div class="peer-id-display" id="myIdDisplay">Generating Hub...</div>
+                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Fleet Key</button>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Join Joint Operation</span>
+                <div class="input-group">
+                    <input type="text" id="peerIdInput" placeholder="Paste admiral key...">
+                    <button class="btn" style="padding: 10px 10px; background: var(--blue-piece);" onclick="connectToPeer('play')">指挥</button>
+                    <button class="btn btn-secondary" style="padding: 10px 10px; border-color: #ffb03a; color: #ffb03a;" onclick="connectToPeer('spectate')">参谋</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Combat Log Feed</span>
+                <div class="status-area" style="margin-top:4px;">
+                    <div id="connectionStatus" class="status-badge local-mode">Local Control</div>
+                    <div id="turnStatus" class="status-badge">Turn: Blue</div>
+                    <div id="roleStatus" class="status-badge" style="display:none;"></div>
+                </div>
+                <div class="log-box" id="logBox">Ocean grid array map loaded. Sonar initialized.</div>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">回溯航线</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">提议停战</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="btn btn-danger" style="flex: 1;" id="resignBtn" onclick="handleResign()">凿舰自沉</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #8a50ff; color: #8a50ff;" id="saveBtn" onclick="saveGame()">保存海图</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #52b788; color: #52b788;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">导入海图</button>
+                <input type="file" id="fileLoadInput" accept=".naval" style="display:none;" onchange="handleFileSelect(event)">
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">重置推演</button>
+        </div>
+
+        <div class="board-wrapper" id="boardWrapper">
+            <svg class="trajectory-layer" id="trajectoryLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div class="chess-board" id="board"></div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix space configuration representing ocean grid architecture (9 Rows x 7 Columns)
+        let boardState = Array(9).fill(null).map(() => Array(7).fill(null));
+        let selectedCell = null;
+        let myRole = null; 
+        let currentTurn = 'blue'; // Blue fleet initiates movement matrix first
+        let lastMove = { from: null, to: null, strike: false };
+        let moveHistory = [];
+        let lastMatchWinner = null;
+
+        // Replay Time-Travel Variables
+        let isReplayMode = false;
+        let replayStates = [];
+        let currentReplayStep = 0;
+
+        // MQTT Cluster Core Infrastructure
+        let mqttClient = null;
+        let currentRoomTopic = '';
+        const myUniqueId = 'NAV_UID_' + Math.random().toString(36).substr(2, 9);
+        let myRoomId = '';
+
+        let matchStats = JSON.parse(localStorage.getItem('naval_tactical_stats')) || { wins: 0, losses: 0 };
+
+        // Strategic Naval Grid Features maps
+        const ISLANDS = [{r:4, c:1}, {r:4, c:3}, {r:4, c:5}];
+        const HARBORS = [{r:0, c:2}, {r:0, c:4}, {r:8, c:2}, {r:8, c:4}];
+
+        // Dynamic tactical weight system evaluating global win ratios
+        const PIECE_VALUES = { '旗舰':5000, '航母':950, '战列舰':800, '巡洋舰':550, '驱逐舰':400, '潜艇':450, '水雷':200 };
+
+        function isIsland(r, c) { return ISLANDS.some(p => p.r === r && p.c === c); }
+        function isHarbor(r, c) { return HARBORS.some(p => p.r === r && p.c === c); }
+
+        // Render vector layers framing architectural naval channels and defense perimeters
+        function renderSVGBoard() {
+            const cw = 74; const ch = 64; const hW = cw / 2; const hH = ch / 2;
+            const lineColor = "var(--board-line)";
+            let svgStr = `<svg class="svg-layer" width="${7*cw}" height="${9*ch}" viewBox="0 0 ${7*cw} ${9*ch}" xmlns="http://www.w3.org/2000/svg">`;
+
+            // Draw core grid architecture lines
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cx = c * cw + hW; const cy = r * ch + hH;
+                    if (c < 6) svgStr += `<line x1="${cx}" y1="${cy}" x2="${cx + cw}" y2="${cy}" stroke="${lineColor}" stroke-width="1"/>`;
+                    if (r < 8) svgStr += `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + ch}" stroke="${lineColor}" stroke-width="1"/>`;
+                }
+            }
+
+            // Paint localized island reef obstacle perimeters
+            ISLANDS.forEach(p => {
+                const cx = p.c * cw + hW; const cy = p.r * ch + hH;
+                svgStr += `<polygon points="${cx-22},${cy+14} ${cx-14},${cy-18} ${cx+18},${cy-10} ${cx+22},${cy+16}" fill="#161f3d" stroke="#334155" stroke-width="1.5"/>`;
+                svgStr += `<text x="${cx}" y="${cy+4}" font-size="9" fill="#64748b" text-anchor="middle">礁石</text>`;
+            });
+
+            // Highlight deep sheltered supply harbors
+            HARBORS.forEach(p => {
+                const cx = p.c * cw + hW; const cy = p.r * ch + hH;
+                svgStr += `<rect x="${cx-26}" y="${cy-20}" width="52" height="40" fill="none" stroke="#00f5d4" stroke-width="1" stroke-dasharray="2 2" opacity="0.4"/>`;
+                svgStr += `<circle cx="${cx}" cy="${cy}" r="4" fill="none" stroke="#00f5d4" stroke-width="1" opacity="0.5"/>`;
+            });
+
+            svgStr += `</svg>`;
+            document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svgStr);
+        }
+
+        // Bridge real-time data streaming layers via centralized public MQTT brokers
+        function initNetwork() {
+            myRoomId = 'NAVY-' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('myIdDisplay').innerText = myRoomId;
+            currentRoomTopic = `naval/room/${myRoomId}`;
+
+            log("正在连接全球战术海军中转集群...");
+            mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+
+            mqttClient.on('connect', () => {
+                log("全域卫星加密信道桥接就绪。开始广播本地雷达网络...");
+                mqttClient.subscribe(currentRoomTopic);
+            });
+
+            mqttClient.on('message', (topic, message) => {
+                try {
+                    const data = JSON.parse(message.toString());
+                    if (data.senderId === myUniqueId) return;
+                    handleNetworkData(data);
+                } catch (e) { console.error("Network decode vector tracking matrix exception:", e); }
+            });
+        }
+
+        function connectToPeer(mode = 'play') {
+            const remoteId = document.getElementById('peerIdInput').value.trim();
+            if (!remoteId) return alert("请输入合法的舰队加密指挥密钥！");
+            if (remoteId === myRoomId) return alert("自身网络无法挂载本地指挥部阵列！");
+
+            log(`解耦当前防线，正在跃迁切入目标编队总线: ${remoteId}...`);
+            mqttClient.unsubscribe(currentRoomTopic);
+            currentRoomTopic = `naval/room/${remoteId}`;
+            mqttClient.subscribe(currentRoomTopic);
+
+            if (mode === 'spectate') {
+                myRole = 'spectator'; sendMqttMessage('spectator_join');
+                log("作为战区高级联合战略观察参谋切入雷达视窗...");
+            } else {
+                myRole = 'red'; sendMqttMessage('join');
+            }
+        }
+
+        function sendMqttMessage(type, extraPayload = {}) {
+            if (!mqttClient || !currentRoomTopic) return;
+            const messageObj = { type, senderId: myUniqueId, ...extraPayload };
+            mqttClient.publish(currentRoomTopic, JSON.stringify(messageObj));
+        }
+
+        function handleNetworkData(data) {
+            if (data.type === 'join') {
+                myRole = 'blue'; updateConnectionUI(true); updateOrientation(); initBoard();
+                log("对端联合舰队最高指挥官已挂载接入。你执蓝方舰队（先手突击）。");
+                sendMqttMessage('join_ack');
+            } else if (data.type === 'join_ack') {
+                myRole = 'red'; updateConnectionUI(true); updateOrientation(); initBoard();
+                log("战区卫星通信联锁配置完成！你执红方舰队（后手机动）。");
+            } else if (data.type === 'spectator_join') {
+                log("👁️ 作战参谋本部调派了一名战情观察员切入公共雷达网。");
+                if (myRole === 'blue' || myRole === 'red') {
+                    sendMqttMessage('sync_board_to_spectator', { boardState, currentTurn, lastMove });
+                }
+            } else if (data.type === 'sync_board_to_spectator') {
+                if (myRole === 'spectator') {
+                    boardState = data.boardState; currentTurn = data.currentTurn; lastMove = data.lastMove;
+                    updateConnectionUI(true); renderPieces(); evaluateAndDisplayWinRate();
+                }
+            } else if (data.type === 'move') {
+                executeMoveSync(data.from.r, data.from.c, data.to.r, data.to.c, data.isStrike);
+            } else if (data.type === 'reset') {
+                resetBoardLocal(); log("对方重置了推演沙盘。");
+            } else if (data.type === 'undo_request') {
+                if (confirm("对方请求微调航线回溯上一指令，是否同意？")) {
+                    executeUndoLocal(); sendMqttMessage('undo_response', { accept: true });
+                } else { sendMqttMessage('undo_response', { accept: false }); }
+            } else if (data.type === 'undo_response') {
+                if (data.accept) { executeUndoLocal(); log("对方应允了航线变更申请，时空重叠执行。"); } else { log("变更申请被对方防空系统拦截。"); }
+            } else if (data.type === 'draw_request') {
+                if (confirm("对方指挥官提议停战，签署海上和平和解协议？")) {
+                    currentTurn = null; updateTurnUI(); sendMqttMessage('draw_response', { accept: true }); showCelebration('draw');
+                } else { sendMqttMessage('draw_response', { accept: false }); }
+            } else if (data.type === 'draw_response') {
+                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); } else { log("协议被单方面撕毁，战争持续。"); }
+            } else if (data.type === 'resign_notice') {
+                triggerGameOverDirectly(data.loser === 'blue' ? 'red' : 'blue');
+            } else if (data.type === 'role_swap') {
+                if(myRole !== 'spectator' && myRole !== null) { myRole = data.nextRole; updateOrientation(); }
+                updateConnectionUI(true); resetBoardLocal(); log(`阵营转换，舰队互换推演防线！`);
+            }
+        }
+
+        function createDOMGrid() {
+            const boardDOM = document.getElementById('board'); boardDOM.innerHTML = '';
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell'; cell.dataset.row = r; cell.dataset.col = c;
+                    cell.addEventListener('click', () => handleCellClick(r, c));
+                    boardDOM.appendChild(cell);
+                }
+            }
+        }
+
+        function initBoard() {
+            if (myRole === 'spectator') return;
+            resetBoardLocal();
+            sendMqttMessage('reset');
+        }
+
+        // Generate balanced symmetrically distributed modular fleet matrices
+        function resetBoardLocal() {
+            boardState = Array(9).fill(null).map(() => Array(7).fill(null));
+            selectedCell = null; currentTurn = 'blue'; lastMove = { from: null, to: null, strike: false };
+            moveHistory = []; document.getElementById('trajectoryLayer').innerHTML = '';
+            
+            const fleetBlueprint = [
+                '旗舰', '航母', '战列舰', '战列舰', '巡洋舰', '巡洋舰', '巡洋舰', 
+                '驱逐舰', '驱逐舰', '驱逐舰', '驱逐舰', '潜艇', '潜艇', '潜艇', 
+                '水雷', '水雷', '水雷', '水雷'
+            ];
+
+            // Deterministic structural index placement maps
+            // Red Fleet Placement Map (North Horizon Rows 0,1,2)
+            let rIdx = 0;
+            const redList = [...fleetBlueprint];
+            for(let r=0; r<=2; r++) {
+                for(let c=0; c<7; c++) {
+                    if (r === 0 && c === 3) { boardState[r][c] = { type: '旗舰', color: 'red' }; continue; }
+                    if (rIdx < redList.length) {
+                        let type = redList[rIdx++];
+                        if (type === '旗舰') type = '水雷'; // Substitute leftover slots safely
+                        boardState[r][c] = { type, color: 'red' };
+                    }
+                }
+            }
+
+            // Blue Fleet Placement Map (South Horizon Rows 6,7,8)
+            let bIdx = 0;
+            const blueList = [...fleetBlueprint];
+            for(let r=8; r>=6; r--) {
+                for(let c=0; c<7; c++) {
+                    if (r === 8 && c === 3) { boardState[r][c] = { type: '旗舰', color: 'blue' }; continue; }
+                    if (bIdx < blueList.length) {
+                        let type = blueList[bIdx++];
+                        if (type === '旗舰') type = '水雷';
+                        boardState[r][c] = { type, color: 'blue' };
+                    }
+                }
+            }
+
+            renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+        }
+
+        // Radar visibility fog analysis core rules pipeline
+        function shouldReveal(r, c, viewerColor) {
+            if (!viewerColor || viewerColor === 'spectator') return true; // Observer access transparency
+            const piece = boardState[r][c];
+            if (!piece || piece.color === viewerColor) return true;
+
+            // Analyze proximity scanner ranges across every active matching faction hull
+            for (let tr = 0; tr < 9; tr++) {
+                for (let tc = 0; tc < 7; tc++) {
+                    const scout = boardState[tr][tc];
+                    if (scout && scout.color === viewerColor) {
+                        const dr = Math.abs(tr - r); const dc = Math.abs(tc - c);
+                        
+                        // Destroyers boast high sensitivity long range surface search loops
+                        if (scout.type === '驱逐舰') {
+                            if ((tr === r && dc <= 2) || (tc === c && dr <= 2)) {
+                                return true; // Destroys stealth signatures instantly
+                            }
+                        }
+                        
+                        // Standard proximity radar mesh grid logic
+                        if (dr <= 1 && dc <= 1) {
+                            // Submarines bypass standard close-range sonar fields unless directly matched by a Destroyer
+                            if (piece.type === '潜艇') {
+                                if (scout.type === '驱逐舰') return true;
+                            } else {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function renderPieces() {
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cellDOM = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
+                    const oldChild = cellDOM.querySelector('.piece');
+                    if (oldChild) oldChild.remove();
+                    
+                    cellDOM.classList.remove('last-move');
+                    if (lastMove && ((lastMove.from && lastMove.from.r === r && lastMove.from.c === c) || (lastMove.to && lastMove.to.r === r && lastMove.to.c === c))) {
+                        cellDOM.classList.add('last-move');
+                    }
+
+                    const piece = boardState[r][c];
+                    if (piece) {
+                        const pieceDOM = document.createElement('div');
+                        const visible = shouldReveal(r, c, myRole);
+                        
+                        if (visible) {
+                            pieceDOM.className = `piece ${piece.color}`;
+                            pieceDOM.innerText = piece.type;
+                            // Add decorative visual tags inside specialized supply harbor areas
+                            if (isHarbor(r, c)) pieceDOM.style.boxShadow = "inset 0 0 8px #00f5d4";
+                        } else {
+                            pieceDOM.className = `piece fog`;
+                            pieceDOM.innerText = "⚓";
+                        }
+                        cellDOM.appendChild(pieceDOM);
+                    }
+                }
+            }
+        }
+
+        function handleCellClick(r, c) {
+            if (isReplayMode || myRole === 'spectator') return;
+            if (myRole !== null && currentTurn !== myRole) return;
+
+            const clickedPiece = boardState[r][c];
+
+            if (selectedCell) {
+                const activePiece = boardState[selectedCell.r][selectedCell.c];
+                
+                // Swap active coordinates if another friendly token is targeted
+                if (clickedPiece && clickedPiece.color === activePiece.color) {
+                    clearSelectionHighlights(); selectPiece(r, c); return;
+                }
+
+                // Parse move validity vectors across kinematic or airstrike paths
+                const moveCheck = validateMove(selectedCell.r, selectedCell.c, r, c);
+                if (moveCheck.valid) {
+                    commitPieceMovement(selectedCell.r, selectedCell.c, r, c, moveCheck.isStrike);
+                } else { clearSelectionHighlights(); }
+            } else {
+                if (clickedPiece && clickedPiece.color === currentTurn) {
+                    if (clickedPiece.type === '水雷' || clickedPiece.type === '旗舰') return;
+                    selectPiece(r, c);
+                }
+            }
+        }
+
+        function selectPiece(r, c) {
+            selectedCell = { r, c };
+            document.querySelector(`[data-row='${r}'][data-col='${c}']`).classList.add('selected');
+            const p = boardState[r][c];
+
+            for (let tr = 0; tr < 9; tr++) {
+                for (let tc = 0; tc < 7; tc++) {
+                    const check = validateMove(r, c, tr, tc);
+                    if (check.valid) {
+                        const targetDOM = document.querySelector(`[data-row='${tr}'][data-col='${tc}']`);
+                        if (check.isStrike) targetDOM.classList.add('strike-target');
+                        else targetDOM.classList.add('valid-target');
+                    }
+                }
+            }
+        }
+
+        // Draw trajectory track layers dynamically mapping structural lines
+        function drawTrajectory(fromR, fromC, toR, toC, isStrike) {
+            const cw = 74; const ch = 64; const hW = cw / 2; const hH = ch / 2;
+            let startX = fromC * cw + hW; let startY = fromR * ch + hH;
+            let endX = toC * cw + hW; let endY = toR * ch + hH;
+            const className = isStrike ? "strike-path" : "trajectory-path";
+            const pathStr = `<path class="${className}" d="M ${startX} ${startY} L ${endX} ${endY}"/>`;
+            document.getElementById('trajectoryLayer').innerHTML = pathStr;
+        }
+
+        function commitPieceMovement(fromR, fromC, toR, toC, isStrike) {
+            if (myRole !== null) {
+                sendMqttMessage('move', { from: { r: fromR, c: fromC }, to: { r: toR, c: toC }, isStrike });
+            }
+            executeMoveSync(fromR, fromC, toR, toC, isStrike);
+        }
+
+        // Mathematical kinematics checker assessing structural velocity rule arrays
+        function validateMove(fromR, fromC, toR, toC) {
+            const p = boardState[fromR][fromC]; const target = boardState[toR][toC];
+            if (!p || isIsland(toR, toC)) return { valid: false };
+            if (target && target.color === p.color) return { valid: false };
+
+            const dr = toR - fromR; const dc = toC - fromC;
+            const absDr = Math.abs(dr); const absDc = Math.abs(dc);
+
+            // Carrier specialized long-range missile air assault calculations
+            if (p.type === '航母') {
+                // Check if target falls exactly within non-diagonal 3-tile scanner rays
+                if ((dr === 0 && absDc <= 3 && absDc > 0) || (dc === 0 && absDr <= 3 && absDr > 0)) {
+                    // Must be a confirmed explicit enemy asset visible on screens
+                    if (target && target.color !== p.color) {
+                        // Enforce harbor deployment air immunity rules
+                        if (isHarbor(toR, toC)) return { valid: false };
+                        return { valid: true, isStrike: true };
+                    }
+                }
+                // Fallback standard movement kinematics
+                if (absDr <= 1 && absDc <= 1) return { valid: !target, isStrike: false };
+                return { valid: false };
+            }
+
+            // Continuous intercept vectors checking for straight channel blocks
+            if (fromR === toR || fromC === toC) {
+                let blocked = false;
+                if (fromR === toR) {
+                    let minC = Math.min(fromC, toC); let maxC = Math.max(fromC, toC);
+                    for(let c=minC+1; c<maxC; c++) if (boardState[fromR][c] || isIsland(fromR, c)) blocked = true;
+                } else {
+                    let minR = Math.min(fromR, toR); let maxR = Math.max(fromR, toR);
+                    for(let r=minR+1; r<maxR; r++) if (boardState[r][fromC] || isIsland(r, fromC)) blocked = true;
+                }
+                if (blocked) return { valid: false };
+
+                if (p.type === '驱逐舰' && (absDr <= 3 && absDc <= 3)) return { valid: true, isStrike: false };
+                if (p.type === '巡洋舰' && (absDr <= 2 && absDc <= 2)) return { valid: true, isStrike: false };
+            }
+
+            // Universal single step vector mapping
+            if (p.type === '战列舰' || p.type === '潜艇') {
+                if (absDr <= 1 && absDc <= 1) return { valid: true, isStrike: false };
+            }
+
+            return { valid: false };
+        }
+
+        // Core tactical conflict matrix calculator resolving hull crashes deterministically
+        function executeMoveSync(fromR, fromC, toR, toC, isStrike) {
+            const src = boardState[fromR][fromC]; const tgt = boardState[toR][toC];
+            if (!src) return;
+
+            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } });
+            lastMove = { from: { r: fromR, c: fromC }, to: { r: toR, c: toC }, strike: isStrike };
+
+            let gameOver = false; let winner = null;
+            let logMsg = `[指令] ${src.color === 'blue'?'蓝军':'红军'}${src.type}`;
+
+            if (isStrike) {
+                logMsg += ` 远程空袭了 (${toR}, ${toC}) ${tgt.type}`;
+                boardState[toR][toC] = null; // Air strikes clear target spaces outright
+                if (tgt.type === '旗舰') { gameOver = true; winner = src.color; }
+            } else {
+                logMsg += ` 航线变更为 (${toR}, ${toC})`;
+                if (!tgt) {
+                    boardState[toR][toC] = src; boardState[fromR][fromC] = null;
+                } else {
+                    logMsg += ` 遭遇战 💥 与敌方 [${tgt.type}] 接战`;
+                    if (tgt.type === '旗舰') {
+                        gameOver = true; winner = src.color; boardState[toR][toC] = src; boardState[fromR][fromC] = null;
+                    } else if (tgt.type === '水雷') {
+                        if (src.type === '驱逐舰') {
+                            boardState[toR][toC] = src; boardState[fromR][fromC] = null; logMsg += " -> 成功排雷安全占领处";
+                        } else {
+                            boardState[toR][toC] = null; boardState[fromR][fromC] = null; logMsg += " -> 触雷发生剧烈殉爆双沉";
+                        }
+                    } else if (src.type === '潜艇') {
+                        if (tgt.type === '战列舰' || tgt.type === '航母') {
+                            boardState[toR][toC] = src; boardState[fromR][fromC] = null; logMsg += " -> 鱼雷完美雷击突袭成功";
+                        } else {
+                            boardState[toR][toC] = null; boardState[fromR][fromC] = null; logMsg += " -> 被近程反潜火力击沉";
+                        }
+                    } else if (tgt.type === '潜艇') {
+                        if (src.type === '驱逐舰' || src.type === '巡洋舰') {
+                            boardState[toR][toC] = src; boardState[fromR][fromC] = null; logMsg += " -> 深水炸弹反潜合围成功";
+                        } else {
+                            boardState[fromR][fromC] = null; logMsg += " -> 突入潜艇拦截圈反遭雷击沉没";
+                        }
+                    } else if (PIECE_VALUES[src.type] > PIECE_VALUES[tgt.type]) {
+                        boardState[toR][toC] = src; boardState[fromR][fromC] = null; logMsg += " -> 火力压制击沉敌舰";
+                    } else if (PIECE_VALUES[src.type] === PIECE_VALUES[tgt.type]) {
+                        boardState[toR][toC] = null; boardState[fromR][fromC] = null; logMsg += " -> 乱战中两败俱伤各归母港";
+                    } else {
+                        boardState[fromR][fromC] = null; logMsg += " -> 越级强攻反遭重创沉没";
+                    }
+                }
+            }
+
+            clearSelectionHighlights(); renderPieces(); drawTrajectory(fromR, fromC, toR, toC, isStrike); log(logMsg);
+
+            if (gameOver) { triggerGameOverDirectly(winner); return; }
+
+            currentTurn = currentTurn === 'blue' ? 'red' : 'blue';
+            updateTurnUI(); playSonarSound(); evaluateAndDisplayWinRate();
+        }
+
+        function triggerGameOverDirectly(winner) {
+            lastMatchWinner = winner; showCelebration(winner); currentTurn = null; updateTurnUI(); playSonarSound();
+            if (myRole !== null && myRole !== 'spectator') {
+                if (winner === myRole) matchStats.wins++; else matchStats.losses++;
+                localStorage.setItem('naval_tactical_stats', JSON.stringify(matchStats));
+                updateStatsUI();
+            }
+        }
+
+        function evaluateBoard() {
+            let score = 0;
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const p = boardState[r][c]; if (!p) continue;
+                    let val = PIECE_VALUES[p.type] || 0;
+                    score += p.color === 'blue' ? val : -val;
+                }
+            }
+            return score;
+        }
+
+        function evaluateAndDisplayWinRate() {
+            const score = evaluateBoard();
+            let blueRate = 50 + (score / 120); blueRate = Math.max(5, Math.min(95, blueRate));
+            document.getElementById('blueEvalBar').style.width = blueRate + '%';
+            document.getElementById('redEvalBar').style.width = (100 - blueRate) + '%';
+            document.getElementById('blueEvalText').innerText = blueRate.toFixed(0) + '% Blue';
+            document.getElementById('redEvalText').innerText = (100 - blueRate).toFixed(0) + '% Red';
+        }
+
+        function showCelebration(winner) {
+            const overlay = document.getElementById('celebrationOverlay');
+            const titleEl = document.getElementById('celebrationTitle');
+            const subtitleEl = document.getElementById('celebrationSubtitle');
+            
+            if (winner === 'draw') {
+                titleEl.innerText = "CEASEFIRE"; subtitleEl.innerText = "联合战事中止协议签定。全舰队挂旗停火。";
+            } else if (myRole === winner) {
+                titleEl.innerText = "VICTORY"; subtitleEl.innerText = "海战全胜，摧毁敌方最高总指挥旗舰！制海权全量合围。";
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+            } else {
+                titleEl.innerText = "DEFEAT"; subtitleEl.innerText = "最高战术纵队遭遇全军覆没，核心旗舰已沉没。";
+            }
+            overlay.classList.add('active');
+        }
+
+        function startNextMatchManual() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            if (myRole !== null && myRole !== 'spectator') {
+                let next = myRole === 'blue' ? 'red' : 'blue';
+                sendMqttMessage('role_swap', { nextRole: myRole });
+                myRole = next; updateOrientation(); updateConnectionUI(true); resetBoardLocal();
+            } else { resetBoardLocal(); }
+        }
+
+        function saveGame() {
+            if (!currentTurn) return alert("无可固化海战数据。");
+            const data = { boardState, currentTurn, lastMove, moveHistory, savedAsRole: myRole };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Naval_Fleet_Archive_${new Date().toISOString().slice(0,10)}.naval`;
+            a.click(); URL.revokeObjectURL(url); log("💾 当前海区态势序列化输出成功 (.naval)。");
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const snap = JSON.parse(e.target.result);
+                    boardState = snap.boardState; currentTurn = snap.currentTurn; lastMove = snap.lastMove; moveHistory = snap.moveHistory;
+                    clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+                    log("📂 战史海图快照态势重组载入。");
+                } catch(err) { alert("海图文件格式破损错误。"); }
+            };
+            reader.readAsText(file); event.target.value = '';
+        }
+
+        function handleResign() {
+            if (!currentTurn || !confirm("确定要向全体编队下达凿舰命令投降认输吗？")) return;
+            let loser = (myRole !== null) ? myRole : currentTurn;
+            if (myRole !== null) sendMqttMessage('resign_notice', { loser: myRole });
+            triggerGameOverDirectly(loser === 'blue' ? 'red' : 'blue');
+        }
+
+        function requestUndo() {
+            if (moveHistory.length === 0) return alert("无历史航行节点。");
+            if (myRole !== null) {
+                if (currentTurn === myRole) return alert("需在敌方思索规避期间递交悔棋申请！");
+                sendMqttMessage('undo_request'); log("已向敌方总长机要室递交变更申请...");
+            } else { executeUndoLocal(); }
+        }
+
+        function executeUndoLocal() {
+            if (moveHistory.length === 0) return;
+            const prev = moveHistory.pop();
+            boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
+            document.getElementById('trajectoryLayer').innerHTML = '';
+            clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+        }
+
+        function requestDraw() {
+            if (myRole !== null) { sendMqttMessage('draw_request'); log("发起公海和平停战倡议协议..."); }
+            else { currentTurn = null; updateTurnUI(); showCelebration('draw'); }
+        }
+
+        function openReplay() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            const states = [...moveHistory, { board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } }];
+            localStorage.setItem('naval_replay_data', JSON.stringify(states));
+            window.open(window.location.href.split('?')[0] + '?mode=replay', '_blank');
+        }
+
+        function initReplayMode() {
+            isReplayMode = true;
+            document.querySelector('h1').innerHTML = 'Replay Command <div class="status-badge spectator-mode">Replay Active</div>';
+            const panels = document.querySelectorAll('.panel-section');
+            if (panels.length >= 4) { panels[2].style.display = 'none'; panels[3].style.display = 'none'; }
+            document.getElementById('undoBtn').parentElement.style.display = 'none';
+            document.getElementById('resignBtn').parentElement.style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+
+            const replayUI = document.createElement('div'); replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
+            replayUI.innerHTML = `
+                <button class="btn btn-secondary" style="flex: 1; color: var(--blue-piece); border-color: var(--blue-piece);" onclick="replayPrev()">上一步 (Prev)</button>
+                <button class="btn btn-secondary" style="flex: 1; color: var(--red-piece); border-color: var(--red-piece);" onclick="replayNext()">下一步 (Next)</button>
+            `;
+            document.querySelector('.sidebar').appendChild(replayUI);
+            try { replayStates = JSON.parse(localStorage.getItem('naval_replay_data')) || []; } catch (e) { return; }
+            currentReplayStep = replayStates.length - 1; applyReplayState(currentReplayStep);
+        }
+
+        function applyReplayState(index) {
+            if (index < 0 || index >= replayStates.length) return;
+            const state = replayStates[index]; boardState = state.board; currentTurn = state.turn; lastMove = state.lastMove;
+            clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+            if (lastMove && lastMove.from && lastMove.from.r !== null) drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c, lastMove.strike);
+        }
+
+        function replayPrev() { if (currentReplayStep > 0) applyReplayState(--currentReplayStep); }
+        function replayNext() { if (currentReplayStep < replayStates.length - 1) applyReplayState(++currentReplayStep); }
+
+        function playSonarSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        function updateOrientation() {
+            const wrapper = document.getElementById('boardWrapper');
+            if (myRole === 'red') wrapper.classList.add('flipped-view'); else wrapper.classList.remove('flipped-view');
+        }
+
+        function clearSelectionHighlights() { selectedCell = null; document.querySelectorAll('.cell').forEach(el => { el.classList.remove('selected', 'valid-target', 'strike-target'); }); }
+        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); log("联机作战钥匙已复制到剪贴板。"); }
+        function log(text) { const logBox = document.getElementById('logBox'); logBox.innerHTML += `<br><span style="color:#334155">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; logBox.scrollTop = logBox.scrollHeight; }
+        function updateStatsUI() { document.getElementById('statWins').innerText = matchStats.wins; document.getElementById('statLosses').innerText = matchStats.losses; const total = matchStats.wins + matchStats.losses; document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`; }
+        
+        function updateTurnUI() {
+            const turnBadge = document.getElementById('turnStatus'); if (!currentTurn) { turnBadge.style.display = "none"; return; }
+            turnBadge.style.display = "inline-block"; const name = currentTurn === 'blue' ? '蓝方' : '红方'; turnBadge.innerText = `执行回合: ${name}`;
+            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (旗舰就绪)"; } 
+            else { turnBadge.className = "status-badge"; }
+        }
+
+        function updateConnectionUI(isConnected) {
+            const badge = document.getElementById('connectionStatus'); const rBadge = document.getElementById('roleStatus');
+            if (isConnected) {
+                if(myRole === 'spectator') {
+                    badge.innerText = "联合参谋"; badge.className = "status-badge spectator-mode"; rBadge.style.display = "inline-block"; rBadge.innerText = "战情观察席";
+                } else {
+                    badge.innerText = "远程联机"; badge.className = "status-badge connected"; rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'blue' ? "蓝军总长" : "红军总长";
+                }
+            }
+            updateTurnUI();
+        }
+
+        // Bootstrap Core App Workspace Engine
+        renderSVGBoard();
+        createDOMGrid();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'replay') {
+            initReplayMode();
+        } else {
+            initBoard();
+            initNetwork();
+            updateStatsUI();
+        }
+    </script>
+</body>
+</html>

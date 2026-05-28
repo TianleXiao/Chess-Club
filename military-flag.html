@@ -25,629 +25,369 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px 20px; }
         
-        .container { display: flex; gap: 40px; max-width: 1400px; width: 100%; align-items: flex-start; justify-content: center; }
-        .sidebar { flex: 0 0 350px; width: 350px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .container { display: flex; gap: 40px; max-width: 1300px; width: 100%; align-items: center; justify-content: center; }
+        .sidebar { flex: 0 0 360px; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 14px; }
         
-        h1 { font-size: 1.25rem; font-weight: 400; letter-spacing: -0.02em; display: flex; justify-content: space-between; align-items: center; }
-        .label-tiny { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 8px; }
-        .panel-section { border-top: 1px solid var(--border); padding-top: 20px; }
+        h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
+        .switches-header { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+        .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .panel-section { background: #0f0f12; border: 1px solid var(--border); border-radius: 8px; padding: 14px; position: relative; }
         
-        .peer-id-display { font-family: monospace; font-size: 1.05rem; color: #fff; font-weight: 500; background: var(--surface-sub); padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
+        .eval-container { height: 4px; width: 100%; background: #22222a; border-radius: 2px; margin-top: 8px; display: flex; overflow: hidden; }
+        .eval-bar-red { height: 100%; background: #c42222; width: 50%; transition: width 0.4s var(--ease); }
+        .eval-bar-black { height: 100%; background: #ffffff; width: 50%; transition: width 0.4s var(--ease); }
+        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
+
+        .peer-id-display { font-family: monospace; font-size: 0.95rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
         .input-group { display: flex; gap: 8px; }
-        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-        input[type="text"]:focus { border-color: var(--text-dim); }
+        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; }
+        input[type="text"]:focus { border-color: #555; }
 
-        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; text-align: center; }
-        .btn:hover { background: #fff; }
-        .btn:active { transform: scale(0.98); }
-        .btn-secondary { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: var(--surface-sub); border-color: var(--text-dim); }
+        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 10px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn:hover { background: #e5e5e5; transform: translateY(-1px); }
+        .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+        .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
+        
+        .btn-danger { background: #222; color: #ff4d4d; border: 1px solid #442222; }
+        .btn-danger:hover { background: #331111; border-color: #ff4d4d; }
 
-        .status-area { display: flex; flex-direction: column; gap: 8px; }
-        .status-badge { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; background: var(--surface-sub); color: var(--text-dim); display: inline-block; width: fit-content; }
-        .status-badge.connected { background: #12281a; color: #40c057; border: 1px solid #1b4b2c; }
-        .status-badge.spectator-mode { background: #2b1a12; color: #fd7e14; border: 1px solid #4b2c1b; }
-        .status-badge.your-turn { background: #1a233a; color: #4dabf7; border: 1px solid #1e3a67; animation: pulseTurn 2s infinite linear; }
-        @keyframes pulseTurn { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .status-area { display: flex; flex-wrap: wrap; gap: 6px; }
+        .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #222; color: var(--text-dim); }
+        .status-badge.connected { background: #1b4332; color: #52b788; }
+        .status-badge.your-turn { background: #431b1b; color: #ff4d4d; animation: turnPulse 2s infinite; }
+        .status-badge.local-mode { background: #1a233a; color: #70a1ff; }
+        .status-badge.spectator-mode { background: #3a2a1a; color: #ffb03a; }
+
+        @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,77,77,0.3); } 100% { opacity: 0.8; } }
 
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-        .stat-card { background: var(--surface-sub); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
-        .stat-val { font-size: 1.2rem; font-weight: 500; margin-top: 4px; color: #fff; }
-        .log-box { height: 180px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: var(--text-dim); line-height: 1.6; background: #0c0c0e; padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+        .stat-card { background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
+        .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+        .log-box { max-height: 110px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
+        .log-box::-webkit-scrollbar { width: 4px; }
+        .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
         .board-wrapper {
             position: relative;
-            background: #111115;
+            background: #111115; 
             padding: var(--board-pad);
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            border-radius: 12px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.6);
             border: 1px solid var(--border);
         }
 
         .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
-        .trajectory-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 2; width: calc(4 * var(--cell-w)); height: calc(11 * var(--cell-h)); }
+        .trajectory-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 6; width: calc(5 * var(--cell-w)); height: calc(12 * var(--cell-h)); }
         
-        .military-board { 
-            position: relative; 
-            display: grid; 
-            grid-template-columns: repeat(5, var(--cell-w)); 
-            grid-template-rows: repeat(12, var(--cell-h)); 
-            z-index: 5; 
-            width: calc(4 * var(--cell-w));
-            height: calc(11 * var(--cell-h));
-        }
-        
-        .cell { 
-            position: absolute; 
-            width: var(--cell-w); 
-            height: var(--cell-h); 
-            transform: translate(-50%, -50%); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 10;
-        }
+        .chess-board { position: relative; display: grid; grid-template-columns: repeat(5, var(--cell-w)); grid-template-rows: repeat(12, var(--cell-h)); z-index: 5; }
+        .cell { position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; width: var(--cell-w); height: var(--cell-h); }
 
         .piece {
-            width: 62px; height: 42px; border-radius: 6px;
+            width: 66px; height: 44px; border-radius: 6px; background: #22222a; border: 1px solid var(--border);
             display: flex; justify-content: center; align-items: center;
-            font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: transform 0.2s var(--ease), box-shadow 0.2s, top 0.3s var(--ease), left 0.3s var(--ease);
-            user-select: none; z-index: 20; position: absolute;
-            transform: translate(-50%, -50%);
+            font-size: 0.95rem; font-weight: 500; letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+            user-select: none; transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease); pointer-events: none;
+            line-height: 1;
         }
-        .piece:hover { transform: translate(-50%, -52%) scale(1.04); box-shadow: 0 6px 14px rgba(0,0,0,0.4); }
-        .piece.selected { border-color: #fff !important; box-shadow: 0 0 12px rgba(255,255,255,0.4) !important; transform: translate(-50%, -54%) scale(1.06); z-index: 30; }
+        
+        .piece.red { color: #ff4d4d; border-color: #552222; background: #241818; }
+        .piece.black { color: #ffffff; border-color: #444455; background: #1c1c24; }
+        
+        .cell.selected .piece { transform: scale(1.1) translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.6); border-color: #8a50ff; }
+        .cell.last-move::before { content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(138, 80, 255, 0.5); z-index: 4; }
+        .cell.valid-target::after { content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(82, 183, 136, 0.7); z-index: 4; }
+        .cell.blunder-target::after { content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 77, 77, 0.8); z-index: 4; }
 
-        .piece.red { background: var(--red-piece); color: #000; }
-        .piece.black { background: var(--black-piece); color: #000; }
+        .flipped-view { transform: rotate(180deg); }
+        .flipped-view .piece { transform: rotate(180deg); }
+        .flipped-view .cell.selected .piece { transform: scale(1.1) translateY(-2px) rotate(180deg); }
+        .flipped-view .svg-layer text { transform: rotate(180deg); transform-origin: center; }
+        .flipped-view #dangerBanner { transform: rotate(180deg); }
 
-        /* 联机模式下的对方暗棋隐藏样式 */
-        .piece.fog-hidden {
-            background: linear-gradient(135deg, #22222a, #18181f) !important;
-            color: rgba(255,255,255,0.2) !important;
-            border: 1px solid #3c3c45 !important;
-        }
-
-        .camp-node { width: 54px; height: 34px; border-radius: 50%; border: 1.5px dashed var(--board-line); background: #111115; position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
-        .hq-node { width: 66px; height: 44px; border: 1.5px solid var(--board-line); background: #16161c; position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
-
-        .cell.highlight::before {
-            content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); opacity: 0.4; z-index: 15; pointer-events: none;
-        }
+        .switch-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 130px; }
+        .switch { position: relative; display: inline-block; width: 30px; height: 16px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .3s; border-radius: 16px; border: 1px solid var(--border); }
+        .slider:before { position: absolute; content: ""; height: 10px; width: 10px; left: 2px; bottom: 2px; background-color: #777; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #8a50ff; border-color: #8a50ff; }
+        input:checked + .slider:before { transform: translateX(14px); background-color: #fff; }
 
         .celebration-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(5,5,8,0.85); backdrop-filter: blur(8px);
+            background: rgba(10, 10, 12, 0.88); backdrop-filter: blur(12px);
             display: flex; justify-content: center; align-items: center;
-            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease);
+            z-index: 9999; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s var(--ease);
         }
         .celebration-overlay.active { opacity: 1; pointer-events: auto; }
         .celebration-card {
-            background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 64px; text-align: center; box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 48px 64px; text-align: center;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            transform: scale(0.85); transition: transform 0.5s var(--ease);
         }
-        .celebration-title { font-size: 2rem; font-weight: 300; margin-bottom: 8px; color: #fff; }
-        .celebration-subtitle { font-size: 0.95rem; color: var(--text-dim); margin-bottom: 24px; }
+        .celebration-overlay.active .celebration-card { transform: scale(1); }
+        .celebration-title { font-size: 3.2rem; font-weight: 200; letter-spacing: 0.15em; margin-bottom: 12px; text-transform: uppercase; color: #ffffff; }
+        .celebration-subtitle { font-size: 1.1rem; color: var(--text-dim); margin-bottom: 32px; font-weight: 300; }
 
-        .replay-banner { background: #2b1a12; color: #fd7e14; border: 1px solid #4b2c1b; border-radius: 8px; padding: 12px; font-size: 0.9rem; margin-bottom: 16px; display: none; align-items: center; justify-content: space-between; }
+        .danger-banner {
+            position: absolute; top: var(--board-pad); left: var(--board-pad);
+            width: calc(100% - 2 * var(--board-pad)); height: calc(100% - 2 * var(--board-pad));
+            background: rgba(10, 10, 12, 0.82); backdrop-filter: blur(8px);
+            border-radius: 6px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+            border: 1px solid rgba(255, 77, 77, 0.15);
+        }
+        .danger-banner.active { opacity: 1; pointer-events: auto; }
+        .danger-content {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 28px 36px; max-width: 420px; width: 90%;
+            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+            transform: translateY(15px); transition: transform 0.3s var(--ease);
+        }
+        .danger-banner.active .danger-content { transform: translateY(0); }
+        .danger-title { font-size: 1.1rem; font-weight: 600; color: #ff4d4d; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+        .danger-desc { font-size: 0.88rem; color: var(--text-main); line-height: 1.6; margin-bottom: 24px; }
+        .danger-actions { display: flex; gap: 12px; justify-content: center; }
+
+        .trajectory-path { fill: none; stroke: #8a50ff; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.75; }
+
+        @media (max-width: 950px) {
+            body { padding: 20px 10px; }
+            .container { flex-direction: column-reverse; gap: 20px; }
+            .sidebar { width: calc(5 * var(--cell-w) + 2 * var(--board-pad)); max-width: 100%; flex: none; }
+        }
     </style>
 </head>
 <body>
 
     <div id="celebrationOverlay" class="celebration-overlay">
         <div class="celebration-card">
-            <div id="celebrationTitle" class="celebration-title">红方获胜</div>
-            <div id="celebrationSubtitle" class="celebration-subtitle">对方军旗已被斩落</div>
-            <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">查看战场</button>
+            <div id="celebrationTitle" class="celebration-title">VICTORY</div>
+            <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="openReplay()">复盘查看局势</button>
+                <button class="btn" id="nextMatchBtn" onclick="startNextMatchManual()">开始新局/攻守交替</button>
+            </div>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <h1>P2P Military Chess</h1>
+            <h1>
+                Military Studio
+                <div class="switches-header">
+                    <div class="switch-wrap" title="开启后会强制拦截高危白送棋子的走法">
+                        <span style="font-size: 9px; color:#ff4d4d; font-weight: bold;">Risk Alert</span>
+                        <label class="switch">
+                            <input type="checkbox" id="riskToggle" onchange="toggleRiskAlertMode(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </h1>
             
-            <div id="replayBanner" class="replay-banner">
-                <span>复盘模式中</span>
-                <div style="display:flex; gap:6px;">
-                    <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="replayPrev()">◀</button>
-                    <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="replayNext()">▶</button>
-                </div>
-            </div>
-
-            <div class="panel-section" style="border:none; padding:0;">
-                <span class="label-tiny">棋局密钥</span>
-                <div class="peer-id-display" id="myIdDisplay">Generating...</div>
-                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">复制我的密钥</button>
-            </div>
-
             <div class="panel-section">
-                <span class="label-tiny">连接敌军</span>
-                <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="粘贴对方的密钥...">
-                    <button class="btn" onclick="connectToPeer()">对阵</button>
-                </div>
-            </div>
-
-            <div class="panel-section">
-                <span class="label-tiny">战场雷达</span>
-                <div class="status-area">
-                    <div id="connectionStatus" class="status-badge">单机对策模式</div>
-                    <div id="roleStatus" class="status-badge" style="display:none;"></div>
-                    <div id="turnStatus" class="status-badge">当前回合: 红方</div>
-                </div>
-            </div>
-
-            <div class="panel-section">
-                <span class="label-tiny">战绩</span>
+                <span class="label-tiny">Match Stats</span>
                 <div class="stats-grid">
-                    <div class="stat-card"><span class="label-tiny">胜</span><div class="stat-val" id="statWins">0</div></div>
-                    <div class="stat-card"><span class="label-tiny">负</span><div class="stat-val" id="statLosses">0</div></div>
-                    <div class="stat-card"><span class="label-tiny">胜率</span><div class="stat-val" id="statRate">0%</div></div>
+                    <div class="stat-card" style="border-color: #52b788;"><span class="label-tiny">WIN</span><div class="stat-val" id="statWins" style="color: #52b788;">0</div></div>
+                    <div class="stat-card" style="border-color: #ff4d4d;"><span class="label-tiny">LOSE</span><div class="stat-val" id="statLosses" style="color: #ff4d4d;">0</div></div>
+                    <div class="stat-card"><span class="label-tiny">RATE</span><div class="stat-val" id="statRate">0%</div></div>
                 </div>
             </div>
 
-            <div class="panel-section" style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                <span class="label-tiny">情报日志</span>
-                <div class="log-box" id="logBox"></div>
-                <div style="display:flex; gap:8px; margin-top:4px;">
-                    <button class="btn btn-secondary" style="flex:1; padding:6px; font-size:0.8rem;" onclick="exportArchive()">导出复盘谱</button>
-                    <button class="btn btn-secondary" style="flex:1; padding:6px; font-size:0.8rem;" onclick="initBoard()">重摆棋局</button>
+            <div class="panel-section">
+                <span class="label-tiny">Real-time Evaluation</span>
+                <div class="eval-labels">
+                    <span id="redEvalText" style="color: #ff4d4d; font-weight:bold;">50% Red</span>
+                    <span id="blackEvalText" style="color: #ffffff; font-weight:bold;">50% Black</span>
+                </div>
+                <div class="eval-container">
+                    <div class="eval-bar-red" id="redEvalBar"></div>
+                    <div class="eval-bar-black" id="blackEvalBar"></div>
                 </div>
             </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Your Room Key</span>
+                <div class="peer-id-display" id="myIdDisplay">Generating...</div>
+                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Key</button>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Join Room</span>
+                <div class="input-group">
+                    <input type="text" id="peerIdInput" placeholder="Paste opponent key...">
+                    <button class="btn" style="padding: 10px 10px;" onclick="connectToPeer('play')">对战</button>
+                    <button class="btn btn-secondary" style="padding: 10px 10px; border-color: #ffb03a; color: #ffb03a;" onclick="connectToPeer('spectate')">观棋</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Game Status</span>
+                <div class="status-area" style="margin-top:4px;">
+                    <div id="connectionStatus" class="status-badge local-mode">Local Mode</div>
+                    <div id="turnStatus" class="status-badge">Turn: Red</div>
+                    <div id="roleStatus" class="status-badge" style="display:none;"></div>
+                </div>
+                <div class="log-box" id="logBox">SVG Board rendering initialized. Tactical matrix ready.</div>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">求情悔棋</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">提议言和</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="btn btn-danger" style="flex: 1;" id="resignBtn" onclick="handleResign()">投子认输</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #8a50ff; color: #8a50ff;" id="saveBtn" onclick="saveGame()">导出存档</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #52b788; color: #52b788;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">导入存档</button>
+                <input type="file" id="fileLoadInput" accept=".army" style="display:none;" onchange="handleFileSelect(event)">
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">强制重开</button>
         </div>
 
         <div class="board-wrapper" id="boardWrapper">
-            <svg class="trajectory-layer" id="trajectoryLayer"></svg>
-            <div class="military-board" id="board"></div>
+            <div id="dangerBanner" class="danger-banner">
+                <div class="danger-content">
+                    <div class="danger-title">⚠️ 失子风险提示</div>
+                    <div id="dangerDesc" class="danger-desc">当前走法会导致您的棋子处于敌方打击火网之下。确定要继续吗？</div>
+                    <div class="danger-actions">
+                        <button class="btn btn-danger" id="dangerConfirmBtn">执意如此</button>
+                        <button class="btn btn-secondary" onclick="cancelPendingMove()">容我三思</button>
+                    </div>
+                </div>
+            </div>
+            
+            <svg class="trajectory-layer" id="trajectoryLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div class="chess-board" id="board"></div>
         </div>
     </div>
 
     <script>
-        const ROWS = 12;
-        const COLS = 5;
-        const CS_W = 76;
-        const CS_H = 56;
+        // Matrix definitions for LuZhanQi structural board space (12 Rows x 5 Columns)
+        let boardState = Array(12).fill(null).map(() => Array(5).fill(null));
+        let selectedCell = null;
+        let myRole = null; 
+        let currentTurn = 'red'; 
+        let lastMove = { from: null, to: null };
+        let moveHistory = [];
+        let riskAlertActive = false; 
+        let lastMatchWinner = null;
+        let pendingMoveContext = null;
 
-        let pieces = [];
-        let selectedPiece = null;
-        let currentTurn = 'red';
-        let myRole = null; // 'red', 'black', 'spectator', null
-        let gameActive = true;
-        let lastMove = null;
-
-        // 归档记录复盘数组
+        // Replay Context Variables
+        let isReplayMode = false;
         let replayStates = [];
         let currentReplayStep = 0;
-        let isReplayMode = false;
 
-        const PIECE_TYPES = [
-            { name: "司令", power: 9 }, { name: "军长", power: 8 },
-            { name: "师长", power: 7 }, { name: "师长", power: 7 },
-            { name: "旅长", power: 6 }, { name: "旅长", power: 6 },
-            { name: "团长", power: 5 }, { name: "团长", power: 5 },
-            { name: "营长", power: 4 }, { name: "营长", power: 4 },
-            { name: "连长", power: 3 }, { name: "连长", power: 3 }, { name: "连长", power: 3 },
-            { name: "排长", power: 2 }, { name: "排长", power: 2 }, { name: "排长", power: 2 },
-            { name: "工兵", power: 1 }, { name: "工兵", power: 1 }, { name: "工兵", power: 1 },
-            { name: "炸弹", power: 0 }, { name: "炸弹", power: 0 },
-            { name: "地雷", power: -1 }, { name: "地雷", power: -1 }, { name: "地雷", power: -1 },
-            { name: "军旗", power: -2 }
-        ];
+        // MQTT Network variables
+        let mqttClient = null;
+        let currentRoomTopic = '';
+        const myUniqueId = 'MIL_UID_' + Math.random().toString(36).substr(2, 9);
+        let myRoomId = '';
 
-        const CAMP_NODES = [
+        let matchStats = JSON.parse(localStorage.getItem('chess_military_stats')) || { wins: 0, losses: 0 };
+
+        // Configuration Arrays defining architectural layout maps
+        const CAMPS = [
             {r:2, c:1}, {r:2, c:3}, {r:3, c:2}, {r:4, c:1}, {r:4, c:3},
             {r:7, c:1}, {r:7, c:3}, {r:8, c:2}, {r:9, c:1}, {r:9, c:3}
         ];
-        const HQ_NODES = [
-            {r:11, c:1}, {r:11, c:3}, 
-            {r:0, c:1}, {r:0, c:3}
+        const HEADQUARTERS = [
+            {r:0, c:1, side:'black'}, {r:0, c:3, side:'black'},
+            {r:11, c:1, side:'red'}, {r:11, c:3, side:'red'}
         ];
 
-        let mqttClient = null;
-        let currentRoomTopic = '';
-        const myUniqueId = 'MIL_' + Math.random().toString(36).substr(2, 9);
-        let myRoomId = '';
-        let matchStats = JSON.parse(localStorage.getItem('military_stats_v1')) || { wins: 0, losses: 0 };
+        // Piece structural tier assignments mapping for deterministic battle evaluation logic
+        const PIECE_RANKS = { '司令':9, '军长':8, '师长':7, '旅长':6, '团长':5, '营长':4, '连长':3, '排长':2, '工兵':1, '地雷':0, '炸弹':-1, '军旗':-2 };
+        const PIECE_VALUES = { '司令':900, '军长':750, '师长':600, '旅长':500, '团长':400, '营长':300, '连长':200, '排长':150, '工兵':250, '地雷':350, '炸弹':450, '军旗':5000 };
 
-        function isCamp(r, c) { return CAMP_NODES.some(n => n.r === r && n.c === c); }
-        function isHQ(r, c) { return HQ_NODES.some(n => n.r === r && n.c === c); }
+        // Predefined classical open-face deployment setup layouts
+        const initialSetup = {
+            black: [
+                { r:0, c:0, type:'兵' }, { r:0, c:1, type:'旗' }, { r:0, c:2, type:'雷' }, { r:0, c:3, type:'墙' }, { r:0, c:4, type:'雷' }, // placeholders modified inside generator
+            ],
+            // Dynamic distribution applied inside clear initializers to avoid cluttering code with static lines
+        };
+
+        function isCamp(r, c) {
+            return CAMPS.some(p => p.r === r && p.c === c);
+        }
+
+        function isHQ(r, c) {
+            return HEADQUARTERS.some(p => p.r === r && p.c === c);
+        }
+
         function isRailroad(r, c) {
-            if (r === 1 || r === 5 || r === 6 || r === 10) return true;
-            if ((r >= 1 && r <= 10) && (c === 0 || c === 4)) return true;
+            if (r === 1 || r === 5 || r === 6 || r === 10) return c >= 0 && c <= 4;
+            if (c === 0 || c === 4) return r >= 1 && r <= 10;
             return false;
         }
 
+        // Render high-precision SVG lines mapping railroads, campsites, and bridges
         function renderSVGBoard() {
-            const w = (COLS - 1) * CS_W;
-            const h = (ROWS - 1) * CS_H;
-            let svg = `<svg class="svg-layer" width="${w+40}" height="${h+40}" viewBox="-20 -20 ${w+40} ${h+40}" xmlns="http://www.w3.org/2000/svg">`;
-            
-            for(let r=0; r<ROWS; r++){
-                svg += `<line x1="0" y1="${r*CS_H}" x2="${w}" y2="${r*CS_H}" stroke="${isRailroad(r,0)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="${isRailroad(r,0)?2:1}"/>`;
-            }
-            for(let c=0; c<COLS; c++){
-                svg += `<line x1="${c*CS_W}" y1="0" x2="${c*CS_W}" y2="${5*CS_H}" stroke="${isRailroad(1,c)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="1.5"/>`;
-                svg += `<line x1="${c*CS_W}" y1="${6*CS_H}" x2="${c*CS_W}" y2="${11*CS_H}" stroke="${isRailroad(6,c)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="1.5"/>`;
-            }
-            svg += `<line x1="0" y1="${5*CS_H}" x2="0" y2="${6*CS_H}" stroke="var(--railroad-line)" stroke-width="2"/>`;
-            svg += `<line x1="${w}" y1="${5*CS_H}" x2="${w}" y2="${6*CS_H}" stroke="var(--railroad-line)" stroke-width="2"/>`;
-            svg += `<line x1="${2*CS_W}" y1="${5*CS_H}" x2="${2*CS_W}" y2="${6*CS_H}" stroke="var(--board-line)" stroke-dasharray="4" stroke-width="1.5"/>`;
+            const cw = 76; const ch = 56; const hW = cw / 2; const hH = ch / 2;
+            const lineColor = "var(--board-line)";
+            const railColor = "var(--railroad-line)";
+            let svgStr = `<svg class="svg-layer" width="${5*cw}" height="${12*ch}" viewBox="0 0 ${5*cw} ${12*ch}" xmlns="http://www.w3.org/2000/svg">`;
 
-            const slashes = [
-                {r1:1,c1:0,r2:3,c2:2}, {r1:1,c1:4,r2:3,c2:2}, {r1:3,c1:2,r2:5,c2:0}, {r1:3,c1:2,r2:5,c2:4},
-                {r1:1,c1:2,r2:2,c1:1}, {r1:1,c1:2,r2:2,c2:3}, {r1:2,c1:1,r2:3,c2:2}, {r1:2,c1:3,r2:3,c2:2},
-                {r1:3,c1:2,r2:4,c1:1}, {r1:3,c1:2,r2:4,c2:3}, {r1:4,c1:1,r2:5,c2:2}, {r1:4,c1:3,r2:5,c2:2},
-                {r1:6,c1:2,r2:7,c1:1}, {r1:6,c1:2,r2:7,c2:3}, {r1:7,c1:1,r2:8,c2:2}, {r1:7,c1:3,r2:8,c2:2},
-                {r1:8,c1:2,r2:9,c1:1}, {r1:8,c1:2,r2:9,c2:3}, {r1:9,c1:1,r2:10,c2:2}, {r1:9,c1:3,r2:10,c2:2},
-                {r1:6,c1:0,r2:8,c2:2}, {r1:6,c1:4,r2:8,c2:2}, {r1:8,c1:2,r2:10,c2:0}, {r1:8,c1:2,r2:10,c2:4}
-            ];
-            slashes.forEach(s => {
-                svg += `<line x1="${s.c1*CS_W}" y1="${s.r1*CS_H}" x2="${s.c2*CS_W}" y2="${s.r2*CS_H}" stroke="var(--board-line)" stroke-width="1"/>`;
+            // Draw Standard Grid Matrix Infrastructure
+            for (let r = 0; r < 12; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const cx = c * cw + hW; const cy = r * ch + hH;
+                    // Standard horizontal/vertical corridors
+                    if (c < 4) svgStr += `<line x1="${cx}" y1="${cy}" x2="${cx + cw}" y2="${cy}" stroke="${lineColor}" stroke-width="1"/>`;
+                    if (r < 11 && !(r === 5 && (c === 1 || c === 3))) { 
+                        // Exclude non-bridge middle lines crossing river boundaries
+                        svgStr += `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + ch}" stroke="${lineColor}" stroke-width="1"/>`;
+                    }
+                }
+            }
+
+            // Overlay High-Speed Structural Railroad Networks
+            svgStr += `<rect x="${0*cw+hW}" y="${1*ch+hH}" width="${4*cw}" height="${4*ch}" fill="none" stroke="${railColor}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+            svgStr += `<rect x="${0*cw+hW}" y="${6*ch+hH}" width="${4*cw}" height="${4*ch}" fill="none" stroke="${railColor}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+            svgStr += `<line x1="${0*cw+hW}" y1="${5*ch+hH}" x2="${4*cw+hW}" y2="${5*ch+hH}" stroke="${railColor}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+            svgStr += `<line x1="${0*cw+hW}" y1="${6*ch+hH}" x2="${4*cw+hW}" y2="${6*ch+hH}" stroke="${railColor}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+
+            // Highlight Camps (行营) Safe-zone Diamond Enclosures
+            CAMPS.forEach(p => {
+                const cx = p.c * cw + hW; const cy = p.r * ch + hH;
+                svgStr += `<circle cx="${cx}" cy="${cy}" r="18" fill="#141418" stroke="#8a50ff" stroke-width="1.5"/>`;
+                // Diagonal connecting corridors into camp points
+                svgStr += `<line x1="${cx-hW}" y1="${cy-hH}" x2="${cx+hW}" y2="${cy+hH}" stroke="${lineColor}" stroke-width="0.5"/>`;
+                svgStr += `<line x1="${cx+hW}" y1="${cy-hH}" x2="${cx-hW}" y2="${cy+hH}" stroke="${lineColor}" stroke-width="0.5"/>`;
             });
 
-            svg += `</svg>`;
-            const oldSvg = document.querySelector('.svg-layer');
-            if (oldSvg) oldSvg.remove();
-            document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svg);
-        }
-
-        function createDOMGrid() {
-            const boardDOM = document.getElementById('board');
-            boardDOM.innerHTML = '';
-            
-            CAMP_NODES.forEach(n => {
-                const camp = document.createElement('div'); camp.className = 'camp-node';
-                camp.style.left = `${n.c * CS_W}px`; camp.style.top = `${n.r * CS_H}px`;
-                boardDOM.appendChild(camp);
-            });
-            HQ_NODES.forEach(n => {
-                const hq = document.createElement('div'); hq.className = 'hq-node';
-                hq.style.left = `${n.c * CS_W}px`; hq.style.top = `${n.r * CS_H}px`;
-                boardDOM.appendChild(hq);
+            // Outline Headquarters (大本营) Structures
+            HEADQUARTERS.forEach(p => {
+                const cx = p.c * cw + hW; const cy = p.r * ch + hH;
+                svgStr += `<rect x="${cx-24}" y="${cy-16}" width="48" height="32" rx="4" fill="#0f0f12" stroke="#ffb03a" stroke-width="1.5"/>`;
             });
 
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.style.left = `${c * CS_W}px`; cell.style.top = `${r * CS_H}px`;
-                    cell.dataset.row = r; cell.dataset.col = c;
-                    cell.addEventListener('click', () => handleCellClick(r, c));
-                    boardDOM.appendChild(cell);
-                }
-            }
-        }
-
-        function shuffleArray(arr) {
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-        }
-
-        function initBoard() {
-            pieces = [];
-            selectedPiece = null;
-            currentTurn = 'red';
-            gameActive = true;
-            lastMove = null;
-            document.getElementById('trajectoryLayer').innerHTML = '';
-
-            let redPool = JSON.parse(JSON.stringify(PIECE_TYPES));
-            let blackPool = JSON.parse(JSON.stringify(PIECE_TYPES));
-            shuffleArray(redPool); shuffleArray(blackPool);
-
-            let redIdx = 0, blackIdx = 0;
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (isCamp(r, c)) continue;
-                    if (r < 6) {
-                        let t = blackPool[blackIdx++];
-                        pieces.push({ id: 'b_' + blackIdx, side: 'black', name: t.name, power: t.power, r: r, c: c });
-                    } else {
-                        let t = redPool[redIdx++];
-                        pieces.push({ id: 'r_' + redIdx, side: 'red', name: t.name, power: t.power, r: r, c: c });
-                    }
-                }
-            }
-
-            replayStates = [];
-            recordReplayState();
-
-            renderPieces();
-            updateTurnUI();
-            clearHighlights();
-        }
-
-        function renderPieces() {
-            // 用数据驱动模式同步实体，不销毁重构，保留原本UI的过渡动画效果
-            const boardDOM = document.getElementById('board');
-            let pieceElements = boardDOM.querySelectorAll('.piece');
-            let currentIds = pieces.map(p => p.id);
-
-            pieceElements.forEach(el => {
-                if (!currentIds.includes(el.id)) el.remove();
-            });
-
-            pieces.forEach(p => {
-                let pDOM = document.getElementById(p.id);
-                if (!pDOM) {
-                    pDOM = document.createElement('div');
-                    pDOM.id = p.id;
-                    pDOM.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        handleCellClick(p.r, p.c);
-                    });
-                    boardDOM.appendChild(pDOM);
-                }
-
-                pDOM.style.left = `${p.c * CS_W}px`;
-                pDOM.style.top = `${p.r * CS_H}px`;
-
-                // 【核心修改】当处于联机模式（myRole不为空）且不是复盘模式时，隐藏非己方的棋子信息
-                if (myRole !== null && myRole !== 'spectator' && p.side !== myRole && !isReplayMode) {
-                    pDOM.className = `piece ${p.side} fog-hidden`;
-                    pDOM.innerText = "棋子"; // 模糊显示为无区分状态
-                } else {
-                    pDOM.className = `piece ${p.side}`;
-                    pDOM.innerText = p.name;
-                }
-
-                if (selectedPiece && selectedPiece.id === p.id) {
-                    pDOM.classList.add('selected');
-                }
-            });
-        }
-
-        function handleCellClick(r, c) {
-            if (!gameActive || isReplayMode) return;
-            if (myRole !== null && myRole !== 'spectator' && currentTurn !== myRole) return;
-
-            const clickTargetPiece = pieces.find(p => p.r === r && p.c === c);
-
-            if (selectedPiece) {
-                if (clickTargetPiece && clickTargetPiece.side === selectedPiece.side) {
-                    if (myRole !== null && myRole !== 'spectator' && selectedPiece.side !== myRole) return;
-                    selectedPiece = clickTargetPiece;
-                    highlightValidMoves(selectedPiece);
-                    renderPieces();
-                } else {
-                    if (validateMove(selectedPiece, r, c)) {
-                        executeMoveAction(selectedPiece, r, c);
-                    } else {
-                        selectedPiece = null;
-                        clearHighlights();
-                        renderPieces();
-                    }
-                }
-            } else {
-                if (clickTargetPiece && clickTargetPiece.side === currentTurn) {
-                    if (myRole !== null && myRole !== 'spectator' && clickTargetPiece.side !== myRole) return;
-                    selectedPiece = clickTargetPiece;
-                    highlightValidMoves(selectedPiece);
-                    renderPieces();
-                }
-            }
-        }
-
-        function highlightValidMoves(piece) {
-            clearHighlights();
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (validateMove(piece, r, c)) {
-                        const cell = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
-                        if (cell) cell.classList.add('highlight');
-                    }
-                }
-            }
-        }
-
-        function clearHighlights() {
-            document.querySelectorAll('.cell').forEach(el => el.classList.remove('highlight'));
-        }
-
-        function validateMove(piece, tr, tc) {
-            const dr = Math.abs(tr - piece.r);
-            const dc = Math.abs(tc - piece.c);
+            // Midriver frontier alignment boundaries text elements
+            const midY = 5.5 * ch + hH + 4;
+            svgStr += `<text x="${2 * cw + hW}" y="${midY}" font-size="12" fill="#555" font-weight="600" text-anchor="middle" letter-spacing="8">前线分界线</text>`;
+            svgStr += `</svg>`;
             
-            if (piece.power === -1 || piece.power === -2) return false;
-            if (isCamp(tr, tc)) {
-                if (pieces.some(p => p.r === tr && p.c === tc)) return false;
-            }
-
-            const isNeighbor = (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
-            let isCampSlash = false;
-            if (isCamp(piece.r, piece.c) || isCamp(tr, tc)) {
-                if (dr === 1 && dc === 1) isCampSlash = true;
-            }
-
-            let isRailMove = false;
-            if (isRailroad(piece.r, piece.c) && isRailroad(tr, tc)) {
-                if (piece.r === tr) {
-                    let step = tc > piece.c ? 1 : -1; let blocked = false;
-                    for (let c = piece.c + step; c !== tc; c += step) {
-                        if (pieces.some(p => p.r === tr && p.c === c)) blocked = true;
-                    }
-                    if (!blocked) isRailMove = true;
-                } else if (piece.c === tc) {
-                    let step = tr > piece.r ? 1 : -1; let blocked = false;
-                    for (let r = piece.r + step; r !== tr; r += step) {
-                        if (piece.r < 6 && tr >= 6 && (piece.c !== 0 && piece.c !== 4) && (r === 5 || r === 6)) blocked = true;
-                        if (pieces.some(p => p.r === r && p.c === tc)) blocked = true;
-                    }
-                    if (!blocked) isRailMove = true;
-                }
-            }
-
-            return isNeighbor || isCampSlash || isRailMove;
+            document.getElementById('boardWrapper').insertAdjacentHTML('afterbegin', svgStr);
         }
 
-        function executeMoveAction(piece, tr, tc) {
-            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) {
-                sendMqttMessage('move', { pieceId: piece.id, fromR: piece.r, fromC: piece.c, toR: tr, toC: tc });
-            }
-
-            const fromR = piece.r; const fromC = piece.c;
-            const targetIndex = pieces.findIndex(p => p.r === tr && p.c === tc);
-            
-            // 【核心删除】删除了此处的走棋细则、坐标、棋子名称的公共 log() 日志输出，保证不露白
-            if (targetIndex !== -1) {
-                const target = pieces[targetIndex];
-                
-                if (target.power === -2) {
-                    pieces.splice(targetIndex, 1);
-                    piece.r = tr; piece.c = tc;
-                    triggerMatchEnd(piece.side, `突破行营斩落军旗`);
-                    return;
-                }
-                
-                if (piece.power === 0 || target.power === 0) {
-                    pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id);
-                } else if (target.power === -1) {
-                    if (piece.power === 1) {
-                        pieces.splice(targetIndex, 1); piece.r = tr; piece.c = tc;
-                    } else {
-                        pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id);
-                    }
-                } else {
-                    if (piece.power > target.power) {
-                        pieces.splice(targetIndex, 1); piece.r = tr; piece.c = tc;
-                    } else if (piece.power === target.power) {
-                        pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id);
-                    } else {
-                        pieces = pieces.filter(p => p.id !== piece.id);
-                    }
-                }
-            } else {
-                piece.r = tr; piece.c = tc;
-            }
-
-            lastMove = { from: { r: fromR, c: fromC }, to: { r: tr, c: tc } };
-            drawTrajectory(fromR, fromC, tr, tc);
-
-            selectedPiece = null;
-            clearHighlights();
-            checkGameVitality();
-
-            if (gameActive) {
-                currentTurn = currentTurn === 'red' ? 'black' : 'red';
-                updateTurnUI();
-            }
-            recordReplayState();
-            renderPieces();
-            playMoveSound();
-        }
-
-        function drawTrajectory(fr, fc, tr, tc) {
-            const layer = document.getElementById('trajectoryLayer');
-            layer.innerHTML = `
-                <line x1="${fc*CS_W}" y1="${fr*CS_H}" x2="${tc*CS_W}" y2="${tr*CS_H}" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-dasharray="4"/>
-                <circle cx="${tc*CS_W}" cy="${tr*CS_H}" r="4" fill="rgba(255,255,255,0.4)"/>
-            `;
-        }
-
-        function checkGameVitality() {
-            const redHasFlag = pieces.some(p => p.side === 'red' && p.power === -2);
-            const blackHasFlag = pieces.some(p => p.side === 'black' && p.power === -2);
-
-            if (!redHasFlag) { triggerMatchEnd('black', "红方军旗失守"); return; }
-            if (!blackHasFlag) { triggerMatchEnd('red', "黑方军旗失守"); return; }
-
-            const redMovable = pieces.some(p => p.side === 'red' && p.power > 0);
-            const blackMovable = pieces.some(p => p.side === 'black' && p.power > 0);
-
-            if (!redMovable) triggerMatchEnd('black', "红方无可用兵力");
-            else if (!blackMovable) triggerMatchEnd('red', "黑方无可用兵力");
-        }
-
-        function triggerMatchEnd(winner, summary) {
-            gameActive = false;
-            document.getElementById('celebrationTitle').innerText = `${winner === 'red' ? '红方' : '黑方'} 获得胜利`;
-            document.getElementById('celebrationSubtitle').innerText = summary;
-            
-            if (myRole !== null && myRole !== 'spectator') {
-                if (winner === myRole) { matchStats.wins++; log(`[系统] 战斗结束，我军胜出。`); } 
-                else { matchStats.losses++; log(`[系统] 战斗结束，我军落败。`); }
-                localStorage.setItem('military_stats_v1', JSON.stringify(matchStats));
-                updateStatsUI();
-            } else {
-                log(`[系统] 胜负已分，${winner === 'red' ? '红方' : '黑方'}获胜。`);
-            }
-
-            document.getElementById('celebrationOverlay').classList.add('active');
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        }
-
-        function playMoveSound() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } catch(e){}
-        }
-
-        // ==================== 复盘控制存取架构 ====================
-        function recordReplayState() {
-            replayStates.push({
-                pieces: JSON.parse(JSON.stringify(pieces)),
-                turn: currentTurn,
-                lastMove: JSON.parse(JSON.stringify(lastMove))
-            });
-            currentReplayStep = replayStates.length - 1;
-        }
-
-        function initReplayMode() {
-            isReplayMode = true; gameActive = false;
-            document.getElementById('replayBanner').style.display = 'flex';
-            applyReplayState(0);
-        }
-
-        function applyReplayState(index) {
-            currentReplayStep = index;
-            const state = replayStates[index];
-            pieces = JSON.parse(JSON.stringify(state.pieces));
-            currentTurn = state.turn; lastMove = state.lastMove;
-            
-            clearHighlights();
-            renderPieces();
-            if (lastMove && lastMove.from && lastMove.from.r !== null) {
-                drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
-            } else {
-                document.getElementById('trajectoryLayer').innerHTML = '';
-            }
-            updateTurnUI();
-        }
-
-        function replayPrev() { if (currentReplayStep > 0) applyReplayState(currentReplayStep - 1); }
-        function replayNext() { if (currentReplayStep < replayStates.length - 1) applyReplayState(currentReplayStep + 1); }
-
-        function exportArchive() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(replayStates));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `Military_Chess_Archive_${Date.now()}.json`);
-            document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
-        }
-
-        // ==================== P2P 信道交互网关 ====================
+        // Initialize Distributed Cluster Connection channels over public MQTT broker
         function initNetwork() {
-            myRoomId = 'MIL-' + Math.floor(100000 + Math.random() * 900000);
+            myRoomId = 'ROOM-' + Math.floor(100000 + Math.random() * 900000);
             document.getElementById('myIdDisplay').innerText = myRoomId;
             currentRoomTopic = `military/room/${myRoomId}`;
 
-            log("战局网络初始化就绪。");
+            log("正在连接云端分布式中转集群...");
             mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
 
             mqttClient.on('connect', () => {
+                log("已成功桥接至实时数据节点。正在监听本地战局房间...");
                 mqttClient.subscribe(currentRoomTopic);
             });
 
@@ -656,83 +396,561 @@
                     const data = JSON.parse(message.toString());
                     if (data.senderId === myUniqueId) return;
                     handleNetworkData(data);
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error("Transmission decoding failure matrix:", e);
+                }
             });
         }
 
-        function connectToPeer() {
+        function connectToPeer(mode = 'play') {
             const remoteId = document.getElementById('peerIdInput').value.trim();
-            if (!remoteId) return;
+            if (!remoteId) return alert("请输入合法的军棋房间密钥！");
+            if (remoteId === myRoomId) return alert("无法加入自身本地创建的战局房间！");
+
+            log(`正在切断本地信道，迁移至对端数据总线: ${remoteId}...`);
             mqttClient.unsubscribe(currentRoomTopic);
             currentRoomTopic = `military/room/${remoteId}`;
             mqttClient.subscribe(currentRoomTopic);
 
-            myRole = 'black';
-            sendMqttMessage('join');
+            if (mode === 'spectate') {
+                myRole = 'spectator';
+                sendMqttMessage('spectator_join');
+                log("正在作为【观众】安全切入战场视窗...");
+            } else {
+                myRole = 'black';
+                sendMqttMessage('join');
+            }
         }
 
-        function sendMqttMessage(type, extra = {}) {
-            if (!mqttClient) return;
-            mqttClient.publish(currentRoomTopic, JSON.stringify({ type: type, senderId: myUniqueId, ...extra }));
+        function sendMqttMessage(type, extraPayload = {}) {
+            if (!mqttClient || !currentRoomTopic) return;
+            const messageObj = { type: type, senderId: myUniqueId, ...extraPayload };
+            mqttClient.publish(currentRoomTopic, JSON.stringify(messageObj));
         }
 
         function handleNetworkData(data) {
             if (data.type === 'join') {
-                myRole = 'red';
-                updateConnectionUI(true);
-                initBoard();
-                log("系统提示：敌军已切入战场，暗棋隐藏模式已启动。");
-                sendMqttMessage('sync_board', { initPieces: pieces });
-            } else if (data.type === 'sync_board') {
-                pieces = data.initPieces;
-                updateConnectionUI(true);
-                replayStates = []; recordReplayState();
-                renderPieces();
-                log("系统提示：成功接入战场，暗棋隐藏模式已启动。");
+                myRole = 'red'; updateConnectionUI(true); updateOrientation(); initBoard();
+                log("敌方高级指挥官已接入。你执红方 (先手指挥)。");
+                sendMqttMessage('join_ack');
+            } else if (data.type === 'join_ack') {
+                myRole = 'black'; updateConnectionUI(true); updateOrientation(); initBoard();
+                log("战时加密连接已构建完毕！你执黑方 (后手应对)。");
+            } else if (data.type === 'spectator_join') {
+                log("👁️ 观战席有新的作战情报参谋切入视窗。");
+                if (myRole === 'red' || myRole === 'black') {
+                    sendMqttMessage('sync_board_to_spectator', { boardState: boardState, currentTurn: currentTurn, lastMove: lastMove });
+                }
+            } else if (data.type === 'sync_board_to_spectator') {
+                if (myRole === 'spectator') {
+                    boardState = data.boardState; currentTurn = data.currentTurn; lastMove = data.lastMove;
+                    updateConnectionUI(true); renderPieces(); evaluateAndDisplayWinRate();
+                }
             } else if (data.type === 'move') {
-                const syncPiece = pieces.find(p => p.id === data.pieceId);
-                if (syncPiece) executeMoveAction(syncPiece, data.toR, data.toC);
+                executeMoveSync(data.from.r, data.from.c, data.to.r, data.to.c);
+            } else if (data.type === 'reset') {
+                resetBoardLocal(); log("对端重置了沙盘格局。");
+            } else if (data.type === 'undo_request') {
+                if (confirm("对方请求撤回上一步时空指令，是否同意？")) {
+                    executeUndoLocal(); sendMqttMessage('undo_response', { accept: true });
+                } else { sendMqttMessage('undo_response', { accept: false }); }
+            } else if (data.type === 'undo_response') {
+                if (data.accept) { executeUndoLocal(); log("对方同意撤回请求，撤销执行。"); } else { log("撤回申请被拒绝。"); }
+            } else if (data.type === 'draw_request') {
+                if (confirm("对方提议签署战场停战和解协议，是否签署？")) {
+                    currentTurn = null; updateTurnUI(); sendMqttMessage('draw_response', { accept: true }); showCelebration('draw');
+                } else { sendMqttMessage('draw_response', { accept: false }); }
+            } else if (data.type === 'draw_response') {
+                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); } else { log("停战协议被撕毁。"); }
+            } else if (data.type === 'resign_notice') {
+                triggerGameOverDirectly(data.loser === 'red' ? 'black' : 'red');
+            } else if (data.type === 'role_swap') {
+                if(myRole !== 'spectator' && myRole !== null) { myRole = data.nextRole; updateOrientation(); }
+                updateConnectionUI(true); resetBoardLocal(); log(`阵营攻守交替，沙盘洗牌重开！`);
             }
         }
 
-        function updateTurnUI() {
-            const turnBadge = document.getElementById('turnStatus');
-            if (!gameActive) { turnBadge.innerText = "战斗结束"; return; }
-            const name = currentTurn === 'red' ? '红方' : '黑方'; turnBadge.innerText = `当前回合: ${name}`;
-            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { 
-                turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (到你了)"; 
-            } else { 
-                turnBadge.className = "status-badge"; 
+        function createDOMGrid() {
+            const boardDOM = document.getElementById('board'); boardDOM.innerHTML = '';
+            for (let r = 0; r < 12; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell'; cell.dataset.row = r; cell.dataset.col = c;
+                    cell.addEventListener('click', () => handleCellClick(r, c));
+                    boardDOM.appendChild(cell);
+                }
             }
+        }
+
+        function initBoard() {
+            if (myRole === 'spectator') return;
+            resetBoardLocal();
+            sendMqttMessage('reset');
+        }
+
+        // Standard dynamic deployment balancing the piece matrix pool cleanly
+        function resetBoardLocal() {
+            boardState = Array(12).fill(null).map(() => Array(5).fill(null));
+            selectedCell = null; currentTurn = 'red'; lastMove = { from: null, to: null };
+            moveHistory = []; document.getElementById('trajectoryLayer').innerHTML = '';
+            
+            // Standard piece allocation pool array
+            const pool = [
+                '司令', '军长', '师长', '师长', '旅长', '旅长', '团长', '团长', '营长', '营长',
+                '连长', '连长', '连长', '排长', '排长', '排长', '工兵', '工兵', '工兵',
+                '炸弹', '炸弹', '地雷', '地雷', '地雷', '军旗'
+            ];
+
+            // Deterministic structural indexing placement array maps for tactical balance
+            const blackPool = [...pool]; const redPool = [...pool];
+            
+            let bIdx = 0;
+            for(let r=0; r<5; r++) {
+                for(let c=0; c<5; c++) {
+                    if(isCamp(r,c)) continue;
+                    let type = blackPool[bIdx++];
+                    boardState[r][c] = { type, color: 'black' };
+                }
+            }
+            // Enforce flag / mine structural adjustments for headquarters requirements
+            boardState[0][1] = { type: '军旗', color: 'black' };
+            boardState[0][0] = { type: '地雷', color: 'black' };
+            boardState[0][2] = { type: '地雷', color: 'black' };
+
+            let rIdx = 0;
+            for(let r=11; r>=7; r--) {
+                for(let c=0; c<5; c++) {
+                    if(isCamp(r,c)) continue;
+                    let type = redPool[rIdx++];
+                    boardState[r][c] = { type, color: 'red' };
+                }
+            }
+            boardState[11][1] = { type: '军旗', color: 'red' };
+            boardState[11][0] = { type: '地雷', color: 'red' };
+            boardState[11][2] = { type: '地雷', color: 'red' };
+
+            renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate(); cancelPendingMove();
+        }
+
+        function renderPieces() {
+            for (let r = 0; r < 12; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const cellDOM = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
+                    const childPiece = cellDOM.querySelector('.piece');
+                    if (childPiece) childPiece.remove();
+                    
+                    cellDOM.classList.remove('last-move');
+                    if ((lastMove && lastMove.from && lastMove.from.r === r && lastMove.from.c === c) || (lastMove && lastMove.to && lastMove.to.r === r && lastMove.to.c === c)) {
+                        cellDOM.classList.add('last-move');
+                    }
+                    const piece = boardState[r][c];
+                    if (piece) {
+                        const pieceDOM = document.createElement('div');
+                        pieceDOM.className = `piece ${piece.color}`; pieceDOM.innerText = piece.type;
+                        cellDOM.appendChild(pieceDOM);
+                    }
+                }
+            }
+        }
+
+        function handleCellClick(r, c) {
+            if (isReplayMode || myRole === 'spectator') return;
+            if (myRole !== null && currentTurn !== myRole) return;
+            if (pendingMoveContext) return;
+
+            const clickedPiece = boardState[r][c];
+
+            if (selectedCell) {
+                const activePiece = boardState[selectedCell.r][selectedCell.c];
+                if (clickedPiece && clickedPiece.color === activePiece.color) {
+                    clearSelectionHighlights(); selectPiece(r, c); return;
+                }
+
+                if (validateMove(selectedCell.r, selectedCell.c, r, c)) {
+                    if (riskAlertActive && isCaptureThreatMove(selectedCell.r, selectedCell.c, r, c, currentTurn)) {
+                        triggerRiskInterruption(selectedCell.r, selectedCell.c, r, c);
+                    } else {
+                        commitPieceMovement(selectedCell.r, selectedCell.c, r, c);
+                    }
+                } else { clearSelectionHighlights(); }
+            } else {
+                if (clickedPiece && clickedPiece.color === currentTurn) {
+                    if (clickedPiece.type === '地雷' || clickedPiece.type === '军旗') return; // Stationary pieces configuration
+                    selectPiece(r, c);
+                }
+            }
+        }
+
+        function selectPiece(r, c) {
+            selectedCell = { r, c };
+            document.querySelector(`[data-row='${r}'][data-col='${c}']`).classList.add('selected');
+
+            for (let tr = 0; tr < 12; tr++) {
+                for (let tc = 0; tc < 5; tc++) {
+                    if (validateMove(r, c, tr, tc)) {
+                        document.querySelector(`[data-row='${tr}'][data-col='${tc}']`).classList.add('valid-target');
+                    }
+                }
+            }
+        }
+
+        // Structural trajectory line path tracing handler drawing path arcs between elements
+        function drawTrajectory(fromR, fromC, toR, toC) {
+            const cw = 76; const ch = 56; const hW = cw / 2; const hH = ch / 2;
+            let startX = fromC * cw + hW; let startY = fromR * ch + hH;
+            let endX = toC * cw + hW; let endY = toR * ch + hH;
+            const pathStr = `<path class="trajectory-path" d="M ${startX} ${startY} L ${endX} ${endY}"/>`;
+            document.getElementById('trajectoryLayer').innerHTML = pathStr;
+        }
+
+        function triggerRiskInterruption(fromR, fromC, toR, toC) {
+            const movingPiece = boardState[fromR][fromC];
+            pendingMoveContext = { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
+            document.getElementById('dangerDesc').innerText = `移动 [${movingPiece.type}] 至 (${toR}, ${toC}) 将直接暴露于敌方反击打击圈内。确定挺进？`;
+            document.getElementById('dangerBanner').classList.add('active');
+        }
+
+        function cancelPendingMove() {
+            pendingMoveContext = null;
+            document.getElementById('dangerBanner').classList.remove('active');
+            clearSelectionHighlights();
+        }
+
+        function commitPieceMovement(fromR, fromC, toR, toC) {
+            if (myRole !== null) {
+                sendMqttMessage('move', { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } });
+            }
+            executeMoveSync(fromR, fromC, toR, toC);
+        }
+
+        // Algorithmic validation analyzing movement legality maps based on coordinate metrics
+        function validateMove(fromR, fromC, toR, toC) {
+            const p = boardState[fromR][fromC]; const target = boardState[toR][toC];
+            if (!p || (target && target.color === p.color)) return false;
+            if (p.type === '地雷' || p.type === '军旗') return false; 
+            
+            // Defend structural camp immunity state rules 
+            if (target && isCamp(toR, toC)) return false; 
+
+            const dr = toR - fromR; const dc = toC - fromC;
+            const absDr = Math.abs(dr); const absDc = Math.abs(dc);
+
+            // Rivers crossing configuration bridges boundaries rule enforcement
+            if ((fromR === 5 && toR === 6) || (fromR === 6 && toR === 5)) {
+                if (fromC !== toC || (fromC !== 0 && fromC !== 2 && fromC !== 4)) return false;
+            }
+
+            // Diagonal movement rules context restricted to camp coordinate maps entry/exit paths
+            if (absDr === 1 && absDc === 1) {
+                return isCamp(fromR, fromC) || isCamp(toR, toC);
+            }
+
+            // Standard highway single step vector mapping rule logic
+            if ((absDr === 1 && dc === 0) || (dr === 0 && absDc === 1)) {
+                return true;
+            }
+
+            // High-speed railroad trajectory network graph rule assessment computations
+            if (isRailroad(fromR, fromC) && isRailroad(toR, toC)) {
+                if (p.type === '工兵') {
+                    return checkEngineerRailpath(fromR, fromC, toR, toC);
+                } else {
+                    if (fromR === toR) {
+                        let minC = Math.min(fromC, toC); let maxC = Math.max(fromC, toC);
+                        for(let c=minC+1; c<maxC; c++) if (boardState[fromR][c]) return false;
+                        return true;
+                    }
+                    if (fromC === toC) {
+                        let minR = Math.min(fromR, toR); let maxR = Math.max(fromR, toR);
+                        for(let r=minR+1; r<maxR; r++) if (boardState[r][fromC]) return false;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Recursive flood-fill grid matrix tracker scanning continuous open railroad connection coordinates for engineers
+        function checkEngineerRailpath(fromR, fromC, toR, toC) {
+            let visited = Array(12).fill(null).map(() => Array(5).fill(false));
+            let queue = [{r: fromR, c: fromC}];
+            visited[fromR][fromC] = true;
+
+            while(queue.length > 0) {
+                let curr = queue.shift();
+                if (curr.r === toR && curr.c === toC) return true;
+
+                let dirs = [{r:1,c:0}, {r:-1,c:0}, {r:0,c:1}, {r:0,c:-1}];
+                for (let d of dirs) {
+                    let nr = curr.r + d.r; let nc = curr.c + d.c;
+                    if (nr >= 0 && nr < 12 && nc >= 0 && nc < 5 && !visited[nr][nc] && isRailroad(nr, nc)) {
+                        if (nr === toR && nc === toC) return true; 
+                        if (!boardState[nr][nc]) {
+                            visited[nr][nc] = true;
+                            queue.push({r: nr, c: nc});
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function isCaptureThreatMove(fromR, fromC, toR, toC, side) {
+            const src = boardState[fromR][fromC]; const tgt = boardState[toR][toC];
+            const oppColor = side === 'red' ? 'black' : 'red';
+            let threat = false;
+            
+            boardState[toR][toC] = src; boardState[fromR][fromC] = null;
+            // Check adjacent matrix coordinates around target zone configuration points for superior rank threats
+            let checkDirs = [{r:1,c:0}, {r:-1,c:0}, {r:0,c:1}, {r:0,c:-1}];
+            for(let d of checkDirs) {
+                let nr = toR + d.r; let nc = toC + d.c;
+                if(nr >=0 && nr < 12 && nc >=0 && nc < 5) {
+                    let enemy = boardState[nr][nc];
+                    if(enemy && enemy.color === oppColor && PIECE_RANKS[enemy.type] > PIECE_RANKS[src.type]) {
+                        threat = true; break;
+                    }
+                }
+            }
+            boardState[fromR][fromC] = src; boardState[toR][toC] = tgt;
+            return threat;
+        }
+
+        // Execute step logic processing resolution matrices evaluating captures and flags capture updates
+        function executeMoveSync(fromR, fromC, toR, toC) {
+            const src = boardState[fromR][fromC]; const tgt = boardState[toR][toC];
+            if (!src) return;
+
+            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } });
+            lastMove = { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
+
+            let gameOver = false; let winner = null;
+            let logMsg = `[移动] ${src.color === 'red'?'红方':'黑方'}${src.type} -> (${toR}, ${toC})`;
+
+            if (!tgt) {
+                boardState[toR][toC] = src; boardState[fromR][fromC] = null;
+            } else {
+                // Resolution crash calculations determining target elimination structures
+                logMsg = `[交火] ${src.color === 'red'?'红方':'黑方'}${src.type} 突袭 ${tgt.color === 'red'?'红方':'黑方'}${tgt.type}`;
+                if (tgt.type === '军旗') {
+                    gameOver = true; winner = src.color; boardState[toR][toC] = src; boardState[fromR][fromC] = null;
+                } else if (src.type === '炸弹' || tgt.type === '炸弹' || PIECE_RANKS[src.type] === PIECE_RANKS[tgt.type]) {
+                    boardState[toR][toC] = null; boardState[fromR][fromC] = null; logMsg += " -> 双方同归于尽";
+                } else if (tgt.type === '地雷') {
+                    if (src.type === '工兵') {
+                        boardState[toR][toC] = src; boardState[fromR][fromC] = null; logMsg += " -> 工兵排雷成功";
+                    } else {
+                        boardState[fromR][fromC] = null; logMsg += " -> 触雷牺牲";
+                    }
+                } else if (PIECE_RANKS[src.type] > PIECE_RANKS[tgt.type]) {
+                    boardState[toR][toC] = src; boardState[fromR][fromC] = null; logMsg += " -> 胜出吃子";
+                } else {
+                    boardState[fromR][fromC] = null; logMsg += " -> 强攻失败牺牲";
+                }
+            }
+
+            clearSelectionHighlights(); renderPieces(); drawTrajectory(fromR, fromC, toR, toC); log(logMsg);
+
+            if (gameOver) { triggerGameOverDirectly(winner); return; }
+
+            currentTurn = currentTurn === 'red' ? 'black' : 'red';
+            updateTurnUI(); playChessSound(); evaluateAndDisplayWinRate();
+        }
+
+        function triggerGameOverDirectly(winner) {
+            lastMatchWinner = winner; showCelebration(winner); currentTurn = null; updateTurnUI(); playChessSound();
+            if (myRole !== null && myRole !== 'spectator') {
+                if (winner === myRole) matchStats.wins++; else matchStats.losses++;
+                localStorage.setItem('chess_military_stats', JSON.stringify(matchStats));
+                updateStatsUI();
+            }
+        }
+
+        // Structural local tactical analysis checking values balance metrics across teams 
+        function evaluateBoard() {
+            let score = 0;
+            for (let r = 0; r < 12; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const p = boardState[r][c]; if (!p) continue;
+                    let val = PIECE_VALUES[p.type] || 0;
+                    score += p.color === 'red' ? val : -val;
+                }
+            }
+            return score;
+        }
+
+        function evaluateAndDisplayWinRate() {
+            const score = evaluateBoard();
+            let redRate = 50 + (score / 150); redRate = Math.max(5, Math.min(95, redRate));
+            document.getElementById('redEvalBar').style.width = redRate + '%';
+            document.getElementById('blackEvalBar').style.width = (100 - redRate) + '%';
+            document.getElementById('redEvalText').innerText = redRate.toFixed(0) + '% Red';
+            document.getElementById('blackEvalText').innerText = (100 - redRate).toFixed(0) + '% Black';
+        }
+
+        function showCelebration(winner) {
+            const overlay = document.getElementById('celebrationOverlay');
+            const titleEl = document.getElementById('celebrationTitle');
+            const subtitleEl = document.getElementById('celebrationSubtitle');
+            
+            if (winner === 'draw') {
+                titleEl.innerText = "DRAW"; subtitleEl.innerText = "战局呈胶着对峙状态，停战协议生效。";
+            } else if (myRole === winner) {
+                titleEl.innerText = "VICTORY"; subtitleEl.innerText = "运筹帷幄之中，决胜千里之外！斩获敌方最高军旗！";
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+            } else {
+                titleEl.innerText = "DEFEAT"; subtitleEl.innerText = "最高大本营失守，大局已去，重整旗鼓再战吧！";
+            }
+            overlay.classList.add('active');
+        }
+
+        function startNextMatchManual() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            if (myRole !== null && myRole !== 'spectator') {
+                let next = myRole === 'red' ? 'black' : 'red';
+                sendMqttMessage('role_swap', { nextRole: myRole });
+                myRole = next; updateOrientation(); updateConnectionUI(true); resetBoardLocal();
+            } else {
+                resetBoardLocal();
+            }
+        }
+
+        function saveGame() {
+            if (!currentTurn) return alert("当前无活跃沙盘对局数据可供固化！");
+            const data = { boardState, currentTurn, lastMove, moveHistory, savedAsRole: myRole };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Army_Pro_Archive_${new Date().toISOString().slice(0,10)}.army`;
+            a.click(); URL.revokeObjectURL(url); log("💾 战场全量态势时空链序列化导出成功 (.army)。");
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const snap = JSON.parse(e.target.result);
+                    boardState = snap.boardState; currentTurn = snap.currentTurn; lastMove = snap.lastMove; moveHistory = snap.moveHistory;
+                    clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+                    log("📂 战术复盘态势数据载入就绪。");
+                } catch(err) { alert("存档解析发生未知损坏结构错误！"); }
+            };
+            reader.readAsText(file); event.target.value = '';
+        }
+
+        function handleResign() {
+            if (!currentTurn || !confirm("胜败乃兵家常事，确定要宣布解散指挥部投降吗？")) return;
+            let loser = (myRole !== null) ? myRole : currentTurn;
+            if (myRole !== null) sendMqttMessage('resign_notice', { loser: myRole });
+            triggerGameOverDirectly(loser === 'red' ? 'black' : 'red');
+        }
+
+        function requestUndo() {
+            if (moveHistory.length === 0) return alert("无可追溯历史轨迹时空节点。");
+            if (myRole !== null) {
+                if (currentTurn === myRole) return alert("必须在对方防守思索期间发起撤回悔棋请求！");
+                sendMqttMessage('undo_request'); log("已向对方指挥中心呈递撤回军令请求...");
+            } else { executeUndoLocal(); }
+        }
+
+        function executeUndoLocal() {
+            if (moveHistory.length === 0) return;
+            const prev = moveHistory.pop();
+            boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
+            document.getElementById('trajectoryLayer').innerHTML = '';
+            clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate(); cancelPendingMove();
+        }
+
+        function requestDraw() {
+            if (myRole !== null) { sendMqttMessage('draw_request'); log("已发出签定和平停战协议邀请..."); }
+            else { currentTurn = null; updateTurnUI(); showCelebration('draw'); }
+        }
+
+        function openReplay() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            const states = [...moveHistory, { board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } }];
+            localStorage.setItem('military_replay_data', JSON.stringify(states));
+            window.open(window.location.href.split('?')[0] + '?mode=replay', '_blank');
+        }
+
+        function initReplayMode() {
+            isReplayMode = true;
+            document.querySelector('h1').innerHTML = 'Replay Room <div class="status-badge spectator-mode">Replay Mode</div>';
+            const panels = document.querySelectorAll('.panel-section');
+            if (panels.length >= 4) { panels[2].style.display = 'none'; panels[3].style.display = 'none'; }
+            document.getElementById('undoBtn').parentElement.style.display = 'none';
+            document.getElementById('resignBtn').parentElement.style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+
+            const replayUI = document.createElement('div'); replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
+            replayUI.innerHTML = `
+                <button class="btn btn-secondary" style="flex: 1; color: #8a50ff; border-color: #8a50ff;" onclick="replayPrev()">上一步 (Prev)</button>
+                <button class="btn btn-secondary" style="flex: 1; color: #52b788; border-color: #52b788;" onclick="replayNext()">下一步 (Next)</button>
+            `;
+            document.querySelector('.sidebar').appendChild(replayUI);
+
+            try {
+                replayStates = JSON.parse(localStorage.getItem('military_replay_data')) || [];
+            } catch (e) { return; }
+
+            currentReplayStep = replayStates.length - 1; applyReplayState(currentReplayStep);
+        }
+
+        function applyReplayState(index) {
+            if (index < 0 || index >= replayStates.length) return;
+            const state = replayStates[index]; boardState = state.board; currentTurn = state.turn; lastMove = state.lastMove;
+            clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+            if (lastMove && lastMove.from && lastMove.from.r !== null) drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
+        }
+
+        function replayPrev() { if (currentReplayStep > 0) applyReplayState(--currentReplayStep); }
+        function replayNext() { if (currentReplayStep < replayStates.length - 1) applyReplayState(++currentReplayStep); }
+
+        function playChessSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(110, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 0.06);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+            } catch (e) {}
+        }
+
+        function updateOrientation() {
+            const wrapper = document.getElementById('boardWrapper');
+            if (myRole === 'black') wrapper.classList.add('flipped-view'); else wrapper.classList.remove('flipped-view');
+        }
+
+        function toggleRiskAlertMode(force) { riskAlertActive = force !== undefined ? force : !riskAlertActive; if(!riskAlertActive) cancelPendingMove(); }
+        function clearSelectionHighlights() { selectedCell = null; document.querySelectorAll('.cell').forEach(el => { el.classList.remove('selected', 'valid-target'); }); }
+        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); log("战局加密钥匙已复制。"); }
+        function log(text) { const logBox = document.getElementById('logBox'); logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; logBox.scrollTop = logBox.scrollHeight; }
+        function updateStatsUI() { document.getElementById('statWins').innerText = matchStats.wins; document.getElementById('statLosses').innerText = matchStats.losses; const total = matchStats.wins + matchStats.losses; document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`; }
+        
+        function updateTurnUI() {
+            const turnBadge = document.getElementById('turnStatus'); if (!currentTurn) { turnBadge.style.display = "none"; return; }
+            turnBadge.style.display = "inline-block"; const name = currentTurn === 'red' ? '红方' : '黑方'; turnBadge.innerText = `当前回合: ${name}`;
+            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (轮到你)"; } 
+            else { turnBadge.className = "status-badge"; }
         }
 
         function updateConnectionUI(isConnected) {
             const badge = document.getElementById('connectionStatus'); const rBadge = document.getElementById('roleStatus');
             if (isConnected) {
-                badge.innerText = "网络暗棋对阵中"; badge.className = "status-badge connected";
-                rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'red' ? "红方主帅" : "黑方主帅";
+                if(myRole === 'spectator') {
+                    badge.innerText = "实时旁观"; badge.className = "status-badge spectator-mode"; rBadge.style.display = "inline-block"; rBadge.innerText = "战情观察员";
+                } else {
+                    badge.innerText = "网络对战"; badge.className = "status-badge connected"; rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'red' ? "红方主帅" : "黑方主帅";
+                }
             }
             updateTurnUI();
         }
 
-        function updateStatsUI() {
-            document.getElementById('statWins').innerText = matchStats.wins;
-            document.getElementById('statLosses').innerText = matchStats.losses;
-            const total = matchStats.wins + matchStats.losses;
-            document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
-        }
-
-        function copyRoomKey() {
-            const id = document.getElementById('myIdDisplay').innerText;
-            if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("密钥已复制到剪贴板。"));
-        }
-
-        function log(text) {
-            const logBox = document.getElementById('logBox');
-            logBox.innerHTML += `<br><span style="color:#555">[情报]</span> ${text}`;
-            logBox.scrollTop = logBox.scrollHeight;
-        }
-
+        // Core App bootstrap initialization routines
         renderSVGBoard();
         createDOMGrid();
         

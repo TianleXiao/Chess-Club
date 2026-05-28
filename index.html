@@ -112,11 +112,11 @@
             display: flex; justify-content: center; align-items: center;
             background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
             margin-bottom: 10px; transition: transform 0.5s var(--ease-out-expo);
+            color: var(--text-main);
+            font-size: 2rem;
         }
         
         .game-card:hover .card-icon { transform: scale(1.1) rotate(5deg); background: rgba(255,255,255,0.08); }
-
-        .icon-svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 1.5; fill: none; opacity: 0.8; }
 
         .card-meta { display: flex; flex-direction: column; gap: 8px; }
         .card-title { font-size: 1.4rem; font-weight: 300; letter-spacing: 0.05em; color: #ffffff; }
@@ -137,46 +137,61 @@
             z-index: 10; opacity: 0; pointer-events: none; transform: scale(1.02);
             transition: opacity 0.6s var(--ease-out-expo), transform 0.6s var(--ease-out-expo);
             background: #000; 
+            display: flex;
+            flex-direction: column;
         }
 
         .arena-container.active {
             opacity: 1; pointer-events: auto; transform: scale(1);
         }
 
-        /* CRITICAL RENDER FIX: Replaced display:none with off-screen positioning to reserve rendering sizes */
+        .arena-navbar {
+            height: 56px;
+            background: #09090d;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+        }
+        .back-btn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .back-btn:hover {
+            color: #fff;
+            border-color: var(--glass-border-hover);
+            background: rgba(255,255,255,0.02);
+        }
+        .arena-title-display {
+            font-size: 0.85rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .frame-wrapper {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+        
         .game-frame { 
-            position: absolute;
-            top: 0;
-            left: -99999px;
-            width: 100%; 
-            height: 100%; 
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%; 
             border: none; 
-            background: transparent; 
-            visibility: hidden;
+            display: none; 
         }
         .game-frame.active { 
-            left: 0;
-            visibility: visible;
-        }
-
-        /* Floating Controller Hub (Top Left) */
-        .hub-back-trigger {
-            position: absolute; top: 30px; left: 30px; z-index: 99;
-            background: rgba(15, 15, 18, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.1); color: #fff;
-            padding: 12px 24px; border-radius: 30px; font-size: 0.75rem; font-weight: 500;
-            letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
-            display: flex; align-items: center; gap: 10px;
-            transition: all 0.4s var(--ease-out-expo); opacity: 0; transform: translateX(-20px); pointer-events: none;
-        }
-
-        .arena-container.active .hub-back-trigger {
-            opacity: 1; transform: translateX(0); pointer-events: auto;
-        }
-
-        .hub-back-trigger:hover {
-            background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: block; 
         }
 
         @keyframes fadeUp {
@@ -208,63 +223,98 @@
 
         <div class="cards-grid">
             
-            <div class="game-card" onclick="enterArena('frame-cc')">
-                <div class="card-icon">
-                    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="8"></line><line x1="12" y1="16" x2="12" y2="22"></line><line x1="2" y1="12" x2="8" y2="12"></line><line x1="16" y1="12" x2="22" y2="12"></line></svg>
+            <div class="game-card" onclick="enterArena('frameInternationalChess', 'International Chess')">
+                <div class="card-icon">♞</div>
+                <div class="card-meta">
+                    <div class="card-title">国际象棋</div>
+                    <div class="card-desc">Standard 8x8 matrix tactical network vector system with standard pawn promotion rules.</div>
                 </div>
+                <div class="enter-action">
+                    Deploy Strike Axis 
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </div>
+            </div>
+
+            <div class="game-card" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
+                <div class="card-icon">帥</div>
                 <div class="card-meta">
                     <div class="card-title">中国象棋</div>
-                    <div class="card-desc">基于 WebRTC 直连技术的楚河汉界防御战。高度还原传统走法，支持实时局域网/广域网内网穿透与对抗。</div>
+                    <div class="card-desc">Traditional River-divide tactical combat mapping grid utilizing distributed P2P node communication.</div>
                 </div>
                 <div class="enter-action">
-                    Initialize Link 
+                    Deploy Strike Axis 
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frame-go')">
-                <div class="card-icon">
-                    <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
-                </div>
+            <div class="game-card" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
+                <div class="card-icon">⚑</div>
                 <div class="card-meta">
-                    <div class="card-title">围棋对决</div>
-                    <div class="card-desc">19x19 星系坐标网络。采用高可用 MQTT 分布式消息队列，毫秒级同步，附带防自杀与自动化提子判定。</div>
+                    <div class="card-title">军棋</div>
+                    <div class="card-desc">Land combat tactical deployment matrix featuring hidden ranks and station network routes.</div>
                 </div>
                 <div class="enter-action">
-                    Initialize Link 
+                    Deploy Strike Axis 
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frame-gomoku')">
-                <div class="card-icon">
-                    <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                </div>
+            <div class="game-card" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
+                <div class="card-icon">⚓</div>
                 <div class="card-meta">
-                    <div class="card-title">五子棋局</div>
-                    <div class="card-desc">纯粹的五子连珠战术博弈。内置启发式扫描 AI 引擎，提供实时的攻防威胁点与胜率高亮辅助。</div>
+                    <div class="card-title">航海棋</div>
+                    <div class="card-desc">Naval coordinate radar tracking array designed for strategic fleet engagement simulation.</div>
                 </div>
                 <div class="enter-action">
-                    Initialize Link 
+                    Deploy Strike Axis 
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </div>
             </div>
 
+            <div class="game-card" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
+                <div class="card-icon">⚫</div>
+                <div class="card-meta">
+                    <div class="card-title">围棋</div>
+                    <div class="card-desc">19x19 high-dimension cellular territory mapping array for deep spatial balance simulation.</div>
+                </div>
+                <div class="enter-action">
+                    Deploy Strike Axis 
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </div>
+            </div>
+
+            <div class="game-card" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
+                <div class="card-icon">⚪</div>
+                <div class="card-meta">
+                    <div class="card-title">五子棋</div>
+                    <div class="card-desc">Rapid 5-in-a-row straight-line strategic deployment engine with sub-second collision logic.</div>
+                </div>
+                <div class="enter-action">
+                    Deploy Strike Axis 
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="arena-container" id="arenaContainer">
-        <button class="hub-back-trigger" onclick="exitArena()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-            Terminal Hub
-        </button>
-
-        <iframe id="frame-cc" class="game-frame" src="Chess.html"></iframe>
-        <iframe id="frame-go" class="game-frame" src="Go.html"></iframe>
-        <iframe id="frame-gomoku" class="game-frame" src="Gomoku.html"></iframe>
+        <div class="arena-navbar">
+            <button class="back-btn" onclick="exitArena()">← 返回控制大厅 (Lobby)</button>
+            <div class="arena-title-display" id="arenaTitleDisplay">TACTICAL SIMULATION MATRIX</div>
+            <div style="width: 80px;"></div> 
+        </div>
+        <div class="frame-wrapper">
+            <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
+            <iframe id="frameChineseChess" class="game-frame" data-src="Chinese chess.html"></iframe>
+            <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military flag.html"></iframe>
+            <iframe id="frameNavalFlag" class="game-frame" data-src="Naval flag.html"></iframe>
+            <iframe id="frameGo" class="game-frame" data-src="go.html"></iframe>
+            <iframe id="frameGomoku" class="game-frame" data-src="gomoku.html"></iframe>
+        </div>
     </div>
 
     <script>
+        // Spotlight hover effect for interactive cards
         document.querySelectorAll('.game-card').forEach(card => {
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
@@ -275,44 +325,57 @@
             });
         });
 
-        // Optimized Switch Engine with Canvas Pulse Synchronization
-        function enterArena(frameId) {
+        // Elegant Dynamic Mounting Strategy
+        function enterArena(frameId, gameTitle) {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');
+            const titleDisplay = document.getElementById('arenaTitleDisplay');
 
+            // Set title text
+            titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
+
+            // Hide lobby UI
             lobby.classList.add('hidden');
 
-            document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
+            // Reset all iframes to prevent memory leaks and background processes
+            document.querySelectorAll('.game-frame').forEach(f => {
+                f.classList.remove('active');
+                f.src = ''; 
+            });
+
+            // Make the target frame visible (display: block)
             const targetFrame = document.getElementById(frameId);
             targetFrame.classList.add('active');
 
-            setTimeout(() => {
-                arena.classList.add('active');
+            // Show the arena container
+            arena.classList.add('active');
 
-                // CRITICAL SEED: Dispatches pulse events to force immediate Canvas view recalibration loops
-                try {
-                    if (targetFrame.contentWindow) {
-                        targetFrame.contentWindow.dispatchEvent(new Event('resize'));
-                        // Fallback trigger for custom chessboard canvas bundle draw functions
-                        if (typeof targetFrame.contentWindow.drawBoard === 'function') {
-                            targetFrame.contentWindow.drawBoard();
-                        }
-                    }
-                } catch (e) {
-                    console.log("[OmniEngine] Viewport dimensions synchronized.");
-                }
-            }, 300);
+            // CRITICAL FIX: Load the source ONLY AFTER the iframe is visible and has full dimensions
+            // This guarantees Canvas elements initialize flawlessly every time
+            setTimeout(() => {
+                targetFrame.src = targetFrame.getAttribute('data-src');
+            }, 50);
         }
 
+        // Clean Unmounting Strategy
         function exitArena() {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');
 
+            // Hide arena
             arena.classList.remove('active');
 
+            // Destroy the running game instance after the fade-out animation completes
+            setTimeout(() => {
+                document.querySelectorAll('.game-frame').forEach(f => {
+                    f.src = '';
+                });
+            }, 500);
+
+            // Restore lobby
             setTimeout(() => {
                 lobby.classList.remove('hidden');
-            }, 500);
+            }, 300);
         }
     </script>
 </body>

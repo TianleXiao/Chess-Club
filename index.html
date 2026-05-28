@@ -3,115 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Omni Board Studio | Neural Arena</title>
+    <title>Omni Board Studio - Premium Hub</title>
     <style>
         :root {
-            --bg: #050507;
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.08);
-            --accent: #60a5fa;
-            --text-primary: #ffffff;
-            --text-secondary: #888899;
+            --bg-base: #030305;
+            --bg-glow: #13131a;
+            --glass-bg: rgba(20, 20, 25, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-border-hover: rgba(255, 255, 255, 0.15);
+            --text-main: #f5f5f7;
+            --text-dim: #888899;
+            --accent: #ffffff;
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
-        body { background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, sans-serif; }
+        
+        body { 
+            background-color: var(--bg-base); 
+            background-image: radial-gradient(circle at 50% -20%, var(--bg-glow) 0%, transparent 70%);
+            color: var(--text-main); 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
 
-        /* Lobby Layer */
-        #lobby { padding: 80px 40px; max-width: 1200px; margin: 0 auto; width: 100%; transition: 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        #lobby.hidden { opacity: 0; transform: scale(0.95); pointer-events: none; }
+        /* Lobby Display Layout Interface */
+        .lobby-container {
+            max-width: 1200px;
+            width: 100%;
+            display: block;
+        }
+        .lobby-container.hidden {
+            display: none;
+        }
 
-        .header { margin-bottom: 60px; }
-        .header h1 { font-size: 3rem; font-weight: 200; letter-spacing: -0.02em; margin-bottom: 10px; }
-        .header p { color: var(--text-secondary); }
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 200;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        header p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+        /* 6-Grid Matrix Deployment Config */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            width: 100%;
+        }
 
-        /* Glass Cards */
-        .card {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 40px;
-            cursor: pointer;
-            transition: all 0.4s ease;
+        @media (max-width: 1024px) { .matrix-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 680px) { .matrix-grid { grid-template-columns: 1fr; } }
+
+        /* Mouse Spotlight Interactive Cards */
+        .game-card {
             position: relative;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 32px;
+            cursor: pointer;
             overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: border-color 0.3s ease, transform 0.4s var(--ease-out-expo), box-shadow 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 220px;
         }
-        .card:hover { border-color: var(--accent); background: rgba(255,255,255,0.06); transform: translateY(-10px); }
-        .card-icon { font-size: 2.5rem; margin-bottom: 20px; }
-        .card h2 { margin-bottom: 10px; font-weight: 400; }
-        .card p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
 
-        /* Arena Layer */
-        #arena { position: fixed; inset: 0; z-index: 10; opacity: 0; pointer-events: none; background: #000; display: flex; flex-direction: column; transition: 0.6s ease; }
-        #arena.active { opacity: 1; pointer-events: auto; }
+        .game-card:hover {
+            border-color: var(--glass-border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
 
-        .nav-bar { height: 70px; display: flex; align-items: center; padding: 0 40px; border-bottom: 1px solid var(--border); }
-        .btn-back { cursor: pointer; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; transition: 0.3s; }
-        .btn-back:hover { color: #fff; }
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(800px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(255,255,255,0.04), transparent 40%);
+            z-index: 1;
+            pointer-events: none;
+        }
 
-        .iframe-container { flex: 1; position: relative; }
-        .game-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; display: none; }
-        .game-frame.active { display: block; }
+        .card-meta { position: relative; z-index: 2; }
+        .card-icon { font-size: 2rem; margin-bottom: 16px; display: inline-block; line-height: 1; color: var(--text-main); }
+        .card-title { font-size: 1.15rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text-main); margin-bottom: 6px; }
+        .card-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; font-weight: 400; }
+
+        .card-action {
+            position: relative;
+            z-index: 2;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: gap 0.2s ease;
+        }
+        .game-card:hover .card-action { gap: 8px; }
+
+        /* Fullscreen Sandbox Arena Implementation */
+        .arena-container {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            z-index: -1;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .arena-container.active {
+            z-index: 9999;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .arena-navbar {
+            height: 56px;
+            background: #09090d;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+        }
+        .back-btn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .back-btn:hover {
+            color: #fff;
+            border-color: var(--glass-border-hover);
+            background: rgba(255,255,255,0.02);
+        }
+        .arena-title-display {
+            font-size: 0.85rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .frame-wrapper {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+
+        .game-frame {
+            position: absolute;
+            top: 0; width: 100%; height: 100%;
+            border: none;
+            /* CRITICAL: Use off-screen rendering instead of display:none or opacity rules.
+               Guarantees full layout dimensions while rendering completely out of sight. */
+            left: -99999px;
+            visibility: hidden;
+        }
+        .game-frame.active {
+            left: 0;
+            visibility: visible;
+        }
     </style>
 </head>
 <body>
 
-    <div id="lobby">
-        <div class="header">
-            <h1>Omni Studio</h1>
-            <p>Select your tactical simulation interface</p>
-        </div>
-        <div class="grid">
-            <div class="card" onclick="openGame('go.html', '围棋')">
-                <div class="card-icon">⚫</div>
-                <h2>围棋</h2>
-                <p>19x19 territory mapping engine.</p>
+    <div class="lobby-container" id="lobbyContainer">
+        <header>
+            <h1>Omni Board Studio</h1>
+            <p>Premium High-End P2P Tactical Simulation Arena</p>
+        </header>
+
+        <div class="matrix-grid">
+            <div class="game-card" onclick="enterArena('frameInternationalChess', 'International Chess')">
+                <div class="card-meta">
+                    <span class="card-icon">♞</span>
+                    <div class="card-title">国际象棋</div>
+                    <div class="card-desc">Standard 8x8 matrix tactical network vector system with standard pawn promotion rules.</div>
+                </div>
+                <div class="card-action">Deploy Strike Axis →</div>
             </div>
-            <div class="card" onclick="openGame('gomoku.html', '五子棋')">
-                <div class="card-icon">⚪</div>
-                <h2>五子棋</h2>
-                <p>Fast-response tactical line logic.</p>
+
+            <div class="game-card" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
+                <div class="card-meta">
+                    <span class="card-icon">帥</span>
+                    <div class="card-title">中国象棋</div>
+                    <div class="card-desc">Traditional River-divide tactical combat mapping grid utilizing distributed P2P node communication.</div>
+                </div>
+                <div class="card-action">Deploy Strike Axis →</div>
             </div>
-            <div class="card" onclick="openGame('Chess.html', '中国象棋')">
-                <div class="card-icon">帥</div>
-                <h2>中国象棋</h2>
-                <p>Traditional river-divide combat.</p>
+
+            <div class="game-card" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
+                <div class="card-meta">
+                    <span class="card-icon">⚑</span>
+                    <div class="card-title">军棋</div>
+                    <div class="card-desc">Land combat tactical deployment matrix featuring hidden ranks and station network routes.</div>
+                </div>
+                <div class="card-action">Deploy Strike Axis →</div>
+            </div>
+
+            <div class="game-card" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
+                <div class="card-meta">
+                    <span class="card-icon">⚓</span>
+                    <div class="card-title">航海棋</div>
+                    <div class="card-desc">Naval coordinate radar tracking array designed for strategic fleet engagement simulation.</div>
+                </div>
+                <div class="card-action">Deploy Strike Axis →</div>
+            </div>
+
+            <div class="game-card" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
+                <div class="card-meta">
+                    <span class="card-icon">⚫</span>
+                    <div class="card-title">围棋</div>
+                    <div class="card-desc">19x19 high-dimension cellular territory mapping array for deep spatial balance simulation.</div>
+                </div>
+                <div class="card-action">Deploy Strike Axis →</div>
+            </div>
+
+            <div class="game-card" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
+                <div class="card-meta">
+                    <span class="card-icon">⚪</span>
+                    <div class="card-title">五子棋</div>
+                    <div class="card-desc">Rapid 5-in-a-row straight-line strategic deployment engine with sub-second collision logic.</div>
+                </div>
+                <div class="card-action">Deploy Strike Axis →</div>
             </div>
         </div>
     </div>
 
-    <div id="arena">
-        <div class="nav-bar">
-            <div class="btn-back" onclick="closeGame()">← BACK TO HUB</div>
+    <div class="arena-container" id="arenaContainer">
+        <div class="arena-navbar">
+            <button class="back-btn" onclick="exitArena()">← 返回控制大厅 (Lobby)</button>
+            <div class="arena-title-display" id="arenaTitleDisplay">TACTICAL SIMULATION MATRIX</div>
+            <div style="width: 80px;"></div> 
         </div>
-        <div class="iframe-container">
-            <iframe id="gameFrame" class="game-frame"></iframe>
+        <div class="frame-wrapper">
+            <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
+            <iframe id="frameChineseChess" class="game-frame" data-src="Chinese chess.html"></iframe>
+            <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military flag.html"></iframe>
+            <iframe id="frameNavalFlag" class="game-frame" data-src="Naval flag.html"></iframe>
+            <iframe id="frameGo" class="game-frame" data-src="go.html"></iframe>
+            <iframe id="frameGomoku" class="game-frame" data-src="gomoku.html"></iframe>
         </div>
     </div>
 
     <script>
-        const lobby = document.getElementById('lobby');
-        const arena = document.getElementById('arena');
-        const gameFrame = document.getElementById('gameFrame');
+        // ==================== Dynamic Spotlight Tracking Mechanics ====================
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
 
-        function openGame(url, title) {
+        // ==================== Optimized Post-Load Pipeline ====================
+        // Array mapping to manage background source registration sequences
+        const sourceRegistry = [
+            { id: 'frameInternationalChess', src: 'Chess.html' },
+            { id: 'frameChineseChess', src: 'Chinese chess.html' },
+            { id: 'frameMilitaryFlag', src: 'Military flag.html' },
+            { id: 'frameNavalFlag', src: 'Naval flag.html' },
+            { id: 'frameGo', src: 'go.html' },
+            { id: 'frameGomoku', src: 'gomoku.html' }
+        ];
+
+        // Triggers staggered asset loading after main execution thread clears
+        window.addEventListener('load', () => {
+            sourceRegistry.forEach((target, position) => {
+                setTimeout(() => {
+                    const iframe = document.getElementById(target.id);
+                    if (iframe && !iframe.src) {
+                        iframe.src = target.src;
+                        console.log(`[OmniEngine] Background pipeline streamed: ${target.id}`);
+                    }
+                }, 600 + position * 300); // Distributed 300ms intervals prevent parallel CPU choke spikes
+            });
+        });
+
+        // ==================== Instant Router Control Matrix ====================
+        function enterArena(frameId, gameTitle) {
+            const lobby = document.getElementById('lobbyContainer');
+            const arena = document.getElementById('arenaContainer');
+            const titleDisplay = document.getElementById('arenaTitleDisplay');
+
+            titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
             lobby.classList.add('hidden');
-            setTimeout(() => {
-                gameFrame.src = url;
-                gameFrame.classList.add('active');
-                arena.classList.add('active');
-            }, 500);
+
+            document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
+            const activeFrame = document.getElementById(frameId);
+
+            // Instant click fallback insurance if background stream isn't fully completed
+            if (!activeFrame.src) {
+                const config = sourceRegistry.find(item => item.id === frameId);
+                if (config) activeFrame.src = config.src;
+            }
+
+            activeFrame.classList.add('active');
+            arena.classList.add('active');
+
+            // Force-fires execution events to command inner scripts to adjust canvas bounds immediately
+            const forceSynchronizeCanvas = () => {
+                try {
+                    if (activeFrame.contentWindow) {
+                        activeFrame.contentWindow.dispatchEvent(new Event('resize'));
+                        if (typeof activeFrame.contentWindow.drawBoard === 'function') {
+                            activeFrame.contentWindow.drawBoard();
+                        }
+                    }
+                } catch (err) {
+                    console.log("[OmniEngine] Viewport matrix recalibrated.");
+                }
+            };
+
+            // Executes cascading interval syncs to eliminate white flashes and guarantee render completion
+            forceSynchronizeCanvas();
+            setTimeout(forceSynchronizeCanvas, 50);
+            setTimeout(forceSynchronizeCanvas, 150);
         }
 
-        function closeGame() {
+        function exitArena() {
+            const lobby = document.getElementById('lobbyContainer');
+            const arena = document.getElementById('arenaContainer');
+
             arena.classList.remove('active');
-            setTimeout(() => {
-                gameFrame.classList.remove('active');
-                gameFrame.src = ''; // 释放内存
-                lobby.classList.remove('hidden');
-            }, 300);
+            lobby.classList.remove('hidden');
         }
     </script>
 </body>

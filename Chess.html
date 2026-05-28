@@ -15,7 +15,7 @@
             --text-main: #f1f5f9;
             --text-dim: #64748b;
             --white-piece: #f8fafc;
-            --black-piece: #ef4444; /* Tech Red contrast flavor for Black pieces */
+            --black-piece: #ef4444; 
             --board-light: #1e2235;
             --board-dark: #121424;
             --accent: #06b6d4;
@@ -31,8 +31,9 @@
         .sidebar { flex: 0 0 360px; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 14px; }
         
         h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; color: var(--accent); }
+        .switches-header { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
         .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
-        .panel-section { background: #090b11; border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+        .panel-section { background: #090b11; border: 1px solid var(--border); border-radius: 8px; padding: 14px; position: relative; }
         
         .eval-container { height: 6px; width: 100%; background: #0e1118; border-radius: 3px; margin-top: 8px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
         .eval-bar-black { height: 100%; background: var(--black-piece); width: 50%; transition: width 0.4s var(--ease); }
@@ -98,6 +99,22 @@
         .cell.valid-target::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: rgba(6, 182, 212, 0.6); z-index: 10; }
         .cell.valid-target.has-piece::after { content: ""; position: absolute; width: calc(var(--cell-size) - 4px); height: calc(var(--cell-size) - 4px); border-radius: 50%; border: 2px solid rgba(6, 182, 212, 0.5); background: transparent; }
 
+        /* AI Assistant UI Styles */
+        .switch-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 130px; }
+        .switch { position: relative; display: inline-block; width: 30px; height: 16px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .3s; border-radius: 16px; border: 1px solid var(--border); }
+        .slider:before { position: absolute; content: ""; height: 10px; width: 10px; left: 2px; bottom: 2px; background-color: #777; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); border-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(14px); background-color: #fff; }
+
+        /* AI Assistant Highlight Styles */
+        .cell.assist-start::before { content: ""; position: absolute; width: 56px; height: 56px; border: 2px dashed rgba(6, 182, 212, 0.7); border-radius: 50%; animation: spin 10s linear infinite; z-index: 2; }
+        .cell.assist-end::before { content: ""; position: absolute; width: 56px; height: 56px; border: 2px solid rgba(6, 182, 212, 0.8); border-radius: 50%; z-index: 2; animation: pulse 1.8s infinite; }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.5; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.5; } }
+
         .flipped-view { transform: rotate(180deg); }
         .flipped-view .piece { transform: rotate(180deg); }
 
@@ -135,8 +152,8 @@
             <div id="celebrationTitle" class="celebration-title">CHECKMATE</div>
             <div id="celebrationSubtitle" class="celebration-subtitle">Tactical match has been concluded.</div>
             <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
-                <button class="btn btn-secondary" onclick="openReplay()">战局时空复盘</button>
-                <button class="btn" onclick="startNextMatchManual()">开始新局/换边对决</button>
+                <button class="btn btn-secondary" onclick="openReplay()">Tactical Replay</button>
+                <button class="btn" onclick="startNextMatchManual()">Start New / Switch Sides</button>
             </div>
         </div>
     </div>
@@ -145,7 +162,16 @@
         <div class="sidebar">
             <h1>
                 Chess Intelligence
-                <span style="font-size: 9px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">CORE ENGINE v1.0</span>
+                <div class="switches-header">
+                    <!-- AI Assist Switch from Source 1 -->
+                    <div class="switch-wrap" title="Shortcut: Ctrl+W to toggle AI Assist">
+                        <span style="font-size: 9px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">AI Assist</span>
+                        <label class="switch">
+                            <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
             </h1>
             
             <div class="panel-section">
@@ -172,39 +198,39 @@
             <div class="panel-section">
                 <span class="label-tiny">P2P Matrix Room Key</span>
                 <div class="peer-id-display" id="myIdDisplay">Generating...</div>
-                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">复制作战密钥</button>
+                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Room Key</button>
             </div>
 
             <div class="panel-section">
                 <span class="label-tiny">Establish Remote Sync Link</span>
                 <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="输入对方指挥官密钥...">
-                    <button class="btn" style="background: var(--accent);" onclick="connectToPeer('play')">连线</button>
-                    <button class="btn btn-secondary" style="border-color: #f59e0b; color: #f59e0b;" onclick="connectToPeer('spectate')">观察</button>
+                    <input type="text" id="peerIdInput" placeholder="Enter opponent key...">
+                    <button class="btn" style="background: var(--accent);" onclick="connectToPeer('play')">Connect</button>
+                    <button class="btn btn-secondary" style="border-color: #f59e0b; color: #f59e0b;" onclick="connectToPeer('spectate')">Spectate</button>
                 </div>
             </div>
 
             <div class="panel-section">
                 <span class="label-tiny">Tactical Feed Streams</span>
                 <div class="status-area" style="margin-top:4px;">
-                    <div id="connectionStatus" class="status-badge local-mode">本地沙盘推推演</div>
-                    <div id="turnStatus" class="status-badge">回合: White</div>
+                    <div id="connectionStatus" class="status-badge local-mode">Local Sandbox</div>
+                    <div id="turnStatus" class="status-badge">Turn: White</div>
                     <div id="roleStatus" class="status-badge" style="display:none;"></div>
                 </div>
                 <div class="log-box" id="logBox">Matrix system array mapped. Engine initialized.</div>
             </div>
             
             <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">回溯变换</button>
-                <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">提议和棋</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">Undo Move</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">Offer Draw</button>
             </div>
             <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button class="btn btn-danger" style="flex: 1;" id="resignBtn" onclick="handleResign()">认输倒旗</button>
-                <button class="btn btn-secondary" style="flex: 1; border-color: #a855f7; color: #a855f7;" id="saveBtn" onclick="saveGame()">保存棋局</button>
-                <button class="btn btn-secondary" style="flex: 1; border-color: #22c55e; color: #22c55e;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">导入棋局</button>
+                <button class="btn btn-danger" style="flex: 1;" id="resignBtn" onclick="handleResign()">Resign</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #a855f7; color: #a855f7;" id="saveBtn" onclick="saveGame()">Save Game</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #22c55e; color: #22c55e;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">Load Game</button>
                 <input type="file" id="fileLoadInput" accept=".chess" style="display:none;" onchange="handleFileSelect(event)">
             </div>
-            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">重置推演</button>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">Reset Simulation</button>
         </div>
 
         <div class="board-wrapper" id="boardWrapper">
@@ -218,9 +244,11 @@
         let boardState = Array(8).fill(null).map(() => Array(8).fill(null));
         let selectedCell = null;
         let myRole = null; 
-        let currentTurn = 'white'; // White always initiates the first vector strike
+        let currentTurn = 'white'; 
         let lastMove = { from: null, to: null };
         let moveHistory = [];
+        let assistModeActive = false;
+        let currentPredictRequestId = 0; 
 
         // Time-Travel Replay System variables
         let isReplayMode = false;
@@ -251,11 +279,11 @@
             document.getElementById('myIdDisplay').innerText = myRoomId;
             currentRoomTopic = `chess/room/${myRoomId}`;
 
-            log("正在安全对接中转集群调度中枢...");
+            log("Connecting to the relay cluster...");
             mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
 
             mqttClient.on('connect', () => {
-                log("全链路卫星信号握手就绪。P2P数据信道开放中...");
+                log("Full link satellite handshake ready. P2P data channel opening...");
                 mqttClient.subscribe(currentRoomTopic);
             });
 
@@ -270,17 +298,17 @@
 
         function connectToPeer(mode = 'play') {
             const remoteId = document.getElementById('peerIdInput').value.trim();
-            if (!remoteId) return alert("请输入合法的矩阵推演连线密钥！");
-            if (remoteId === myRoomId) return alert("无法挂载本地回环网络节点！");
+            if (!remoteId) return alert("Please enter a valid room key!");
+            if (remoteId === myRoomId) return alert("Cannot connect to your own local node!");
 
-            log(`解耦本地网络，正在同步切入目标防区线: ${remoteId}...`);
+            log(`Decoupling local network, syncing to target node: ${remoteId}...`);
             mqttClient.unsubscribe(currentRoomTopic);
             currentRoomTopic = `chess/room/${remoteId}`;
             mqttClient.subscribe(currentRoomTopic);
 
             if (mode === 'spectate') {
                 myRole = 'spectator'; sendMqttMessage('spectator_join');
-                log("已作为高级战略观察员席位挂载至公共雷达线。");
+                log("Mounted to the public radar feed as a strategic observer.");
             } else {
                 myRole = 'black'; sendMqttMessage('join');
             }
@@ -295,13 +323,13 @@
         function handleNetworkData(data) {
             if (data.type === 'join') {
                 myRole = 'white'; updateConnectionUI(true); updateOrientation(); initBoard();
-                log("远程指挥官已接入。判定你为白方突击先手。");
+                log("Remote commander joined. You are assigned as White (First Mover).");
                 sendMqttMessage('join_ack');
             } else if (data.type === 'join_ack') {
                 myRole = 'black'; updateConnectionUI(true); updateOrientation(); initBoard();
-                log("卫星对等验证组网通过！判定你为黑方机动后手。");
+                log("P2P network verified! You are assigned as Black.");
             } else if (data.type === 'spectator_join') {
-                log("👁️ 外部战略分析师已挂载并开始观测本场推演盘面。");
+                log("👁️ An external analyst has started observing the board.");
                 if (myRole === 'white' || myRole === 'black') {
                     sendMqttMessage('sync_board_to_spectator', { boardState, currentTurn, lastMove });
                 }
@@ -313,24 +341,24 @@
             } else if (data.type === 'move') {
                 executeMoveSync(data.from.r, data.from.c, data.to.r, data.to.c);
             } else if (data.type === 'reset') {
-                resetBoardLocal(); log("对端重新初始化了推演阵势。");
+                resetBoardLocal(); log("Opponent re-initialized the board.");
             } else if (data.type === 'undo_request') {
-                if (confirm("对方指挥官提出战术回溯修正申请（悔棋），是否同意？")) {
+                if (confirm("Opponent requests to undo a move. Accept?")) {
                     executeUndoLocal(); sendMqttMessage('undo_response', { accept: true });
                 } else { sendMqttMessage('undo_response', { accept: false }); }
             } else if (data.type === 'undo_response') {
-                if (data.accept) { executeUndoLocal(); log("对方应允了航迹重组变动申请，时空同步重叠。"); } else { log("变动请求已被对方拦截阻断。"); }
+                if (data.accept) { executeUndoLocal(); log("Undo accepted by the opponent."); } else { log("Undo request denied."); }
             } else if (data.type === 'draw_request') {
-                if (confirm("对方提议签署中立和解协议停战（和棋），是否签定？")) {
+                if (confirm("Opponent offers a draw. Accept?")) {
                     currentTurn = null; updateTurnUI(); sendMqttMessage('draw_response', { accept: true }); showCelebration('draw');
                 } else { sendMqttMessage('draw_response', { accept: false }); }
             } else if (data.type === 'draw_response') {
-                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); } else { log("和解提议失效，冲突继续。"); }
+                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); } else { log("Draw offer rejected."); }
             } else if (data.type === 'resign_notice') {
                 triggerGameOverDirectly(data.loser === 'white' ? 'black' : 'white');
             } else if (data.type === 'role_swap') {
                 if(myRole !== 'spectator' && myRole !== null) { myRole = data.nextRole; updateOrientation(); }
-                updateConnectionUI(true); resetBoardLocal(); log(`阵营攻守转换，舰队调头推演。`);
+                updateConnectionUI(true); resetBoardLocal(); log(`Roles swapped for the next game.`);
             }
         }
 
@@ -365,60 +393,85 @@
             for (let c = 0; c < 8; c++) {
                 boardState[0][c] = { type: backRowOrder[c], color: 'black' };
                 boardState[7][c] = { type: backRowOrder[c], color: 'white' };
-            }
-
-            // Initialize Front Line Pawn Wall Ironclad Array Vectors
-            for (let c = 0; c < 8; c++) {
+                
+                // Initialize Front Line Pawn Wall Iron
                 boardState[1][c] = { type: 'Pawn', color: 'black' };
                 boardState[6][c] = { type: 'Pawn', color: 'white' };
             }
-
-            renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+            
+            renderPieces();
+            updateTurnUI();
+            evaluateAndDisplayWinRate();
+            clearAssistHighlights();
+            if (assistModeActive) calculateBestMove();
         }
 
         function renderPieces() {
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     const cellDOM = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
-                    const oldPiece = cellDOM.querySelector('.piece');
-                    if (oldPiece) oldPiece.remove();
-
+                    const childPiece = cellDOM.querySelector('.piece');
+                    if (childPiece) childPiece.remove();
+                    
                     cellDOM.classList.remove('last-move-src', 'last-move-dst');
-                    if (lastMove.from && lastMove.from.r === r && lastMove.from.c === c) cellDOM.classList.add('last-move-src');
-                    if (lastMove.to && lastMove.to.r === r && lastMove.to.c === c) cellDOM.classList.add('last-move-dst');
+                    if (lastMove && lastMove.from && lastMove.from.r === r && lastMove.from.c === c) cellDOM.classList.add('last-move-src');
+                    if (lastMove && lastMove.to && lastMove.to.r === r && lastMove.to.c === c) cellDOM.classList.add('last-move-dst');
 
                     const piece = boardState[r][c];
                     if (piece) {
                         const pieceDOM = document.createElement('div');
-                        pieceDOM.className = `piece ${piece.color}`;
-                        pieceDOM.innerHTML = UNICODE_PIECES[piece.color][piece.type];
+                        pieceDOM.className = `piece ${piece.color}`; 
+                        pieceDOM.innerText = UNICODE_PIECES[piece.color][piece.type];
                         cellDOM.appendChild(pieceDOM);
                     }
                 }
             }
         }
 
+        function drawTrajectory(fromR, fromC, toR, toC) {
+            const CS = 68; const half = CS / 2;
+            let startX = fromC * CS + half; let startY = fromR * CS + half;
+            let endX = toC * CS + half; let endY = toR * CS + half;
+
+            const pathStr = `<line class="trajectory-path" x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" />`;
+            document.getElementById('trajectoryLayer').innerHTML = pathStr;
+        }
+
+        function updateOrientation() {
+            const wrapper = document.getElementById('boardWrapper');
+            if (myRole === 'black') wrapper.classList.add('flipped-view'); 
+            else wrapper.classList.remove('flipped-view'); 
+            if (lastMove && lastMove.from) drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
+        }
+
         function handleCellClick(r, c) {
-            if (isReplayMode || myRole === 'spectator') return;
+            if (isReplayMode) return; 
+            if (myRole === 'spectator') return; 
             if (myRole !== null && currentTurn !== myRole) return;
 
-            const targetPiece = boardState[r][c];
+            const clickedPiece = boardState[r][c];
 
             if (selectedCell) {
-                const sourcePiece = boardState[selectedCell.r][selectedCell.c];
-                
-                if (targetPiece && targetPiece.color === sourcePiece.color) {
+                const currentMovingPiece = boardState[selectedCell.r][selectedCell.c];
+                if (clickedPiece && clickedPiece.color === currentMovingPiece.color) {
                     clearSelectionHighlights(); selectPiece(r, c); return;
                 }
 
                 if (validateMove(selectedCell.r, selectedCell.c, r, c)) {
                     commitPieceMovement(selectedCell.r, selectedCell.c, r, c);
-                } else { clearSelectionHighlights(); }
-            } else {
-                if (targetPiece && targetPiece.color === currentTurn) {
-                    selectPiece(r, c);
+                } else { 
+                    clearSelectionHighlights(); 
                 }
+            } else {
+                if (clickedPiece && clickedPiece.color === currentTurn) selectPiece(r, c); 
             }
+        }
+
+        function commitPieceMovement(fromR, fromC, toR, toC) {
+            if (myRole !== null && myRole !== 'spectator') {
+                sendMqttMessage('move', { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } });
+            }
+            executeMoveSync(fromR, fromC, toR, toC);
         }
 
         function selectPiece(r, c) {
@@ -428,108 +481,249 @@
             for (let tr = 0; tr < 8; tr++) {
                 for (let tc = 0; tc < 8; tc++) {
                     if (validateMove(r, c, tr, tc)) {
-                        const targetDOM = document.querySelector(`[data-row='${tr}'][data-col='${tc}']`);
-                        targetDOM.classList.add('valid-target');
-                        if (boardState[tr][tc]) targetDOM.classList.add('has-piece');
+                        const cell = document.querySelector(`[data-row='${tr}'][data-col='${tc}']`);
+                        cell.classList.add('valid-target');
+                        if(boardState[tr][tc]) cell.classList.add('has-piece');
                     }
                 }
             }
         }
 
-        function drawTrajectory(fromR, fromC, toR, toC) {
-            const cs = 68; const half = cs / 2;
-            let startX = fromC * cs + half; let startY = fromR * cs + half;
-            let endX = toC * cs + half; let endY = toR * cs + half;
-            document.getElementById('trajectoryLayer').innerHTML = `<path class="trajectory-path" d="M ${startX} ${startY} L ${endX} ${endY}"/>`;
-        }
-
-        function commitPieceMovement(fromR, fromC, toR, toC) {
-            if (myRole !== null) {
-                sendMqttMessage('move', { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } });
+        function executeMoveSync(fromR, fromC, toR, toC) {
+            let movingPiece = boardState[fromR][fromC];
+            if(!movingPiece) return;
+            const targetPiece = boardState[toR][toC];
+            
+            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } });
+            lastMove = { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
+            
+            // Pawn Promotion (Simplified to Auto-Queen)
+            if (movingPiece.type === 'Pawn') {
+                if ((movingPiece.color === 'white' && toR === 0) || (movingPiece.color === 'black' && toR === 7)) {
+                    movingPiece.type = 'Queen';
+                }
             }
-            executeMoveSync(fromR, fromC, toR, toC);
+
+            boardState[toR][toC] = movingPiece; boardState[fromR][fromC] = null;
+            clearSelectionHighlights(); renderPieces(); drawTrajectory(fromR, fromC, toR, toC); evaluateAndDisplayWinRate();
+
+            let gameOver = false;
+            let winner = null;
+
+            if (targetPiece && targetPiece.type === 'King') {
+                gameOver = true; winner = movingPiece.color;
+                log(`[CHECKMATE] ${winner === 'white' ? 'White' : 'Black'} captures the King and wins!`);
+            } 
+
+            if (gameOver) {
+                triggerGameOverDirectly(winner);
+                return;
+            }
+
+            currentTurn = currentTurn === 'white' ? 'black' : 'white'; 
+            updateTurnUI(); 
+            if (assistModeActive) setTimeout(calculateBestMove, 50);
         }
 
-        // High-fidelity algorithmic kinematic rules verification subsystem
+        // ==================== Validation Logic ====================
         function validateMove(fromR, fromC, toR, toC) {
-            const p = boardState[fromR][fromC]; const target = boardState[toR][toC];
-            if (!p || (fromR === toR && fromC === toC)) return false;
-            if (target && target.color === p.color) return false;
-
+            const p = boardState[fromR][fromC]; 
+            const target = boardState[toR][toC];
+            if (!p || (target && target.color === p.color)) return false; 
+            
             const dr = toR - fromR; const dc = toC - fromC;
             const absDr = Math.abs(dr); const absDc = Math.abs(dc);
+            
+            const countLine = (r1, c1, r2, c2) => {
+                let cnt = 0;
+                if (r1 === r2) {
+                    let minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+                    for (let c = minC + 1; c < maxC; c++) if (boardState[r1][c]) cnt++;
+                } else if (c1 === c2) {
+                    let minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
+                    for (let r = minR + 1; r < maxR; r++) if (boardState[r][c1]) cnt++;
+                } else if (Math.abs(r1-r2) === Math.abs(c1-c2)) {
+                    let rDir = r2 > r1 ? 1 : -1;
+                    let cDir = c2 > c1 ? 1 : -1;
+                    let step = Math.abs(r1-r2);
+                    for(let i=1; i<step; i++) {
+                        if(boardState[r1 + i*rDir][c1 + i*cDir]) cnt++;
+                    }
+                }
+                return cnt;
+            };
 
-            switch (p.type) {
-                case 'Pawn':
-                    const direction = p.color === 'white' ? -1 : 1;
-                    const baseRow = p.color === 'white' ? 6 : 1;
-                    // Standard single forward non-capturing stepping acceleration
-                    if (dc === 0 && dr === direction && !target) return true;
-                    // Dual block forward tactical launch trajectory profile
-                    if (dc === 0 && fromR === baseRow && dr === 2 * direction && !target && !boardState[fromR + direction][fromC]) return true;
-                    // Standard vector diagonal combat capture rule
-                    if (absDc === 1 && dr === direction && target && target.color !== p.color) return true;
-                    return false;
-
-                case 'Rook':
-                    if (fromR !== toR && fromC !== toC) return false;
-                    return isPathClear(fromR, fromC, toR, toC);
-
-                case 'Knight':
+            switch(p.type) {
+                case 'Rook': 
+                    if (fromR !== toR && fromC !== toC) return false; 
+                    return countLine(fromR, fromC, toR, toC) === 0;
+                case 'Bishop': 
+                    if (absDr !== absDc) return false; 
+                    return countLine(fromR, fromC, toR, toC) === 0;
+                case 'Queen': 
+                    if (fromR !== toR && fromC !== toC && absDr !== absDc) return false; 
+                    return countLine(fromR, fromC, toR, toC) === 0;
+                case 'Knight': 
                     return (absDr === 2 && absDc === 1) || (absDr === 1 && absDc === 2);
-
-                case 'Bishop':
-                    if (absDr !== absDc) return false;
-                    return isPathClear(fromR, fromC, toR, toC);
-
-                case 'Queen':
-                    if (fromR !== toR && fromC !== toC && absDr !== absDc) return false;
-                    return isPathClear(fromR, fromC, toR, toC);
-
-                case 'King':
+                case 'King': 
                     return absDr <= 1 && absDc <= 1;
+                case 'Pawn': 
+                    const dir = p.color === 'white' ? -1 : 1;
+                    const startR = p.color === 'white' ? 6 : 1;
+                    // Move forward
+                    if (dc === 0 && !target) {
+                        if (dr === dir) return true;
+                        if (fromR === startR && dr === 2 * dir && !boardState[fromR+dir][fromC]) return true;
+                    } 
+                    // Capture
+                    else if (absDc === 1 && dr === dir && target) {
+                        return true;
+                    }
+                    return false;
             }
             return false;
         }
 
-        function isPathClear(fromR, fromC, toR, toC) {
-            const stepR = Math.sign(toR - fromR);
-            const stepC = Math.sign(toC - fromC);
-            let currR = fromR + stepR; let currC = fromC + stepC;
-            while (currR !== toR || currC !== toC) {
-                if (boardState[currR][currC]) return false;
-                currR += stepR; currC += stepC;
-            }
-            return true;
+        // ==================== AI Assistant Implementation ====================
+        
+        // Toggle AI Mode[cite: 1]
+        function toggleAssistMode(force) {
+            assistModeActive = force !== undefined ? force : !assistModeActive;
+            const toggle = document.getElementById('assistToggle');
+            if (toggle) toggle.checked = assistModeActive;
+            log(`[AI Engine] Tactical AI assistance routing has been ${assistModeActive?'Activated':'Deactivated'}.`);
+            if(assistModeActive && currentTurn) calculateBestMove();
+            else clearAssistHighlights();
         }
 
-        // Central processing atomic synchronized vector action pipeline
-        function executeMoveSync(fromR, fromC, toR, toC) {
-            const src = boardState[fromR][fromC]; const tgt = boardState[toR][toC];
-            if (!src) return;
+        // Keyboard Shortcut Ctrl+W[cite: 1]
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'w') { e.preventDefault(); toggleAssistMode(); }
+        });
 
-            moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } });
-            lastMove = { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
+        function clearSelectionHighlights() {
+            selectedCell = null;
+            document.querySelectorAll('.cell').forEach(el => { el.classList.remove('selected', 'valid-target', 'has-piece'); });
+        }
 
-            let gameOver = false; let winner = null;
-            let logMsg = `[指令] ${src.color === 'white'?'白方':'黑方'}${src.type} 变更为 (${toR}, ${toC})`;
-            if (tgt) logMsg += ` ⚔️ 击沉敌方 [${tgt.type}]`;
+        function clearAssistHighlights() { 
+            document.querySelectorAll('.cell').forEach(el => el.classList.remove('assist-start', 'assist-end')); 
+        }
 
-            // Detect King termination criteria directly
-            if (tgt && tgt.type === 'King') { gameOver = true; winner = src.color; }
+        function generateFEN() {
+            let fenRows = [];
+            const pieceMap = {
+                'white': { 'King': 'K', 'Queen': 'Q', 'Rook': 'R', 'Bishop': 'B', 'Knight': 'N', 'Pawn': 'P' },
+                'black': { 'King': 'k', 'Queen': 'q', 'Rook': 'r', 'Bishop': 'b', 'Knight': 'n', 'Pawn': 'p' }
+            };
+            for (let r = 0; r < 8; r++) {
+                let emptyCount = 0;
+                let rowStr = '';
+                for (let c = 0; c < 8; c++) {
+                    const p = boardState[r][c];
+                    if (!p) {
+                        emptyCount++;
+                    } else {
+                        if (emptyCount > 0) { rowStr += emptyCount; emptyCount = 0; }
+                        rowStr += pieceMap[p.color][p.type];
+                    }
+                }
+                if (emptyCount > 0) rowStr += emptyCount;
+                fenRows.push(rowStr);
+            }
+            const turnStr = currentTurn === 'white' ? 'w' : 'b';
+            return `${fenRows.join('/')} ${turnStr} - - 0 1`;
+        }
 
-            boardState[toR][toC] = src; boardState[fromR][fromC] = null;
+        const colMap = { 'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5, 'g':6, 'h':7 };
+        function uciToCoords(uciStr) {
+            const fromC = colMap[uciStr[0]];
+            const fromR = 8 - parseInt(uciStr[1]);
+            const toC = colMap[uciStr[2]];
+            const toR = 8 - parseInt(uciStr[3]);
+            return { from: { r: fromR, c: fromC }, to: { r: toR, c: toC } };
+        }
 
-            clearSelectionHighlights(); renderPieces(); drawTrajectory(fromR, fromC, toR, toC); log(logMsg);
+        // Fetch best move from local endpoint[cite: 1]
+        function calculateBestMove() {
+            if (!currentTurn) return;
+            clearAssistHighlights();
 
-            if (gameOver) { triggerGameOverDirectly(winner); return; }
+            currentPredictRequestId++;
+            const trackedId = currentPredictRequestId;
+            const currentFen = generateFEN();
 
-            currentTurn = currentTurn === 'white' ? 'black' : 'white';
-            updateTurnUI(); triggerHapticBeep(); evaluateAndDisplayWinRate();
+            fetch('http://localhost:3000/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fen: currentFen })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (trackedId !== currentPredictRequestId) return; 
+                
+                let isPieceHolder = (myRole === null) || (myRole === currentTurn) || (myRole === 'spectator');
+
+                // Render highlighting for recommended move[cite: 1]
+                if (isPieceHolder && data.bestMove && data.bestMove !== '(none)' && data.bestMove !== '0000') {
+                    const coords = uciToCoords(data.bestMove);
+                    const sCell = document.querySelector(`[data-row='${coords.from.r}'][data-col='${coords.from.c}']`);
+                    const eCell = document.querySelector(`[data-row='${coords.to.r}'][data-col='${coords.to.c}']`);
+                    if(sCell) sCell.classList.add('assist-start');
+                    if(eCell) eCell.classList.add('assist-end');
+                }
+
+                // Update evaluation bar[cite: 1]
+                let score = data.score;
+                let whiteRate = 50 + (score / 35); 
+                whiteRate = Math.max(5, Math.min(95, whiteRate)); 
+
+                document.getElementById('whiteEvalBar').style.width = whiteRate + '%';
+                document.getElementById('blackEvalBar').style.width = (100 - whiteRate) + '%';
+                document.getElementById('whiteEvalText').innerText = whiteRate.toFixed(0) + '% White';
+                document.getElementById('blackEvalText').innerText = (100 - whiteRate).toFixed(0) + '% Black';
+            })
+            .catch(err => {
+                console.warn("Backend disconnected. Falling back to local simple evaluator context.");
+                if (trackedId === currentPredictRequestId) {
+                    evaluateAndDisplayWinRateFallback();
+                }
+            });
+        }
+
+        // ==================== UI and Utilities ====================
+
+        function evaluateBoard() {
+            let score = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = boardState[r][c];
+                    if (!p) continue;
+                    let val = MATERIAL_VALUES[p.type] || 0;
+                    score += p.color === 'white' ? val : -val;
+                }
+            }
+            return score;
+        }
+
+        function evaluateAndDisplayWinRateFallback() {
+            const score = evaluateBoard();
+            let whiteRate = 50 + (score / 45); whiteRate = Math.max(5, Math.min(95, whiteRate));
+            document.getElementById('whiteEvalBar').style.width = whiteRate + '%';
+            document.getElementById('blackEvalBar').style.width = (100 - whiteRate) + '%';
+            document.getElementById('whiteEvalText').innerText = whiteRate.toFixed(0) + '% White';
+            document.getElementById('blackEvalText').innerText = (100 - whiteRate).toFixed(0) + '% Black';
+        }
+
+        function evaluateAndDisplayWinRate() {
+            if (assistModeActive) { calculateBestMove(); } else { evaluateAndDisplayWinRateFallback(); }
         }
 
         function triggerGameOverDirectly(winner) {
-            showCelebration(winner); currentTurn = null; updateTurnUI(); triggerHapticBeep();
+            showCelebration(winner);
+            currentTurn = null; 
+            updateTurnUI(); 
+
             if (myRole !== null && myRole !== 'spectator') {
                 if (winner === myRole) matchStats.wins++; else matchStats.losses++;
                 localStorage.setItem('chess_tactical_stats', JSON.stringify(matchStats));
@@ -537,189 +731,190 @@
             }
         }
 
-        function evaluateBoard() {
-            let totalScore = 0;
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const piece = boardState[r][c]; if (!piece) continue;
-                    let val = MATERIAL_VALUES[piece.type] || 0;
-                    totalScore += piece.color === 'white' ? val : -val;
-                }
-            }
-            return totalScore;
-        }
-
-        function evaluateAndDisplayWinRate() {
-            const netBalance = evaluateBoard();
-            let whiteRate = 50 + (netBalance / 100); whiteRate = Math.max(5, Math.min(95, whiteRate));
-            document.getElementById('whiteEvalBar').style.width = whiteRate + '%';
-            document.getElementById('blackEvalBar').style.width = (100 - whiteRate) + '%';
-            document.getElementById('whiteEvalText').innerText = whiteRate.toFixed(0) + '% White';
-            document.getElementById('blackEvalText').innerText = (100 - whiteRate).toFixed(0) + '% Black';
-        }
-
         function showCelebration(winner) {
             const overlay = document.getElementById('celebrationOverlay');
             const titleEl = document.getElementById('celebrationTitle');
             const subtitleEl = document.getElementById('celebrationSubtitle');
             
+            let titleText = "MATCH OVER";
+            let subtitleText = "The simulation has ended.";
+
             if (winner === 'draw') {
-                titleEl.innerText = "DRAW MATCH"; subtitleEl.innerText = "无争端中立停火。两军握手言和。";
-            } else if (myRole === winner || (myRole === null && winner === 'white')) {
-                titleEl.innerText = "VICTORY"; subtitleEl.innerText = "敌方防线核心君王已被完全斩首！制空战线大捷。";
-                confetti({ particleCount: 140, spread: 75, origin: { y: 0.6 } });
+                titleText = "DRAW";
+                subtitleText = "Peace treaty signed.";
+            } else if (winner === myRole) {
+                titleText = "VICTORY";
+                subtitleText = "Brilliant tactical execution.";
+                let duration = 3.5 * 1000; let animationEnd = Date.now() + duration;
+                (function frame() {
+                    confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0.05, y: 0.85 } });
+                    confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 0.95, y: 0.85 } });
+                    if (Date.now() < animationEnd) requestAnimationFrame(frame);
+                }());
             } else {
-                titleEl.innerText = "DEFEAT"; subtitleEl.innerText = "防御线失守，核心指挥官遭遇斩首。";
+                titleText = "DEFEAT";
+                subtitleText = "The opposition overran your defenses.";
             }
+
+            titleEl.innerText = titleText;
+            subtitleEl.innerText = subtitleText;
             overlay.classList.add('active');
         }
 
         function startNextMatchManual() {
             document.getElementById('celebrationOverlay').classList.remove('active');
             if (myRole !== null && myRole !== 'spectator') {
-                let swappedRole = myRole === 'white' ? 'black' : 'white';
-                sendMqttMessage('role_swap', { nextRole: myRole });
-                myRole = swappedRole; updateOrientation(); updateConnectionUI(true); resetBoardLocal();
-            } else { resetBoardLocal(); }
+                if (myRole === 'white') {
+                    sendMqttMessage('role_swap', { nextRole: myRole }); 
+                    myRole = 'black'; 
+                    updateOrientation(); updateConnectionUI(true); resetBoardLocal();
+                } else if (myRole === 'black') {
+                    myRole = 'white'; 
+                    updateOrientation(); updateConnectionUI(true); resetBoardLocal();
+                }
+            } else {
+                resetBoardLocal();
+            }
         }
 
-        function saveGame() {
-            if (!currentTurn) return alert("盘面不活跃，无可固化矩阵。");
-            const snapshot = { boardState, currentTurn, lastMove, moveHistory, savedAsRole: myRole };
-            const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob); link.download = `Tactical_Chess_${new Date().toISOString().slice(0,10)}.chess`;
-            link.click(); URL.revokeObjectURL(link.href); log("💾 当前推演矩阵已打包本地备份 (.chess)。");
+        function updateConnectionUI(isConnected) {
+            const badge = document.getElementById('connectionStatus'); 
+            const rBadge = document.getElementById('roleStatus');
+            if (isConnected) {
+                if(myRole === 'spectator') {
+                    badge.innerText = "Live Spectating"; badge.className = "status-badge spectator-mode";
+                    rBadge.style.display = "inline-block"; rBadge.innerText = "Observer";
+                } else {
+                    badge.innerText = "Network Connected"; badge.className = "status-badge connected";
+                    rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'white' ? "White" : "Black";
+                }
+            } else {
+                badge.innerText = "Local Simulation"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
+            }
+            updateTurnUI();
         }
 
-        function handleFileSelect(event) {
-            const file = event.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const snap = JSON.parse(e.target.result);
-                    boardState = snap.boardState; currentTurn = snap.currentTurn; lastMove = snap.lastMove; moveHistory = snap.moveHistory;
-                    clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
-                    log("📂 战术海图快照反序列化加载就绪。");
-                } catch(err) { alert("海图文件格式破损或编译错误。"); }
-            };
-            reader.readAsText(file); event.target.value = '';
+        function updateTurnUI() {
+            const turnBadge = document.getElementById('turnStatus'); 
+            if (!currentTurn) { turnBadge.style.display = "none"; return; }
+            turnBadge.style.display = "inline-block"; 
+            turnBadge.innerText = `Turn: ${currentTurn === 'white' ? 'White' : 'Black'}`;
+            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { 
+                turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (Your Turn)"; 
+            } else { 
+                turnBadge.className = "status-badge"; 
+            }
         }
 
-        function handleResign() {
-            if (!currentTurn || !confirm("确定要下达弃置防线向对方倒旗认输的命令吗？")) return;
-            let targetLoser = (myRole !== null) ? myRole : currentTurn;
-            if (myRole !== null) sendMqttMessage('resign_notice', { loser: myRole });
-            triggerGameOverDirectly(targetLoser === 'white' ? 'black' : 'white');
+        function updateStatsUI() {
+            document.getElementById('statWins').innerText = matchStats.wins;
+            document.getElementById('statLosses').innerText = matchStats.losses;
+            const total = matchStats.wins + matchStats.losses;
+            document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
         }
+
+        function copyRoomKey() { const id = document.getElementById('myIdDisplay').innerText; if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("Room Key copied to clipboard!")); }
+        function log(text) { const logBox = document.getElementById('logBox'); logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; logBox.scrollTop = logBox.scrollHeight; }
 
         function requestUndo() {
-            if (moveHistory.length === 0) return alert("无历史路径变更序列。");
+            if (myRole === 'spectator') return;
+            if (!currentTurn) return alert("Game is over!");
+            if (moveHistory.length === 0) return alert("Nothing to undo.");
             if (myRole !== null) {
-                if (currentTurn === myRole) return alert("必须在敌方深思期间递交悔棋仲裁申请！");
-                sendMqttMessage('undo_request'); log("已向敌方机要室呈报回溯修正请求...");
-            } else { executeUndoLocal(); }
+                log("Requesting undo from opponent..."); sendMqttMessage('undo_request');
+            } else { executeUndoLocal(); log("Local undo successful."); }
         }
 
         function executeUndoLocal() {
             if (moveHistory.length === 0) return;
-            const previousStep = moveHistory.pop();
-            boardState = previousStep.board; currentTurn = previousStep.turn; lastMove = previousStep.lastMove;
+            const prev = moveHistory.pop();
+            boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             document.getElementById('trajectoryLayer').innerHTML = '';
             clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
+            if (assistModeActive) calculateBestMove();
         }
 
         function requestDraw() {
-            if (myRole !== null) { sendMqttMessage('draw_request'); log("递交公海和平议和倡议协议..."); }
-            else { currentTurn = null; updateTurnUI(); showCelebration('draw'); }
+            if (myRole === 'spectator') return;
+            if (!currentTurn) return alert("Game is over.");
+            if (myRole !== null) { log("Offering draw to opponent..."); sendMqttMessage('draw_request'); } 
+            else { log("Local draw initiated."); currentTurn = null; updateTurnUI(); showCelebration('draw'); }
         }
 
+        function handleResign() {
+            if (!currentTurn) return alert("Game is over!");
+            if (!confirm("Are you sure you want to resign?")) return;
+            let loserColor = (myRole !== null) ? myRole : currentTurn;
+            let winnerColor = loserColor === 'white' ? 'black' : 'white';
+            log(`🏳️ ${loserColor === 'white' ? 'White' : 'Black'} resigned.`);
+            if (myRole !== null && myRole !== 'spectator') sendMqttMessage('resign_notice', { loser: myRole });
+            triggerGameOverDirectly(winnerColor);
+        }
+
+        // ==================== Replay Mode Logic ====================
         function openReplay() {
             document.getElementById('celebrationOverlay').classList.remove('active');
-            const states = [...moveHistory, { board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: { ...lastMove } }];
-            localStorage.setItem('chess_replay_sequence', JSON.stringify(states));
+            const states = [...moveHistory, { board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: JSON.parse(JSON.stringify(lastMove)) }];
+            localStorage.setItem('chess_replay_data', JSON.stringify(states));
             window.open(window.location.href.split('?')[0] + '?mode=replay', '_blank');
         }
 
         function initReplayMode() {
             isReplayMode = true;
-            document.querySelector('h1').innerHTML = 'Time Replay <div class="status-badge spectator-mode">Replay Network</div>';
-            const blocks = document.querySelectorAll('.panel-section');
-            if (blocks.length >= 4) { blocks[2].style.display = 'none'; blocks[3].style.display = 'none'; }
+            document.querySelector('h1').innerHTML = 'Replay Room <div class="status-badge spectator-mode">Replay Mode</div>';
+            
+            const panels = document.querySelectorAll('.panel-section');
+            if (panels.length >= 4) { panels[2].style.display = 'none'; panels[3].style.display = 'none'; }
             document.getElementById('undoBtn').parentElement.style.display = 'none';
             document.getElementById('resignBtn').parentElement.style.display = 'none';
             document.getElementById('resetBtn').style.display = 'none';
 
-            const controller = document.createElement('div'); controller.style = "display: flex; gap: 8px; margin-top: 16px;";
-            controller.innerHTML = `
-                <button class="btn btn-secondary" style="flex: 1; border-color: var(--accent); color: var(--accent);" onclick="replayPrev()">上一步 (Prev)</button>
-                <button class="btn btn-secondary" style="flex: 1; border-color: var(--black-piece); color: var(--black-piece);" onclick="replayNext()">下一步 (Next)</button>
+            const replayUI = document.createElement('div');
+            replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
+            replayUI.innerHTML = `
+                <button class="btn btn-secondary" style="flex: 1; color: #a855f7; border-color: #a855f7;" onclick="replayPrev()">Previous</button>
+                <button class="btn btn-secondary" style="flex: 1; color: #22c55e; border-color: #22c55e;" onclick="replayNext()">Next</button>
             `;
-            document.querySelector('.sidebar').appendChild(controller);
-            try { replayStates = JSON.parse(localStorage.getItem('chess_replay_sequence')) || []; } catch (e) { return; }
-            currentReplayStep = replayStates.length - 1; applyReplayState(currentReplayStep);
-        }
+            document.querySelector('.sidebar').appendChild(replayUI);
 
-        function applyReplayState(idx) {
-            if (idx < 0 || idx >= replayStates.length) return;
-            const packet = replayStates[idx]; boardState = packet.board; currentTurn = packet.turn; lastMove = packet.lastMove;
-            clearSelectionHighlights(); renderPieces(); updateTurnUI(); evaluateAndDisplayWinRate();
-            if (lastMove && lastMove.from && lastMove.from.r !== null) drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
-        }
-
-        function replayPrev() { if (currentReplayStep > 0) applyReplayState(--currentReplayStep); }
-        function replayNext() { if (currentReplayStep < replayStates.length - 1) applyReplayState(++currentReplayStep); }
-
-        function triggerHapticBeep() {
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator(); const vol = ctx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(650, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08);
-                vol.gain.setValueAtTime(0.1, ctx.currentTime);
-                vol.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-                osc.connect(vol); vol.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.08);
-            } catch (e) {}
+                replayStates = JSON.parse(localStorage.getItem('chess_replay_data')) || [];
+                if (replayStates.length === 0) throw new Error("No data");
+            } catch (e) { alert("Replay data not found!"); return; }
+
+            currentReplayStep = replayStates.length - 1;
+            applyReplayState(currentReplayStep);
+            
+            log("📺 Entered Replay Mode.");
+            const connStatus = document.getElementById('connectionStatus');
+            connStatus.innerText = "Replay Mode"; connStatus.className = "status-badge spectator-mode";
         }
 
-        function updateOrientation() {
-            const element = document.getElementById('boardWrapper');
-            if (myRole === 'black') element.classList.add('flipped-view'); else element.classList.remove('flipped-view');
+        function applyReplayState(index) {
+            if (index < 0 || index >= replayStates.length) return;
+            const state = replayStates[index];
+            boardState = state.board; currentTurn = state.turn; lastMove = state.lastMove;
+            
+            clearSelectionHighlights(); renderPieces();
+            if (lastMove && lastMove.from && lastMove.from.r !== null) drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
+            else document.getElementById('trajectoryLayer').innerHTML = '';
+            
+            updateTurnUI(); evaluateAndDisplayWinRateFallback(); 
+            log(`[Replay] Step: ${index} / ${replayStates.length - 1}`);
         }
 
-        function clearSelectionHighlights() { selectedCell = null; document.querySelectorAll('.cell').forEach(el => { el.classList.remove('selected', 'valid-target', 'has-piece'); }); }
-        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); log("联机钥匙已解密复制至系统剪贴板。"); }
-        function log(text) { const lb = document.getElementById('logBox'); lb.innerHTML += `<br><span style="color:#2c324e">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; lb.scrollTop = lb.scrollHeight; }
-        function updateStatsUI() { document.getElementById('statWins').innerText = matchStats.wins; document.getElementById('statLosses').innerText = matchStats.losses; const sum = matchStats.wins + matchStats.losses; document.getElementById('statRate').innerText = sum === 0 ? "0%" : `${Math.round((matchStats.wins / sum) * 100)}%`; }
-        
-        function updateTurnUI() {
-            const badge = document.getElementById('turnStatus'); if (!currentTurn) { badge.style.display = "none"; return; }
-            badge.style.display = "inline-block"; const label = currentTurn === 'white' ? 'White' : 'Black'; badge.innerText = `行动回合: ${label}`;
-            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { badge.className = "status-badge your-turn"; badge.innerText += " (等待决断)"; } 
-            else { badge.className = "status-badge"; }
-        }
+        function replayPrev() { if (currentReplayStep > 0) { currentReplayStep--; applyReplayState(currentReplayStep); } }
+        function replayNext() { if (currentReplayStep < replayStates.length - 1) { currentReplayStep++; applyReplayState(currentReplayStep); } }
 
-        function updateConnectionUI(isConnected) {
-            const statusBadge = document.getElementById('connectionStatus'); const roleBadge = document.getElementById('roleStatus');
-            if (isConnected) {
-                if(myRole === 'spectator') {
-                    statusBadge.innerText = "联合参谋部"; statusBadge.className = "status-badge spectator-mode"; roleBadge.style.display = "inline-block"; roleBadge.innerText = "实时战局观察席";
-                } else {
-                    statusBadge.innerText = "远程联机"; statusBadge.className = "status-badge connected"; roleBadge.style.display = "inline-block"; roleBadge.innerText = myRole === 'white' ? "白方指挥官" : "黑方指挥官";
-                }
-            }
-            updateTurnUI();
-        }
-
-        // Bootstrap Core Render Engine
-        createDOMGrid();
+        // ==================== Initialization ====================
+        createDOMGrid(); 
         
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'replay') {
             initReplayMode();
         } else {
-            initBoard();
-            initNetwork();
+            initBoard(); 
+            initNetwork(); 
             updateStatsUI();
         }
     </script>

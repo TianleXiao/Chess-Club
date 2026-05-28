@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Omni Board Studio - Premium Hub</title>
     <style>
         :root {
@@ -10,9 +10,6 @@
             --bg-glow: #13131a;
             --glass-bg: rgba(20, 20, 25, 0.45);
             --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-border-hover: rgba(255, 255, 255, 0.18);
-            --text-main: #f5f5f7;
-            --text-dim: #888899;
             --accent: #ffffff;
         }
 
@@ -23,13 +20,13 @@
             background-image: radial-gradient(circle at 50% -30%, var(--bg-glow) 0%, transparent 75%);
             color: var(--text-main);
             min-height: 100vh;
-            padding: 60px 20px;
+            padding: 60px 16px;
         }
 
         .matrix-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-            gap: 28px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
             max-width: 1280px;
             width: 100%;
             margin: 0 auto;
@@ -39,25 +36,24 @@
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
-            padding: 34px 32px;
+            padding: 32px;
             cursor: pointer;
-            backdrop-filter: blur(24px);
-            height: 240px;
+            height: 230px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.4s ease;
         }
 
         .game-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--glass-border-hover);
+            transform: translateY(-6px);
+            border-color: rgba(255,255,255,0.2);
         }
 
-        .card-icon { font-size: 2.6rem; margin-bottom: 16px; }
-        .card-title { font-size: 1.28rem; margin-bottom: 8px; }
+        .card-icon { font-size: 2.8rem; margin-bottom: 12px; }
+        .card-title { font-size: 1.25rem; margin-bottom: 8px; }
 
-        /* ==================== Arena ==================== */
+        /* ==================== Arena - 新移动端方案 ==================== */
         .arena-container {
             position: fixed;
             inset: 0;
@@ -69,78 +65,67 @@
         .arena-container.active { display: flex; }
 
         .arena-navbar {
-            height: 68px;
-            background: rgba(9, 9, 13, 0.96);
+            min-height: 64px;
+            background: rgba(9, 9, 13, 0.97);
             border-bottom: 1px solid #222;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .back-btn {
-            padding: 8px 18px;
-            background: transparent;
-            border: 1px solid #444;
-            color: #aaa;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-
-        /* 缩放控制条 */
-        .zoom-control {
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
-            background: rgba(0,0,0,0.4);
-            padding: 6px 12px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .back-btn {
+            padding: 10px 18px;
+            background: transparent;
+            border: 1px solid #555;
+            color: #ccc;
             border-radius: 10px;
-            border: 1px solid #333;
+            font-size: 0.95rem;
         }
 
-        .zoom-btn {
-            width: 36px;
-            height: 36px;
-            background: #222;
-            border: none;
-            color: white;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            cursor: pointer;
+        .mobile-controls {
             display: flex;
-            align-items: center;
-            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .zoom-slider {
-            width: 180px;
-        }
-
-        .zoom-value {
-            font-size: 0.85rem;
-            color: #aaa;
-            min-width: 48px;
-            text-align: center;
+        .control-btn {
+            padding: 8px 16px;
+            background: #1f1f25;
+            border: 1px solid #444;
+            color: #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
         }
 
         .frame-wrapper {
             flex: 1;
             position: relative;
-            background: #000;
-            overflow: hidden;
+            background: #0a0a0a;
+            overflow: auto;           /* 关键：允许滚动 */
+            -webkit-overflow-scrolling: touch;
         }
 
         .game-frame {
             position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             border: none;
-            transform-origin: center top;
-            transition: transform 0.2s ease;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            min-width: 320px;
+        }
+
+        .arena-title {
+            color: #888;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -152,18 +137,15 @@
         <div class="arena-navbar">
             <button class="back-btn" onclick="exitArena()">← 返回大厅</button>
             
-            <div class="zoom-control">
-                <button class="zoom-btn" onclick="zoomOut()">−</button>
-                <input type="range" class="zoom-slider" id="zoomSlider" min="50" max="250" value="100" oninput="applyZoom()">
-                <button class="zoom-btn" onclick="zoomIn()">+</button>
-                <div class="zoom-value" id="zoomValue">100%</div>
-                <button class="zoom-btn" onclick="resetZoom()" style="font-size:0.8rem;">Reset</button>
+            <div class="mobile-controls">
+                <button class="control-btn" onclick="fitToScreen()">📱 适配屏幕</button>
+                <button class="control-btn" onclick="toggleFullscreen()">⛶ 全屏</button>
             </div>
 
-            <div id="arenaTitleDisplay" style="color:#888;font-size:0.95rem;letter-spacing:1px;">TACTICAL MATRIX</div>
+            <div class="arena-title" id="arenaTitleDisplay">TACTICAL MATRIX</div>
         </div>
         
-        <div class="frame-wrapper">
+        <div class="frame-wrapper" id="frameWrapper">
             <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
             <iframe id="frameChineseChess" class="game-frame" data-src="chinese-chess.html"></iframe>
             <iframe id="frameMilitaryFlag" class="game-frame" data-src="military-flag.html"></iframe>
@@ -174,9 +156,6 @@
     </div>
 
     <script>
-        let currentZoom = 100;
-        let currentFrame = null;
-
         const games = [
             { id: "frameInternationalChess", title: "国际象棋", src: "Chess.html", icon: "♞" },
             { id: "frameChineseChess", title: "中国象棋", src: "chinese-chess.html", icon: "帥" },
@@ -185,6 +164,8 @@
             { id: "frameGo", title: "围棋", src: "go.html", icon: "⚫" },
             { id: "frameGomoku", title: "五子棋", src: "gomoku.html", icon: "⚪" }
         ];
+
+        let currentFrame = null;
 
         function createCards() {
             const grid = document.getElementById('grid');
@@ -198,7 +179,7 @@
                         <div class="card-icon">${game.icon}</div>
                         <div class="card-title">${game.title}</div>
                     </div>
-                    <div style="color:#aaa;font-size:0.85rem;">ENTER →</div>
+                    <div style="color:#aaa;font-size:0.9rem;">进入对局 →</div>
                 `;
                 card.onclick = () => enterArena(game.id, game.title, game.src);
                 grid.appendChild(card);
@@ -209,42 +190,50 @@
             document.getElementById('arenaTitleDisplay').textContent = title;
             document.getElementById('arenaContainer').classList.add('active');
 
-            // 隐藏所有iframe
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
 
             currentFrame = document.getElementById(frameId);
-            currentZoom = 100;
 
-            if (!currentFrame.src || currentFrame.src.endsWith('/')) {
+            if (!currentFrame.src) {
                 currentFrame.src = src;
             }
 
             currentFrame.classList.add('active');
-            resetZoom();
+            
+            // 延迟一点执行适配
+            setTimeout(() => {
+                fitToScreen();
+            }, 600);
         }
 
-        function applyZoom() {
+        function fitToScreen() {
             if (!currentFrame) return;
-            currentZoom = parseInt(document.getElementById('zoomSlider').value);
-            currentFrame.style.transform = `scale(${currentZoom / 100})`;
-            document.getElementById('zoomValue').textContent = currentZoom + '%';
+            
+            const wrapper = document.getElementById('frameWrapper');
+            
+            // 重置样式，让浏览器自动适配
+            currentFrame.style.width = 'auto';
+            currentFrame.style.height = 'auto';
+            
+            // 等待iframe内容加载后再适配
+            setTimeout(() => {
+                const frameRect = currentFrame.getBoundingClientRect();
+                const wrapperRect = wrapper.getBoundingClientRect();
+                
+                const scaleX = wrapperRect.width / frameRect.width * 0.95;
+                const scaleY = wrapperRect.height / frameRect.height * 0.95;
+                const scale = Math.min(scaleX, scaleY, 1.8);   // 限制最大放大倍数
+                
+                currentFrame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            }, 100);
         }
 
-        function zoomIn() {
-            let slider = document.getElementById('zoomSlider');
-            slider.value = Math.min(250, parseInt(slider.value) + 10);
-            applyZoom();
-        }
-
-        function zoomOut() {
-            let slider = document.getElementById('zoomSlider');
-            slider.value = Math.max(50, parseInt(slider.value) - 10);
-            applyZoom();
-        }
-
-        function resetZoom() {
-            document.getElementById('zoomSlider').value = 100;
-            applyZoom();
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
         }
 
         function exitArena() {

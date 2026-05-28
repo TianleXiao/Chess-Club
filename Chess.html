@@ -201,15 +201,18 @@
                 <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Room Key</button>
             </div>
 
-            <div class="panel-section">
-                <span class="label-tiny">Establish Remote Sync Link</span>
-                <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="Enter opponent key...">
-                    <button class="btn" style="background: var(--accent);" onclick="connectToPeer('play')">Connect</button>
-                    <button class="btn btn-secondary" style="border-color: #f59e0b; color: #f59e0b;" onclick="connectToPeer('spectate')">Spectate</button>
-                </div>
-            </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">Undo</button>
+            <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">Draw</button>
+        </div>
 
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+            <button class="btn btn-danger" id="resignBtn" onclick="handleResign()">Resign</button>
+            <button class="btn btn-secondary" style="border-color: #a855f7; color: #a855f7;" id="saveBtn" onclick="saveGame()">Save</button>
+            <button class="btn btn-secondary" style="border-color: #22c55e; color: #22c55e; grid-column: span 2;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">Load Game</button>
+        </div>
+
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">Reset Simulation</button>
             <div class="panel-section">
                 <span class="label-tiny">Tactical Feed Streams</span>
                 <div class="status-area" style="margin-top:4px;">

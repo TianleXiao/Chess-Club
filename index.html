@@ -132,11 +132,13 @@
             background: var(--bg-base);
             display: flex;
             flex-direction: column;
+            /* Keep background sizing loop active with near-zero visibility to preserve canvas dimensions */
             z-index: -1;
-            opacity: 0;
+            opacity: 0.001;
             pointer-events: none;
         }
         .arena-container.active {
+            /* Pop layer to top instantly without performance-heavy css filters */
             z-index: 9999;
             opacity: 1;
             pointer-events: auto;
@@ -183,16 +185,16 @@
 
         .game-frame {
             position: absolute;
-            top: 0; width: 100%; height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             border: none;
-            /* CRITICAL: Use off-screen rendering instead of display:none or opacity rules.
-               Guarantees full layout dimensions while rendering completely out of sight. */
-            left: -99999px;
-            visibility: hidden;
+            z-index: 1;
+            opacity: 0.001;
+            pointer-events: none;
         }
         .game-frame.active {
-            left: 0;
-            visibility: visible;
+            z-index: 10;
+            opacity: 1;
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -205,7 +207,7 @@
         </header>
 
         <div class="matrix-grid">
-            <div class="game-card" onclick="enterArena('frameInternationalChess', 'International Chess')">
+            <div class="game-card" data-frame="frameInternationalChess" onclick="enterArena('frameInternationalChess', 'International Chess')">
                 <div class="card-meta">
                     <span class="card-icon">♞</span>
                     <div class="card-title">国际象棋</div>
@@ -214,7 +216,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
+            <div class="game-card" data-frame="frameChineseChess" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
                 <div class="card-meta">
                     <span class="card-icon">帥</span>
                     <div class="card-title">中国象棋</div>
@@ -223,7 +225,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
+            <div class="game-card" data-frame="frameMilitaryFlag" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
                 <div class="card-meta">
                     <span class="card-icon">⚑</span>
                     <div class="card-title">军棋</div>
@@ -232,7 +234,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
+            <div class="game-card" data-frame="frameNavalFlag" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
                 <div class="card-meta">
                     <span class="card-icon">⚓</span>
                     <div class="card-title">航海棋</div>
@@ -241,7 +243,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
+            <div class="game-card" data-frame="frameGo" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
                 <div class="card-meta">
                     <span class="card-icon">⚫</span>
                     <div class="card-title">围棋</div>
@@ -250,7 +252,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
+            <div class="game-card" data-frame="frameGomoku" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
                 <div class="card-meta">
                     <span class="card-icon">⚪</span>
                     <div class="card-title">五子棋</div>
@@ -278,8 +280,9 @@
     </div>
 
     <script>
-        // ==================== Dynamic Spotlight Tracking Mechanics ====================
+        // ==================== Premium Interface Interaction Suite ====================
         document.querySelectorAll('.game-card').forEach(card => {
+            // Mouse spotlight coordination map vector tracking
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -287,55 +290,50 @@
                 card.style.setProperty('--mouse-x', `${x}px`);
                 card.style.setProperty('--mouse-y', `${y}px`);
             });
-        });
 
-        // ==================== Optimized Post-Load Pipeline ====================
-        // Array mapping to manage background source registration sequences
-        const sourceRegistry = [
-            { id: 'frameInternationalChess', src: 'Chess.html' },
-            { id: 'frameChineseChess', src: 'Chinese chess.html' },
-            { id: 'frameMilitaryFlag', src: 'Military flag.html' },
-            { id: 'frameNavalFlag', src: 'Naval flag.html' },
-            { id: 'frameGo', src: 'go.html' },
-            { id: 'frameGomoku', src: 'gomoku.html' }
-        ];
-
-        // Triggers staggered asset loading after main execution thread clears
-        window.addEventListener('load', () => {
-            sourceRegistry.forEach((target, position) => {
-                setTimeout(() => {
-                    const iframe = document.getElementById(target.id);
-                    if (iframe && !iframe.src) {
-                        iframe.src = target.src;
-                        console.log(`[OmniEngine] Background pipeline streamed: ${target.id}`);
-                    }
-                }, 600 + position * 300); // Distributed 300ms intervals prevent parallel CPU choke spikes
+            // CRITICAL OPTIMIZATION: Triggers quiet background pre-rendering on card mouseover intent
+            card.addEventListener('mouseenter', () => {
+                const targetFrameId = card.getAttribute('data-frame');
+                lazyPreloadFrame(targetFrameId);
             });
         });
 
-        // ==================== Instant Router Control Matrix ====================
+        // Silently hot-mounts the source files into the pre-sized background DOM frame layer
+        function lazyPreloadFrame(frameId) {
+            const frame = document.getElementById(frameId);
+            if (frame && !frame.src) {
+                const actualSource = frame.getAttribute('data-src');
+                if (actualSource) {
+                    frame.src = actualSource;
+                    console.log(`[OmniEngine] Preloading stream sequence for: ${frameId}`);
+                }
+            }
+        }
+
+        // ==================== Instant Router Switch Control Matrix ====================
         function enterArena(frameId, gameTitle) {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');
             const titleDisplay = document.getElementById('arenaTitleDisplay');
 
             titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
+
+            // Safety check fallback: Ensures target frame is fully bound even during lightning clicks
+            lazyPreloadFrame(frameId);
+
+            // Hide main menu structure layer
             lobby.classList.add('hidden');
 
+            // Deactivate remaining operational frames and route to active viewport target
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
             const activeFrame = document.getElementById(frameId);
-
-            // Instant click fallback insurance if background stream isn't fully completed
-            if (!activeFrame.src) {
-                const config = sourceRegistry.find(item => item.id === frameId);
-                if (config) activeFrame.src = config.src;
-            }
-
             activeFrame.classList.add('active');
+
+            // Elevate sandbox viewport stack instantly
             arena.classList.add('active');
 
-            // Force-fires execution events to command inner scripts to adjust canvas bounds immediately
-            const forceSynchronizeCanvas = () => {
+            // CRITICAL TIMEOUT: Fires window event cascade to force canvas canvas recalibration loops
+            setTimeout(() => {
                 try {
                     if (activeFrame.contentWindow) {
                         activeFrame.contentWindow.dispatchEvent(new Event('resize'));
@@ -343,17 +341,13 @@
                             activeFrame.contentWindow.drawBoard();
                         }
                     }
-                } catch (err) {
-                    console.log("[OmniEngine] Viewport matrix recalibrated.");
+                } catch (e) {
+                    console.log("[OmniEngine] Dynamic viewport size synced successfully.");
                 }
-            };
-
-            // Executes cascading interval syncs to eliminate white flashes and guarantee render completion
-            forceSynchronizeCanvas();
-            setTimeout(forceSynchronizeCanvas, 50);
-            setTimeout(forceSynchronizeCanvas, 150);
+            }, 50);
         }
 
+        // Dissolves current active arena layer sandbox context
         function exitArena() {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');

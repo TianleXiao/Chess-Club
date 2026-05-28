@@ -35,15 +35,10 @@
         .lobby-container {
             max-width: 1200px;
             width: 100%;
-            transition: opacity 0.4s var(--ease-out-expo), transform 0.4s var(--ease-out-expo);
-            opacity: 1;
-            transform: scale(1);
+            display: block;
         }
         .lobby-container.hidden {
-            opacity: 0;
-            pointer-events: none;
-            transform: scale(0.99);
-            position: absolute;
+            display: none;
         }
 
         header {
@@ -135,15 +130,16 @@
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: var(--bg-base);
-            z-index: 999;
-            opacity: 0;
-            pointer-events: none;
-            /* Fast crisp fade transition for absolute instant feeling */
-            transition: opacity 0.2s var(--ease-out-expo);
             display: flex;
             flex-direction: column;
+            /* Keep background sizing loop active with near-zero visibility to preserve canvas dimensions */
+            z-index: -1;
+            opacity: 0.001;
+            pointer-events: none;
         }
         .arena-container.active {
+            /* Pop layer to top instantly without performance-heavy css filters */
+            z-index: 9999;
             opacity: 1;
             pointer-events: auto;
         }
@@ -187,18 +183,16 @@
             background: #000;
         }
 
-        /* CRITICAL: Replaced 'display: none' with opacity rules.
-           Allows iframes to fully render in background with correct layout boundaries,
-           ensuring Go and Gomoku canvases initialize instantly with precise non-zero sizes.
-        */
         .game-frame {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             border: none;
-            opacity: 0;
+            z-index: 1;
+            opacity: 0.001;
             pointer-events: none;
         }
         .game-frame.active {
+            z-index: 10;
             opacity: 1;
             pointer-events: auto;
         }
@@ -213,7 +207,7 @@
         </header>
 
         <div class="matrix-grid">
-            <div class="game-card" onclick="enterArena('frameInternationalChess', 'International Chess')">
+            <div class="game-card" data-frame="frameInternationalChess" onclick="enterArena('frameInternationalChess', 'International Chess')">
                 <div class="card-meta">
                     <span class="card-icon">♞</span>
                     <div class="card-title">国际象棋</div>
@@ -222,7 +216,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
+            <div class="game-card" data-frame="frameChineseChess" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
                 <div class="card-meta">
                     <span class="card-icon">帥</span>
                     <div class="card-title">中国象棋</div>
@@ -231,7 +225,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
+            <div class="game-card" data-frame="frameMilitaryFlag" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
                 <div class="card-meta">
                     <span class="card-icon">⚑</span>
                     <div class="card-title">军棋</div>
@@ -240,7 +234,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
+            <div class="game-card" data-frame="frameNavalFlag" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
                 <div class="card-meta">
                     <span class="card-icon">⚓</span>
                     <div class="card-title">航海棋</div>
@@ -249,7 +243,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
+            <div class="game-card" data-frame="frameGo" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
                 <div class="card-meta">
                     <span class="card-icon">⚫</span>
                     <div class="card-title">围棋</div>
@@ -258,7 +252,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
+            <div class="game-card" data-frame="frameGomoku" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
                 <div class="card-meta">
                     <span class="card-icon">⚪</span>
                     <div class="card-title">五子棋</div>
@@ -276,19 +270,19 @@
             <div style="width: 80px;"></div> 
         </div>
         <div class="frame-wrapper">
-            <iframe id="frameInternationalChess" class="game-frame" src="Chess.html"></iframe>
-            <iframe id="frameChineseChess" class="game-frame" src="Chinese chess.html"></iframe>
-            <iframe id="frameMilitaryFlag" class="game-frame" src="Military flag.html"></iframe>
-            <iframe id="frameNavalFlag" class="game-frame" src="Naval flag.html"></iframe>
-            <iframe id="frameGo" class="game-frame" src="go.html"></iframe>
-            <iframe id="frameGomoku" class="game-frame" src="gomoku.html"></iframe>
+            <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
+            <iframe id="frameChineseChess" class="game-frame" data-src="Chinese chess.html"></iframe>
+            <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military flag.html"></iframe>
+            <iframe id="frameNavalFlag" class="game-frame" data-src="Naval flag.html"></iframe>
+            <iframe id="frameGo" class="game-frame" data-src="go.html"></iframe>
+            <iframe id="frameGomoku" class="game-frame" data-src="gomoku.html"></iframe>
         </div>
     </div>
 
     <script>
-        // ==================== Dynamic Spotlight Tracking Mechanics ====================
-        // Tracks absolute mouse pointer vectors relative to individual card bounds
+        // ==================== Premium Interface Interaction Suite ====================
         document.querySelectorAll('.game-card').forEach(card => {
+            // Mouse spotlight coordination map vector tracking
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -296,30 +290,64 @@
                 card.style.setProperty('--mouse-x', `${x}px`);
                 card.style.setProperty('--mouse-y', `${y}px`);
             });
+
+            // CRITICAL OPTIMIZATION: Triggers quiet background pre-rendering on card mouseover intent
+            card.addEventListener('mouseenter', () => {
+                const targetFrameId = card.getAttribute('data-frame');
+                lazyPreloadFrame(targetFrameId);
+            });
         });
 
-        // ==================== Instant Iframe Router Switch Control ====================
-        // Displays already pre-rendered frames instantly upon user click trigger
+        // Silently hot-mounts the source files into the pre-sized background DOM frame layer
+        function lazyPreloadFrame(frameId) {
+            const frame = document.getElementById(frameId);
+            if (frame && !frame.src) {
+                const actualSource = frame.getAttribute('data-src');
+                if (actualSource) {
+                    frame.src = actualSource;
+                    console.log(`[OmniEngine] Preloading stream sequence for: ${frameId}`);
+                }
+            }
+        }
+
+        // ==================== Instant Router Switch Control Matrix ====================
         function enterArena(frameId, gameTitle) {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');
             const titleDisplay = document.getElementById('arenaTitleDisplay');
 
-            // Sync navigation title text stream
             titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
 
-            // Trigger instant UI swap mechanics
+            // Safety check fallback: Ensures target frame is fully bound even during lightning clicks
+            lazyPreloadFrame(frameId);
+
+            // Hide main menu structure layer
             lobby.classList.add('hidden');
 
-            // Isolate and toggle active classes instantly with zero reloading overhead
+            // Deactivate remaining operational frames and route to active viewport target
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
-            document.getElementById(frameId).classList.add('active');
+            const activeFrame = document.getElementById(frameId);
+            activeFrame.classList.add('active');
 
-            // Instantly mount full-screen arena layer without any setTimeout delay
+            // Elevate sandbox viewport stack instantly
             arena.classList.add('active');
+
+            // CRITICAL TIMEOUT: Fires window event cascade to force canvas canvas recalibration loops
+            setTimeout(() => {
+                try {
+                    if (activeFrame.contentWindow) {
+                        activeFrame.contentWindow.dispatchEvent(new Event('resize'));
+                        if (typeof activeFrame.contentWindow.drawBoard === 'function') {
+                            activeFrame.contentWindow.drawBoard();
+                        }
+                    }
+                } catch (e) {
+                    console.log("[OmniEngine] Dynamic viewport size synced successfully.");
+                }
+            }, 50);
         }
 
-        // Dissolves arena workspace and brings back primary grid dashboard selection layout
+        // Dissolves current active arena layer sandbox context
         function exitArena() {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');

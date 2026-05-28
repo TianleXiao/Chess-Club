@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Omni Board Studio - Premium Hub</title>
     <style>
         :root {
@@ -60,7 +60,6 @@
         .card-title { font-size: 1.28rem; margin-bottom: 8px; }
         .card-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
 
-        /* ==================== Arena - 移动端优化版 ==================== */
         .arena-container {
             position: fixed;
             inset: 0;
@@ -71,65 +70,16 @@
         }
         .arena-container.active { display: flex; }
 
-        .arena-navbar {
-            height: 68px;
-            background: #09090d;
-            border-bottom: 1px solid #222;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .back-btn {
-            padding: 8px 18px;
-            background: transparent;
-            border: 1px solid #444;
-            color: #aaa;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .mobile-controls {
-            display: flex;
-            gap: 10px;
-        }
-
-        .control-btn {
-            padding: 8px 16px;
-            background: #1f1f25;
-            border: 1px solid #444;
-            color: #ddd;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-
-        .frame-wrapper {
-            flex: 1;
-            position: relative;
-            background: #000;
-            overflow: auto;                    /* 允许双向滚动 */
-            -webkit-overflow-scrolling: touch; /* iOS 流畅滚动 */
-            overscroll-behavior: contain;
-        }
-
+        .frame-wrapper { flex: 1; position: relative; background: #000; }
         .game-frame {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
             border: none;
-            min-width: 100%;     /* 关键：允许横向拖动 */
-            min-height: 100%;    /* 关键：允许纵向拖动 */
             display: none;
         }
-        .game-frame.active { 
-            display: block; 
-        }
+        .game-frame.active { display: block; }
 
         .error-msg {
             position: absolute;
@@ -150,18 +100,12 @@
     <div class="matrix-grid" id="grid"></div>
 
     <div class="arena-container" id="arenaContainer">
-        <div class="arena-navbar">
-            <button class="back-btn" onclick="exitArena()">← 返回大厅</button>
-            
-            <div class="mobile-controls">
-                <button class="control-btn" onclick="fitToScreen()">📱 适配屏幕</button>
-                <button class="control-btn" onclick="toggleFullscreen()">⛶ 全屏</button>
-            </div>
-
+        <div style="height:60px;background:#09090d;display:flex;align-items:center;padding:0 28px;justify-content:space-between;border-bottom:1px solid #222;">
+            <button onclick="exitArena()" style="padding:8px 18px;background:transparent;border:1px solid #444;color:#aaa;border-radius:8px;cursor:pointer;">← 返回大厅</button>
             <div id="arenaTitleDisplay" style="color:#888;font-size:0.95rem;letter-spacing:1px;">TACTICAL MATRIX</div>
         </div>
         
-        <div class="frame-wrapper" id="frameWrapper">
+        <div class="frame-wrapper">
             <div class="error-msg" id="errorMsg"></div>
             
             <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
@@ -182,8 +126,6 @@
             { id: "frameGo", title: "围棋", src: "go.html", icon: "⚫" },
             { id: "frameGomoku", title: "五子棋", src: "gomoku.html", icon: "⚪" }
         ];
-
-        let currentFrame = null;
 
         function createCards() {
             const grid = document.getElementById('grid');
@@ -209,47 +151,34 @@
             document.getElementById('arenaTitleDisplay').textContent = title;
             document.getElementById('arenaContainer').classList.add('active');
 
+            // 隐藏所有frame
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
 
-            currentFrame = document.getElementById(frameId);
+            const frame = document.getElementById(frameId);
             const errorMsg = document.getElementById('errorMsg');
+
             errorMsg.style.display = 'none';
 
-            if (!currentFrame.src || currentFrame.src.endsWith('/')) {
-                currentFrame.src = src;
+            // 设置src并显示
+            if (!frame.src || frame.src.endsWith('/')) {
+                frame.src = src;
             }
-            currentFrame.classList.add('active');
+            frame.classList.add('active');
 
-            // 加载完成后尝试适配
-            currentFrame.onload = () => {
+            // 错误监控
+            frame.onload = () => {
                 console.log(`✅ ${title} 加载成功`);
-                setTimeout(fitToScreen, 300);
             };
-        }
 
-        function fitToScreen() {
-            if (!currentFrame) return;
-            
-            currentFrame.style.width = 'auto';
-            currentFrame.style.height = 'auto';
-            currentFrame.style.minWidth = '100%';
-            currentFrame.style.minHeight = '100%';
-
-            const wrapper = document.getElementById('frameWrapper');
-            wrapper.scrollTo(0, 0);
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
+            frame.onerror = () => {
+                errorMsg.textContent = `❌ 无法加载 ${title}，请检查文件是否存在`;
+                errorMsg.style.display = 'block';
+                console.error(`加载失败: ${src}`);
+            };
         }
 
         function exitArena() {
             document.getElementById('arenaContainer').classList.remove('active');
-            currentFrame = null;
         }
 
         // 初始化

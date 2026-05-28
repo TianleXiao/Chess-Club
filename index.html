@@ -15,274 +15,118 @@
             --text-dim: #888899;
             --accent: #ffffff;
             --accent-glow: #a0a0ff;
-            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, sans-serif; 
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
        
         body {
             background-color: var(--bg-base);
             background-image: radial-gradient(circle at 50% -30%, var(--bg-glow) 0%, transparent 75%);
             color: var(--text-main);
             min-height: 100vh;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 60px 20px 40px;
-        }
-
-        .lobby-container {
-            max-width: 1280px;
-            width: 100%;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 70px;
-        }
-        header h1 {
-            font-size: 2.4rem;
-            font-weight: 200;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #fff, #ccc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        header p {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            padding: 60px 20px;
         }
 
         .matrix-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
             gap: 28px;
+            max-width: 1280px;
             width: 100%;
+            margin: 0 auto;
         }
 
         .game-card {
-            position: relative;
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             padding: 34px 32px;
             cursor: pointer;
-            overflow: hidden;
             backdrop-filter: blur(24px);
-            transition: all 0.4s var(--ease-out-expo);
             height: 240px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .game-card:hover {
+            transform: translateY(-8px);
             border-color: var(--glass-border-hover);
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
         }
 
-        .game-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(700px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.06), transparent 50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 1;
-            pointer-events: none;
-        }
+        .card-icon { font-size: 2.6rem; margin-bottom: 16px; }
+        .card-title { font-size: 1.28rem; margin-bottom: 8px; }
+        .card-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
 
-        .game-card:hover::before {
-            opacity: 1;
-        }
-
-        .card-meta { position: relative; z-index: 2; }
-        .card-icon { 
-            font-size: 2.4rem; 
-            margin-bottom: 18px; 
-            display: inline-block; 
-            line-height: 1; 
-            transition: transform 0.4s ease;
-        }
-        .game-card:hover .card-icon {
-            transform: scale(1.15) rotate(8deg);
-        }
-
-        .card-title { 
-            font-size: 1.25rem; 
-            font-weight: 300; 
-            letter-spacing: 0.06em; 
-            margin-bottom: 8px; 
-        }
-        .card-desc { 
-            font-size: 0.8rem; 
-            color: var(--text-dim); 
-            line-height: 1.55; 
-        }
-
-        .card-action {
-            position: relative;
-            z-index: 2;
-            font-size: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            color: var(--accent);
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: auto;
-            transition: all 0.3s ease;
-        }
-
-        .game-card:hover .card-action {
-            gap: 12px;
-            color: var(--accent-glow);
-        }
-
-        /* Arena */
         .arena-container {
             position: fixed;
             inset: 0;
             background: var(--bg-base);
-            display: flex;
             flex-direction: column;
-            z-index: -1;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s ease;
-        }
-
-        .arena-container.active {
             z-index: 9999;
-            opacity: 1;
-            pointer-events: auto;
+            display: none;
         }
+        .arena-container.active { display: flex; }
 
-        .arena-navbar {
-            height: 60px;
-            background: rgba(9, 9, 13, 0.95);
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            padding: 0 28px;
-            justify-content: space-between;
-            backdrop-filter: blur(12px);
-        }
-
-        .back-btn {
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            color: var(--text-dim);
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.25s ease;
-        }
-        .back-btn:hover {
-            color: white;
-            border-color: var(--glass-border-hover);
-            background: rgba(255,255,255,0.03);
-        }
-
-        .arena-title-display {
-            font-size: 0.95rem;
-            font-weight: 400;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-        }
-
-        .frame-wrapper {
-            flex: 1;
-            position: relative;
-            background: #000;
-            overflow: hidden;
-        }
-
+        .frame-wrapper { flex: 1; position: relative; background: #000; }
         .game-frame {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
             border: none;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+            display: none;
         }
+        .game-frame.active { display: block; }
 
-        .game-frame.active {
-            opacity: 1;
-            pointer-events: auto;
-            z-index: 10;
-        }
-
-        .loading {
+        .error-msg {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: var(--text-dim);
-            font-size: 0.9rem;
-            z-index: 5;
+            color: #ff6666;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 25px;
+            border-radius: 8px;
             display: none;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
-    <div class="lobby-container" id="lobbyContainer">
-        <header>
-            <h1>OMNI BOARD STUDIO</h1>
-            <p>Premium Tactical Board Simulation Arena</p>
-        </header>
-        
-        <div class="matrix-grid" id="grid">
-            <!-- 卡片会在这里 -->
-        </div>
-    </div>
+
+    <div class="matrix-grid" id="grid"></div>
 
     <div class="arena-container" id="arenaContainer">
-        <div class="arena-navbar">
-            <button class="back-btn" onclick="exitArena()">← 返回大厅</button>
-            <div class="arena-title-display" id="arenaTitleDisplay">TACTICAL SIMULATION MATRIX</div>
-            <div style="width: 80px;"></div>
+        <div style="height:60px;background:#09090d;display:flex;align-items:center;padding:0 28px;justify-content:space-between;border-bottom:1px solid #222;">
+            <button onclick="exitArena()" style="padding:8px 18px;background:transparent;border:1px solid #444;color:#aaa;border-radius:8px;cursor:pointer;">← 返回大厅</button>
+            <div id="arenaTitleDisplay" style="color:#888;font-size:0.95rem;letter-spacing:1px;">TACTICAL MATRIX</div>
         </div>
+        
         <div class="frame-wrapper">
-            <div class="loading" id="loading">正在加载棋盘...</div>
+            <div class="error-msg" id="errorMsg"></div>
             
             <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
-            <iframe id="frameChineseChess" class="game-frame" data-src="Chinese chess.html"></iframe>
-            <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military flag.html"></iframe>
-            <iframe id="frameNavalFlag" class="game-frame" data-src="Naval flag.html"></iframe>
-            <iframe id="frameGo" class="game-frame" data-src="Chinese Go.html"></iframe>
-            <iframe id="frameGomoku" class="game-frame" data-src="Chinese Gomoku.html"></iframe>
+            <iframe id="frameChineseChess" class="game-frame" data-src="chinese-chess.html"></iframe>
+            <iframe id="frameMilitaryFlag" class="game-frame" data-src="military-flag.html"></iframe>
+            <iframe id="frameNavalFlag" class="game-frame" data-src="naval-flag.html"></iframe>
+            <iframe id="frameGo" class="game-frame" data-src="go.html"></iframe>
+            <iframe id="frameGomoku" class="game-frame" data-src="gomoku.html"></iframe>
         </div>
     </div>
 
     <script>
         const games = [
-            { id: "frameInternationalChess", title: "国际象棋", icon: "♞", desc: "Standard 8x8 matrix tactical network vector system with pawn promotion." },
-            { id: "frameChineseChess", title: "中国象棋", icon: "帥", desc: "Traditional River-divide tactical combat mapping grid." },
-            { id: "frameMilitaryFlag", title: "军棋", icon: "⚑", desc: "Hidden ranks land combat tactical deployment matrix." },
-            { id: "frameNavalFlag", title: "航海棋", icon: "⚓", desc: "Naval coordinate radar tracking fleet engagement simulation." },
-            { id: "frameGo", title: "围棋", icon: "⚫", desc: "19x19 high-dimension territory mapping array." },
-            { id: "frameGomoku", title: "五子棋", icon: "⚪", desc: "Rapid 5-in-a-row strategic deployment engine." }
+            { id: "frameInternationalChess", title: "国际象棋", src: "Chess.html", icon: "♞" },
+            { id: "frameChineseChess", title: "中国象棋", src: "chinese-chess.html", icon: "帥" },
+            { id: "frameMilitaryFlag", title: "军棋", src: "military-flag.html", icon: "⚑" },
+            { id: "frameNavalFlag", title: "航海棋", src: "naval-flag.html", icon: "⚓" },
+            { id: "frameGo", title: "围棋", src: "go.html", icon: "⚫" },
+            { id: "frameGomoku", title: "五子棋", src: "gomoku.html", icon: "⚪" }
         ];
 
-        // 动态生成卡片
         function createCards() {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
@@ -290,75 +134,51 @@
             games.forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'game-card';
-                card.setAttribute('data-frame', game.id);
                 card.innerHTML = `
-                    <div class="card-meta">
-                        <span class="card-icon">${game.icon}</span>
+                    <div>
+                        <div class="card-icon">${game.icon}</div>
                         <div class="card-title">${game.title}</div>
-                        <div class="card-desc">${game.desc}</div>
+                        <div class="card-desc">点击进入对局</div>
                     </div>
-                    <div class="card-action">进入对局 →</div>
+                    <div style="color:#aaa;font-size:0.8rem;">ENTER →</div>
                 `;
-                card.onclick = () => enterArena(game.id, game.title);
-                
-                // 鼠标光斑效果
-                card.addEventListener('mousemove', e => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    card.style.setProperty('--mouse-x', `${x}px`);
-                    card.style.setProperty('--mouse-y', `${y}px`);
-                });
-
+                card.onclick = () => enterArena(game.id, game.title, game.src);
                 grid.appendChild(card);
             });
         }
 
-        function lazyPreloadFrame(frameId) {
+        function enterArena(frameId, title, src) {
+            document.getElementById('arenaTitleDisplay').textContent = title;
+            document.getElementById('arenaContainer').classList.add('active');
+
+            // 隐藏所有frame
+            document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
+
             const frame = document.getElementById(frameId);
-            if (frame && !frame.src) {
-                frame.src = frame.getAttribute('data-src');
+            const errorMsg = document.getElementById('errorMsg');
+
+            errorMsg.style.display = 'none';
+
+            // 设置src并显示
+            if (!frame.src || frame.src.endsWith('/')) {
+                frame.src = src;
             }
-        }
+            frame.classList.add('active');
 
-        function enterArena(frameId, gameTitle) {
-            const lobby = document.getElementById('lobbyContainer');
-            const arena = document.getElementById('arenaContainer');
-            const titleDisplay = document.getElementById('arenaTitleDisplay');
-            const loading = document.getElementById('loading');
+            // 错误监控
+            frame.onload = () => {
+                console.log(`✅ ${title} 加载成功`);
+            };
 
-            titleDisplay.textContent = gameTitle;
-            lazyPreloadFrame(frameId);
-
-            lobby.style.display = 'none';
-            arena.classList.add('active');
-
-            // 显示加载提示
-            loading.style.display = 'block';
-
-            setTimeout(() => {
-                document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
-                const activeFrame = document.getElementById(frameId);
-                activeFrame.classList.add('active');
-                loading.style.display = 'none';
-
-                // 触发resize事件
-                if (activeFrame.contentWindow) {
-                    setTimeout(() => {
-                        activeFrame.contentWindow.dispatchEvent(new Event('resize'));
-                    }, 100);
-                }
-            }, 300);
+            frame.onerror = () => {
+                errorMsg.textContent = `❌ 无法加载 ${title}，请检查文件是否存在`;
+                errorMsg.style.display = 'block';
+                console.error(`加载失败: ${src}`);
+            };
         }
 
         function exitArena() {
-            const lobby = document.getElementById('lobbyContainer');
-            const arena = document.getElementById('arenaContainer');
-            
-            arena.classList.remove('active');
-            setTimeout(() => {
-                lobby.style.display = 'block';
-            }, 400);
+            document.getElementById('arenaContainer').classList.remove('active');
         }
 
         // 初始化

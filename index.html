@@ -14,6 +14,7 @@
             --text-main: #f5f5f7;
             --text-dim: #888899;
             --accent: #ffffff;
+            --accent-glow: rgba(255, 255, 255, 0.1);
             --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -31,15 +32,20 @@
             padding: 60px 20px;
         }
 
-        /* Lobby Display Layout Interface */
+        /* ==================== LEVEL 1: LOBBY INTERFACE ==================== */
         .lobby-container {
             max-width: 1200px;
             width: 100%;
             display: block;
-            transition: opacity 0.3s ease;
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo);
         }
         .lobby-container.hidden {
-            display: none;
+            opacity: 0;
+            transform: scale(0.97);
+            pointer-events: none;
+            position: absolute;
         }
 
         header {
@@ -61,7 +67,6 @@
             text-transform: uppercase;
         }
 
-        /* 6-Grid Matrix Deployment Config */
         .matrix-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -72,7 +77,6 @@
         @media (max-width: 1024px) { .matrix-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 680px) { .matrix-grid { grid-template-columns: 1fr; } }
 
-        /* Mouse Spotlight Interactive Cards */
         .game-card {
             position: relative;
             background: var(--glass-bg);
@@ -126,80 +130,122 @@
         }
         .game-card:hover .card-action { gap: 8px; }
 
-        /* Fullscreen Sandbox Arena Implementation */
-        .arena-container {
+
+        /* ==================== LEVEL 2: SECONDARY WORKSPACE INTERFACE ==================== */
+        .workspace-container {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: var(--bg-base);
             display: flex;
-            flex-direction: column;
             z-index: -1;
             opacity: 0;
+            transform: translateY(15px);
             pointer-events: none;
-            transition: opacity 0.4s var(--ease-out-expo);
+            transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo);
         }
-        .arena-container.active {
+        .workspace-container.active {
             z-index: 9999;
             opacity: 1;
+            transform: translateY(0);
             pointer-events: auto;
         }
 
-        .arena-navbar {
-            height: 56px;
-            background: #09090d;
-            border-bottom: 1px solid var(--glass-border);
+        /* 左侧高端战术控制面板 */
+        .control-sidebar {
+            width: 300px;
+            background: #07070a;
+            border-right: 1px solid var(--glass-border);
             display: flex;
-            align-items: center;
-            padding: 0 24px;
+            flex-direction: column;
+            padding: 40px 24px;
             justify-content: space-between;
         }
-        .back-btn {
-            background: transparent;
-            border: 1px solid var(--glass-border);
+
+        .sidebar-top h2 {
+            font-size: 0.75rem;
             color: var(--text-dim);
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            font-weight: 500;
-            transition: 0.2s;
-        }
-        .back-btn:hover {
-            color: #fff;
-            border-color: var(--glass-border-hover);
-            background: rgba(255,255,255,0.02);
-        }
-        .arena-title-display {
-            font-size: 0.85rem;
-            font-weight: 300;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.2em;
             text-transform: uppercase;
-            color: var(--text-dim);
+            margin-bottom: 32px;
         }
 
-        .frame-wrapper {
+        .active-game-info {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+        .active-icon { font-size: 2rem; margin-bottom: 12px; display: block; }
+        .active-title { font-size: 1.2rem; font-weight: 300; letter-spacing: 0.05em; margin-bottom: 6px; color: #fff; }
+        .active-status { font-size: 11px; color: #00ffaa; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 6px;}
+        .active-status::before { content: ''; width: 6px; height: 6px; background: #00ffaa; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #00ffaa; }
+
+        .sidebar-menu { display: flex; flex-direction: column; gap: 12px; }
+        
+        .panel-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+        .panel-btn:hover {
+            border-color: var(--glass-border-hover);
+            background: rgba(255,255,255,0.03);
+            transform: translateX(2px);
+        }
+        .panel-btn.primary-btn {
+            background: var(--text-main);
+            color: var(--bg-base);
+            font-weight: 600;
+            border: none;
+            margin-top: 20px;
+        }
+        .panel-btn.primary-btn:hover {
+            background: #ffffff;
+            box-shadow: 0 0 20px rgba(255,255,255,0.15);
+        }
+
+        .sidebar-footer {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            line-height: 1.6;
+        }
+
+        /* 右侧核心独立游戏视口 */
+        .viewport-core {
             flex: 1;
             position: relative;
             background: #000;
         }
 
-        /* 👑 核心修复：重构隐藏状态 CSS，确保物理宽高与坐标轴 100% 正确 👑 */
+        /* 二级重叠物理图层架构：100%尺寸，防Canvas宽高归零Bug */
         .game-frame {
             position: absolute;
-            top: 0; 
-            left: 0; /* 拒绝 -9999px，让游戏常驻正中心，确保 Canvas 初始化完美获取物理坐标 */
-            width: 100%; 
-            height: 100%;
+            top: 0; left: 0; 
+            width: 100%; height: 100%;
             border: none;
-            opacity: 0; /* 默认完全透明 */
-            pointer-events: none; /* 隐藏时不拦截鼠标事件 */
+            background: #000;
+            opacity: 0;
+            pointer-events: none;
             z-index: 1;
             transition: opacity 0.3s ease;
         }
         .game-frame.active {
-            opacity: 1; /* 浮现可见 */
-            pointer-events: auto; /* 开启正常交互 */
-            z-index: 10; /* 置于顶层 */
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 10;
         }
     </style>
 </head>
@@ -212,69 +258,91 @@
         </header>
 
         <div class="matrix-grid">
-            <div class="game-card" onclick="enterArena('frameInternationalChess', 'International Chess')">
+            <div class="game-card" onclick="enterWorkspace('frameInternationalChess', '国际象棋', '♞')">
                 <div class="card-meta">
                     <span class="card-icon">♞</span>
                     <div class="card-title">国际象棋</div>
                     <div class="card-desc">Standard 8x8 matrix tactical network vector system with standard pawn promotion rules.</div>
                 </div>
-                <div class="card-action">Deploy Strike Axis →</div>
+                <div class="card-action">Initialize Link →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
+            <div class="game-card" onclick="enterWorkspace('frameChineseChess', '中国象棋', '帥')">
                 <div class="card-meta">
                     <span class="card-icon">帥</span>
                     <div class="card-title">中国象棋</div>
                     <div class="card-desc">Traditional River-divide tactical combat mapping grid utilizing distributed P2P node communication.</div>
                 </div>
-                <div class="card-action">Deploy Strike Axis →</div>
+                <div class="card-action">Initialize Link →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
+            <div class="game-card" onclick="enterWorkspace('frameMilitaryFlag', '军棋', '⚑')">
                 <div class="card-meta">
                     <span class="card-icon">⚑</span>
                     <div class="card-title">军棋</div>
                     <div class="card-desc">Land combat tactical deployment matrix featuring hidden ranks and station network routes.</div>
                 </div>
-                <div class="card-action">Deploy Strike Axis →</div>
+                <div class="card-action">Initialize Link →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
+            <div class="game-card" onclick="enterWorkspace('frameNavalFlag', '航海棋', '⚓')">
                 <div class="card-meta">
                     <span class="card-icon">⚓</span>
                     <div class="card-title">航海棋</div>
                     <div class="card-desc">Naval coordinate radar tracking array designed for strategic fleet engagement simulation.</div>
                 </div>
-                <div class="card-action">Deploy Strike Axis →</div>
+                <div class="card-action">Initialize Link →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
+            <div class="game-card" onclick="enterWorkspace('frameGo', '围棋', '⚫')">
                 <div class="card-meta">
                     <span class="card-icon">⚫</span>
                     <div class="card-title">围棋</div>
                     <div class="card-desc">19x19 high-dimension cellular territory mapping array for deep spatial balance simulation.</div>
                 </div>
-                <div class="card-action">Deploy Strike Axis →</div>
+                <div class="card-action">Initialize Link →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
+            <div class="game-card" onclick="enterWorkspace('frameGomoku', '五子棋', '⚪')">
                 <div class="card-meta">
                     <span class="card-icon">⚪</span>
                     <div class="card-title">五子棋</div>
                     <div class="card-desc">Rapid 5-in-a-row straight-line strategic deployment engine with sub-second collision logic.</div>
                 </div>
-                <div class="card-action">Deploy Strike Axis →</div>
+                <div class="card-action">Initialize Link →</div>
             </div>
         </div>
     </div>
 
-    <div class="arena-container" id="arenaContainer">
-        <div class="arena-navbar">
-            <button class="back-btn" onclick="exitArena()">← 返回控制大厅 (Lobby)</button>
-            <div class="arena-title-display" id="arenaTitleDisplay">TACTICAL SIMULATION MATRIX</div>
-            <div style="width: 80px;"></div> 
+
+    <div class="workspace-container" id="workspaceContainer">
+        <div class="control-sidebar">
+            <div class="sidebar-top">
+                <h2>Tactical Console</h2>
+                
+                <div class="active-game-info">
+                    <span class="active-icon" id="sidebarGameIcon">⚫</span>
+                    <div class="active-title" id="sidebarGameTitle">GAME MATRIX</div>
+                    <div class="active-status">Operational</div>
+                </div>
+
+                <div class="sidebar-menu">
+                    <button class="panel-btn" onclick="hotReloadCurrentFrame()">
+                        <span>↻ 重置当前对局 (Reset)</span>
+                    </button>
+                    <button class="panel-btn primary-btn" onclick="exitWorkspace()">
+                        <span>← 返回主控大厅 (Lobby)</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div>OmniEngine v4.2.0</div>
+                <div style="color: var(--text-dim); margin-top: 4px;">Secure P2P Environment Secure</div>
+            </div>
         </div>
-        <div class="frame-wrapper">
+
+        <div class="viewport-core">
             <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
             <iframe id="frameChineseChess" class="game-frame" data-src="Chinese chess.html"></iframe>
             <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military flag.html"></iframe>
@@ -285,18 +353,16 @@
     </div>
 
     <script>
-        // ==================== Dynamic Spotlight Tracking Mechanics ====================
+        // ==================== 聚光灯卡片动效 ====================
         document.querySelectorAll('.game-card').forEach(card => {
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
+                card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
             });
         });
 
-        // ==================== Optimized Post-Load Pipeline ====================
+        // ==================== 基础物理路由映射 ====================
         const sourceRegistry = [
             { id: 'frameInternationalChess', src: 'Chess.html' },
             { id: 'frameChineseChess', src: 'Chinese chess.html' },
@@ -306,42 +372,48 @@
             { id: 'frameGomoku', src: 'gomoku.html' }
         ];
 
-        // 💡 分时轻量化阶梯预加载：每隔 250ms 静默拉起一个游戏，彻底消除并行的 CPU 堵塞卡顿
+        let currentActiveFrameId = null; // 追踪当前打开的二级工作舱
+
+        // ==================== 智能分时常驻加载管道 ====================
         window.addEventListener('load', () => {
             sourceRegistry.forEach((target, position) => {
                 setTimeout(() => {
                     const iframe = document.getElementById(target.id);
                     if (iframe && !iframe.src) {
                         iframe.src = target.src;
-                        console.log(`[OmniEngine] Background pipeline streamed: ${target.id}`);
+                        console.log(`[OmniEngine] Level-2 Node Hot-Wired: ${target.id}`);
                     }
-                }, 400 + position * 250); 
+                }, 400 + position * 250); // 每隔250ms异步载入，开局流畅度直接拉满
             });
         });
 
-        // ==================== Instant Router Control Matrix ====================
-        function enterArena(frameId, gameTitle) {
+        // ==================== 二级跳转核心控制系统 ====================
+        function enterWorkspace(frameId, gameTitle, gameIcon) {
             const lobby = document.getElementById('lobbyContainer');
-            const arena = document.getElementById('arenaContainer');
-            const titleDisplay = document.getElementById('arenaTitleDisplay');
+            const workspace = document.getElementById('workspaceContainer');
+            
+            // 1. 动态对齐左侧控制舱的文本与元数据
+            document.getElementById('sidebarGameTitle').innerText = gameTitle;
+            document.getElementById('sidebarGameIcon').innerText = gameIcon;
+            currentActiveFrameId = frameId;
 
-            titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
+            // 2. 触发一二级界面交替动画
             lobby.classList.add('hidden');
-
-            // 隐藏所有其它游戏，使其不拦截鼠标、完全透明
+            
+            // 3. 隐藏历史痕迹，点亮当前游戏
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
             const activeFrame = document.getElementById(frameId);
 
-            // 保险机制：若分时加载未触及该项，点击时瞬间强制装载
+            // 安全阀：突发紧急点击时，若后台尚未轮到该游戏加载，瞬间强行拉起 src
             if (!activeFrame.src) {
                 const config = sourceRegistry.find(item => item.id === frameId);
                 if (config) activeFrame.src = config.src;
             }
 
             activeFrame.classList.add('active');
-            arena.classList.add('active');
+            workspace.classList.add('active');
 
-            // 💡 核心唤醒锁：激活瞬间向子页面同步发送 resize 与重绘指令，保证 Canvas 画布零延迟满血复活 💡
+            // 4. 🚀 战术唤醒锁：激活瞬间高频同步同步 Canvas 视口大小（彻底消灭围棋/五子棋画布崩溃）
             const forceSynchronizeCanvas = () => {
                 try {
                     if (activeFrame.contentWindow) {
@@ -351,7 +423,7 @@
                         }
                     }
                 } catch (err) {
-                    console.log("[OmniEngine] Viewport matrix recalibrated.");
+                    console.log("[OmniEngine] Pipeline synced.");
                 }
             };
 
@@ -360,14 +432,30 @@
             setTimeout(forceSynchronizeCanvas, 150);
         }
 
-        function exitArena() {
+        function exitWorkspace() {
             const lobby = document.getElementById('lobbyContainer');
-            const arena = document.getElementById('arenaContainer');
+            const workspace = document.getElementById('workspaceContainer');
 
-            arena.classList.remove('active');
+            workspace.classList.remove('active');
             lobby.classList.remove('hidden');
             
-            // 💡 注意：这里不清理 src，退出后保持后台状态，以便当你重新进入任何一款棋时，都能继续之前的残局完美对弈。
+            // 隐藏工作舱焦点，但不清理任何 src 路径。
+            // 完美保持 6 款游戏的对局进度、棋盘状态、P2P 联机握手信号！
+            document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
+            currentActiveFrameId = null;
+        }
+
+        // ==================== 黑科技：单页面独立热洗牌 ====================
+        function hotReloadCurrentFrame() {
+            if (!currentActiveFrameId) return;
+            const activeFrame = document.getElementById(currentActiveFrameId);
+            const config = sourceRegistry.find(item => item.id === currentActiveFrameId);
+            
+            if (activeFrame && config) {
+                console.log(`[OmniEngine] Hot-Reloading individual node matrix: ${currentActiveFrameId}`);
+                // 仅强制重载当前的 iframe，其余 5 款游戏的进度和联机在后台雷打不动，极度强悍！
+                activeFrame.src = config.src; 
+            }
         }
     </script>
 </body>

@@ -205,13 +205,7 @@
             <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">Undo</button>
             <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">Draw</button>
         </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-            <button class="btn btn-danger" id="resignBtn" onclick="handleResign()">Resign</button>
-            <button class="btn btn-secondary" style="border-color: #a855f7; color: #a855f7;" id="saveBtn" onclick="saveGame()">Save</button>
-            <button class="btn btn-secondary" style="border-color: #22c55e; color: #22c55e; grid-column: span 2;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">Load Game</button>
-        </div>
-
+        
         <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">Reset Simulation</button>
             <div class="panel-section">
                 <span class="label-tiny">Tactical Feed Streams</span>

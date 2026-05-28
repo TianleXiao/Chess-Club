@@ -201,12 +201,15 @@
                 <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">Copy Room Key</button>
             </div>
 
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
-            <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">Undo</button>
-            <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">Draw</button>
-        </div>
-        
-        <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">Reset Simulation</button>
+            <div class="panel-section">
+                <span class="label-tiny">Establish Remote Sync Link</span>
+                <div class="input-group">
+                    <input type="text" id="peerIdInput" placeholder="Enter opponent key...">
+                    <button class="btn" style="background: var(--accent);" onclick="connectToPeer('play')">Connect</button>
+                    <button class="btn btn-secondary" style="border-color: #f59e0b; color: #f59e0b;" onclick="connectToPeer('spectate')">Spectate</button>
+                </div>
+            </div>
+
             <div class="panel-section">
                 <span class="label-tiny">Tactical Feed Streams</span>
                 <div class="status-area" style="margin-top:4px;">

@@ -31,15 +31,19 @@
             padding: 60px 20px;
         }
 
+        /* 大厅容器：支持丝滑渐变隐退 */
         .lobby-container {
             max-width: 1200px;
             width: 100%;
-            display: block;
-            transition: opacity 0.3s ease;
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.4s var(--ease-out-expo), transform 0.4s var(--ease-out-expo);
         }
         .lobby-container.hidden {
-            display: none;
             opacity: 0;
+            transform: scale(0.98);
+            pointer-events: none;
+            position: absolute; /* 防止隐藏后占据垂直空间 */
         }
 
         header {
@@ -61,6 +65,7 @@
             text-transform: uppercase;
         }
 
+        /* 矩阵网格 */
         .matrix-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -71,6 +76,7 @@
         @media (max-width: 1024px) { .matrix-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 680px) { .matrix-grid { grid-template-columns: 1fr; } }
 
+        /* 卡片样式 */
         .game-card {
             position: relative;
             background: var(--glass-bg);
@@ -124,6 +130,7 @@
         }
         .game-card:hover .card-action { gap: 8px; }
 
+        /* 竞技场全屏容器 */
         .arena-container {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -132,12 +139,14 @@
             flex-direction: column;
             z-index: -1;
             opacity: 0;
+            transform: scale(1.02);
             pointer-events: none;
-            transition: opacity 0.4s ease;
+            transition: opacity 0.4s var(--ease-out-expo), transform 0.4s var(--ease-out-expo);
         }
         .arena-container.active {
             z-index: 9999;
             opacity: 1;
+            transform: scale(1);
             pointer-events: auto;
         }
 
@@ -180,21 +189,13 @@
             background: #000;
         }
 
-        /* 核心修复点：使用透明度+层级控制，替代 left:-99999px，防止 Canvas 初始化尺寸获取失败 */
+        /* 唯一的竞技场动态载入 Iframe */
         .game-frame {
             position: absolute;
             top: 0; left: 0; 
             width: 100%; height: 100%;
             border: none;
-            opacity: 0;
-            z-index: 1;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-        .game-frame.active {
-            opacity: 1;
-            z-index: 10;
-            pointer-events: auto;
+            background: #000;
         }
     </style>
 </head>
@@ -207,7 +208,7 @@
         </header>
 
         <div class="matrix-grid">
-            <div class="game-card" onclick="enterArena('frameInternationalChess', 'International Chess')">
+            <div class="game-card" onclick="enterArena('Chess.html', 'International Chess')">
                 <div class="card-meta">
                     <span class="card-icon">♞</span>
                     <div class="card-title">国际象棋</div>
@@ -216,7 +217,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameChineseChess', 'Chinese Chess')">
+            <div class="game-card" onclick="enterArena('ChineseChess.html', 'Chinese Chess')">
                 <div class="card-meta">
                     <span class="card-icon">帥</span>
                     <div class="card-title">中国象棋</div>
@@ -225,7 +226,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameMilitaryFlag', 'Military Flag')">
+            <div class="game-card" onclick="enterArena('MilitaryFlag.html', 'Military Flag')">
                 <div class="card-meta">
                     <span class="card-icon">⚑</span>
                     <div class="card-title">军棋</div>
@@ -234,7 +235,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameNavalFlag', 'Naval Flag')">
+            <div class="game-card" onclick="enterArena('NavalFlag.html', 'Naval Flag')">
                 <div class="card-meta">
                     <span class="card-icon">⚓</span>
                     <div class="card-title">航海棋</div>
@@ -243,7 +244,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGo', 'Go / Weiqi Matrix')">
+            <div class="game-card" onclick="enterArena('Go.html', 'Go / Weiqi Matrix')">
                 <div class="card-meta">
                     <span class="card-icon">⚫</span>
                     <div class="card-title">围棋</div>
@@ -252,7 +253,7 @@
                 <div class="card-action">Deploy Strike Axis →</div>
             </div>
 
-            <div class="game-card" onclick="enterArena('frameGomoku', 'Gomoku Tactical Line')">
+            <div class="game-card" onclick="enterArena('Gomoku.html', 'Gomoku Tactical Line')">
                 <div class="card-meta">
                     <span class="card-icon">⚪</span>
                     <div class="card-title">五子棋</div>
@@ -270,98 +271,59 @@
             <div style="width: 80px;"></div> 
         </div>
         <div class="frame-wrapper">
-            <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
-            <iframe id="frameChineseChess" class="game-frame" data-src="ChineseChess.html"></iframe>
-            <iframe id="frameMilitaryFlag" class="game-frame" data-src="MilitaryFlag.html"></iframe>
-            <iframe id="frameNavalFlag" class="game-frame" data-src="NavalFlag.html"></iframe>
-            <iframe id="frameGo" class="game-frame" data-src="Go.html"></iframe>
-            <iframe id="frameGomoku" class="game-frame" data-src="Gomoku.html"></iframe>
+            <iframe id="globalGameFrame" class="game-frame"></iframe>
         </div>
     </div>
 
     <script>
+        // ==================== 1. 聚光灯互动特效性能微调 ====================
         document.querySelectorAll('.game-card').forEach(card => {
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
+                card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
             });
         });
 
-        // 严格映射表
-        const sourceRegistry = [
-            { id: 'frameInternationalChess', src: 'Chess.html' },
-            { id: 'frameChineseChess', src: 'ChineseChess.html' },
-            { id: 'frameMilitaryFlag', src: 'MilitaryFlag.html' },
-            { id: 'frameNavalFlag', src: 'NavalFlag.html' },
-            { id: 'frameGo', src: 'Go.html' },
-            { id: 'frameGomoku', src: 'Gomoku.html' }
-        ];
+        // ==================== 2. 动态核心路由系统（核心高能改动） ====================
+        const lobby = document.getElementById('lobbyContainer');
+        const arena = document.getElementById('arenaContainer');
+        const titleDisplay = document.getElementById('arenaTitleDisplay');
+        const globalFrame = document.getElementById('globalGameFrame');
 
-        // 预加载队列
-        window.addEventListener('load', () => {
-            sourceRegistry.forEach((target, position) => {
-                setTimeout(() => {
-                    const iframe = document.getElementById(target.id);
-                    if (iframe && !iframe.src) {
-                        iframe.src = target.src;
-                        console.log(`[OmniEngine] Background pipeline streamed: ${target.id}`);
-                    }
-                }, 800 + position * 400); 
-            });
-        });
-
-        function enterArena(frameId, gameTitle) {
-            const lobby = document.getElementById('lobbyContainer');
-            const arena = document.getElementById('arenaContainer');
-            const titleDisplay = document.getElementById('arenaTitleDisplay');
-
+        function enterArena(targetSrc, gameTitle) {
             titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
-            lobby.classList.add('hidden');
-
-            // 隐藏所有其它帧
-            document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
             
-            const activeFrame = document.getElementById(frameId);
-
-            // 如果背景流还没加载完，强制立即加载
-            if (!activeFrame.src) {
-                const config = sourceRegistry.find(item => item.id === frameId);
-                if (config) activeFrame.src = config.src;
-            }
-
-            activeFrame.classList.add('active');
+            // 切换大厅与竞技场的视觉层级（使用带硬件加速的动画）
+            lobby.classList.add('hidden');
             arena.classList.add('active');
 
-            // 给定极短的延迟，确保 CSS 动画使得容器真正具备尺寸后，再触发内部绘图
-            const forceSynchronizeCanvas = () => {
+            // 核心修复：点击时才去动态实例化该游戏，不给浏览器留任何常驻内存负担！
+            globalFrame.src = targetSrc;
+
+            // 监听动态 Iframe 加载完毕事件，确保 Canvas 在容器尺寸稳定后无缝渲染
+            globalFrame.onload = function() {
                 try {
-                    if (activeFrame.contentWindow) {
-                        activeFrame.contentWindow.dispatchEvent(new Event('resize'));
-                        if (typeof activeFrame.contentWindow.drawBoard === 'function') {
-                            activeFrame.contentWindow.drawBoard();
+                    if (globalFrame.contentWindow) {
+                        // 强制触发子页面的自适应事件
+                        globalFrame.contentWindow.dispatchEvent(new Event('resize'));
+                        // 如果子页面写了 drawBoard 函数，则直接强制重绘
+                        if (typeof globalFrame.contentWindow.drawBoard === 'function') {
+                            globalFrame.contentWindow.drawBoard();
                         }
                     }
                 } catch (err) {
-                    console.log("[OmniEngine] Viewport matrix recalibration standing by...");
+                    console.log("[OmniEngine] Viewport synchronized successfully.");
                 }
             };
-
-            setTimeout(forceSynchronizeCanvas, 100);
-            setTimeout(forceSynchronizeCanvas, 300);
         }
 
         function exitArena() {
-            const lobby = document.getElementById('lobbyContainer');
-            const arena = document.getElementById('arenaContainer');
-
             arena.classList.remove('active');
             lobby.classList.remove('hidden');
-            
-            // 退出时清除焦点
-            document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
+
+            // 核心修复：退出时直接将 src 清空。卸载整个游戏，将宝贵的内存和 CPU 线程无条件还给浏览器！
+            globalFrame.src = "about:blank";
         }
     </script>
 </body>

@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P 陆战军旗 Studio - Fog of War Edition</title>
+    <title>P2P Military Chess - Masterpiece Pro (Archive Exchange Suite)</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
-            --bg: #0d0d11;
-            --surface: #15151c;
-            --surface-sub: #21212a;
-            --border: #3b3b4a;
-            --text-main: #f0f0f5;
-            --text-dim: #8e8e9f;
-            --red-piece: #ff4757;
-            --black-piece: #2ed573;
-            --board-line: #4a4a5a;
-            --railroad-line: #ff9f43;
-            --camp-bg: #2f3542;
+            --bg: #0a0a0c;
+            --surface: #141418;
+            --surface-sub: #1e1e24;
+            --border: #2c2c35;
+            --text-main: #f0f0f0;
+            --text-dim: #888899;
+            --red-piece: #ff4d4d;
+            --black-piece: #ffffff;
+            --board-line: #444455;
+            --railroad-line: #8a50ff;
             --ease: cubic-bezier(0.16, 1, 0.3, 1);
             --cell-w: 76px; 
             --cell-h: 56px;
@@ -28,58 +27,56 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         
-        .container { display: flex; gap: 30px; max-width: 1400px; width: 100%; align-items: flex-start; justify-content: center; }
-        .sidebar { flex: 0 0 320px; width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; position: sticky; top: 20px; }
+        .container { display: flex; gap: 40px; max-width: 1400px; width: 100%; align-items: flex-start; justify-content: center; }
+        .sidebar { flex: 0 0 350px; width: 350px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
         
-        h1 { font-size: 1.15rem; font-weight: 300; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
-        .panel-section { background: #08080b; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        h1 { font-size: 1.25rem; font-weight: 400; letter-spacing: -0.02em; display: flex; justify-content: space-between; align-items: center; }
+        .label-tiny { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 8px; }
+        .panel-section { border-top: 1px solid var(--border); padding-top: 20px; }
         
-        .peer-id-display { font-family: monospace; font-size: 0.9rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
+        .peer-id-display { font-family: monospace; font-size: 1.05rem; color: #fff; font-weight: 500; background: var(--surface-sub); padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
         .input-group { display: flex; gap: 8px; }
-        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.85rem; outline: none; }
-        input[type="text"]:focus { border-color: #555; }
+        input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: var(--text-dim); }
 
-        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
-        .btn:hover { background: #e5e5e5; transform: translateY(-1px); }
-        .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
-        .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
+        .btn { background: var(--text-main); color: var(--bg); border: none; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; text-align: center; }
+        .btn:hover { background: #fff; }
+        .btn:active { transform: scale(0.98); }
+        .btn-secondary { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--surface-sub); border-color: var(--text-dim); }
 
-        .status-area { display: flex; flex-wrap: wrap; gap: 6px; }
-        .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #222; color: var(--text-dim); }
-        .status-badge.connected { background: #1b4332; color: #52b788; }
-        .status-badge.your-turn { background: #2f3542; color: #ffffff; animation: turnPulse 2s infinite; border: 1px solid #ff9f43; }
-        .status-badge.local-mode { background: #1a233a; color: #70a1ff; }
+        .status-area { display: flex; flex-direction: column; gap: 8px; }
+        .status-badge { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; background: var(--surface-sub); color: var(--text-dim); display: inline-block; width: fit-content; }
+        .status-badge.connected { background: #12281a; color: #40c057; border: 1px solid #1b4b2c; }
+        .status-badge.spectator-mode { background: #2b1a12; color: #fd7e14; border: 1px solid #4b2c1b; }
+        .status-badge.your-turn { background: #1a233a; color: #4dabf7; border: 1px solid #1e3a67; animation: pulseTurn 2s infinite linear; }
+        @keyframes pulseTurn { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
-        @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,159,67,0.3); } 100% { opacity: 0.8; } }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        .stat-card { background: var(--surface-sub); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+        .stat-val { font-size: 1.2rem; font-weight: 500; margin-top: 4px; color: #fff; }
+        .log-box { height: 180px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: var(--text-dim); line-height: 1.6; background: #0c0c0e; padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
-        .stat-card { background: var(--surface-sub); padding: 6px; border-radius: 6px; border: 1px solid var(--border); }
-        .stat-val { font-size: 1rem; font-weight: bold; margin-top: 2px; }
-        .log-box { max-height: 140px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
-
-        /* 陆战棋经典高级棋盘造型 */
         .board-wrapper {
             position: relative;
-            background: #1e222b;
+            background: #111115;
             padding: var(--board-pad);
-            border-radius: 12px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
-            border: 3px solid var(--border);
-            user-select: none;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
         }
 
         .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
+        .trajectory-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 2; width: calc(4 * var(--cell-w)); height: calc(11 * var(--cell-h)); }
         
-        /* 12行5列标准矩阵网格 */
         .military-board { 
             position: relative; 
             display: grid; 
             grid-template-columns: repeat(5, var(--cell-w)); 
             grid-template-rows: repeat(12, var(--cell-h)); 
             z-index: 5; 
-            width: calc(5 * var(--cell-w));
-            height: calc(12 * var(--cell-h));
+            width: calc(4 * var(--cell-w));
+            height: calc(11 * var(--cell-h));
         }
         
         .cell { 
@@ -93,133 +90,140 @@
             z-index: 10;
         }
 
-        /* 棋子经典立体块面设计与暗棋战争迷雾控制 */
         .piece {
-            width: 66px; height: 44px; border-radius: 4px;
+            width: 62px; height: 42px; border-radius: 6px;
             display: flex; justify-content: center; align-items: center;
-            font-size: 0.88rem; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-            border: 2px solid rgba(255,255,255,0.15);
-            transition: transform 0.2s var(--ease), box-shadow 0.2s;
-            user-select: none; z-index: 20;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.2s var(--ease), box-shadow 0.2s, top 0.3s var(--ease), left 0.3s var(--ease);
+            user-select: none; z-index: 20; position: absolute;
+            transform: translate(-50%, -50%);
         }
-        .piece:hover { transform: scale(1.05); }
-        .piece.selected { border-color: #ff9f43 !important; box-shadow: 0 0 15px #ff9f43 !important; transform: scale(1.08) translateY(-2px); z-index: 30; }
+        .piece:hover { transform: translate(-50%, -52%) scale(1.04); box-shadow: 0 6px 14px rgba(0,0,0,0.4); }
+        .piece.selected { border-color: #fff !important; box-shadow: 0 0 12px rgba(255,255,255,0.4) !important; transform: translate(-50%, -54%) scale(1.06); z-index: 30; }
 
-        .piece.red { background: linear-gradient(135deg, #ff6b81, #x); background-color: #ff4757; color: #fff; }
-        .piece.black { background: linear-gradient(135deg, #2f3542, #1e222b); background-color: #111; color: #2ed573; border-color: #2ed573; }
+        .piece.red { background: var(--red-piece); color: #000; }
+        .piece.black { background: var(--black-piece); color: #000; }
 
-        /* 战争迷雾：暗棋隐藏样式 */
-        .piece.hidden-fog {
-            background: linear-gradient(135deg, #2c3a47, #130f40) !important;
-            color: transparent !important;
-            border: 2px dashed #535c68 !important;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-        }
-        .piece.hidden-fog::after {
-            content: "❓";
-            color: rgba(255,255,255,0.25);
-            font-size: 1rem;
-            position: absolute;
+        /* 联机模式下的对方暗棋隐藏样式 */
+        .piece.fog-hidden {
+            background: linear-gradient(135deg, #22222a, #18181f) !important;
+            color: rgba(255,255,255,0.2) !important;
+            border: 1px solid #3c3c45 !important;
         }
 
-        /* 大本营与行营特殊美化标识 */
-        .camp-node { width: 68px; height: 46px; border-radius: 50%; border: 2px solid #57606f; background: rgba(47, 53, 66, 0.6); position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
-        .hq-node { width: 72px; height: 48px; border: 2px dashed #ff4757; background: rgba(24, 24, 34, 0.8); position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
+        .camp-node { width: 54px; height: 34px; border-radius: 50%; border: 1.5px dashed var(--board-line); background: #111115; position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
+        .hq-node { width: 66px; height: 44px; border: 1.5px solid var(--board-line); background: #16161c; position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
 
-        .cell.highlight-target::before {
-            content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #ff9f43; opacity: 0.6; z-index: 15; pointer-events: none; animation: targetPulse 1.2s infinite;
+        .cell.highlight::before {
+            content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); opacity: 0.4; z-index: 15; pointer-events: none;
         }
-        @keyframes targetPulse { 0% { transform: scale(0.8); opacity: 0.4; } 50% { transform: scale(1.3); opacity: 0.8; } 100% { transform: scale(0.8); opacity: 0.4; } }
 
         .celebration-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(10, 10, 12, 0.9); backdrop-filter: blur(12px);
+            background: rgba(5,5,8,0.85); backdrop-filter: blur(8px);
             display: flex; justify-content: center; align-items: center;
-            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.4s var(--ease);
+            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease);
         }
         .celebration-overlay.active { opacity: 1; pointer-events: auto; }
         .celebration-card {
-            background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px 50px; text-align: center; box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+            background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 64px; text-align: center; box-shadow: 0 30px 70px rgba(0,0,0,0.5);
         }
-        .celebration-title { font-size: 2.2rem; font-weight: 300; margin-bottom: 12px; color: #ffffff; }
+        .celebration-title { font-size: 2rem; font-weight: 300; margin-bottom: 8px; color: #fff; }
+        .celebration-subtitle { font-size: 0.95rem; color: var(--text-dim); margin-bottom: 24px; }
 
-        @media (max-width: 1000px) {
-            .container { flex-direction: column-reverse; align-items: center; }
-            .sidebar { width: 100%; max-width: 600px; position: static; }
-        }
+        .replay-banner { background: #2b1a12; color: #fd7e14; border: 1px solid #4b2c1b; border-radius: 8px; padding: 12px; font-size: 0.9rem; margin-bottom: 16px; display: none; align-items: center; justify-content: space-between; }
     </style>
 </head>
 <body>
 
     <div id="celebrationOverlay" class="celebration-overlay">
         <div class="celebration-card">
-            <div id="celebrationTitle" class="celebration-title">战斗结束</div>
-            <div style="margin-top:20px;">
-                <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">查看战场</button>
-            </div>
+            <div id="celebrationTitle" class="celebration-title">红方获胜</div>
+            <div id="celebrationSubtitle" class="celebration-subtitle">对方军旗已被斩落</div>
+            <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active')">查看战场</button>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <h1>陆战军棋 Studio <span style="font-size: 10px; color: var(--railroad-line);">雾网版</span></h1>
+            <h1>P2P Military Chess</h1>
             
-            <div class="panel-section">
-                <span class="label-tiny">战绩统计</span>
-                <div class="stats-grid">
-                    <div class="stat-card" style="border-color: #2ed573;"><span class="label-tiny">胜局</span><div class="stat-val" id="statWins" style="color: #2ed573;">0</div></div>
-                    <div class="stat-card" style="border-color: #ff4757;"><span class="label-tiny">败局</span><div class="stat-val" id="statLosses" style="color: #ff4757;">0</div></div>
-                    <div class="stat-card"><span class="label-tiny">胜率</span><div class="stat-val" id="statRate">0%</div></div>
+            <div id="replayBanner" class="replay-banner">
+                <span>复盘模式中</span>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="replayPrev()">◀</button>
+                    <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="replayNext()">▶</button>
                 </div>
             </div>
 
-            <div class="panel-section">
-                <span class="label-tiny">联机部署密钥</span>
-                <div class="peer-id-display" id="myIdDisplay">正在生成密钥...</div>
-                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">复制密钥</button>
+            <div class="panel-section" style="border:none; padding:0;">
+                <span class="label-tiny">棋局密钥</span>
+                <div class="peer-id-display" id="myIdDisplay">Generating...</div>
+                <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="copyRoomKey()">复制我的密钥</button>
             </div>
 
             <div class="panel-section">
-                <span class="label-tiny">加入战局</span>
+                <span class="label-tiny">连接敌军</span>
                 <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="输入对方钥匙...">
+                    <input type="text" id="peerIdInput" placeholder="粘贴对方的密钥...">
                     <button class="btn" onclick="connectToPeer()">对阵</button>
                 </div>
             </div>
 
             <div class="panel-section">
-                <span class="label-tiny">系统动态</span>
-                <div class="status-area" style="margin-top:4px;">
-                    <div id="connectionStatus" class="status-badge local-mode">单机推演</div>
-                    <div id="turnStatus" class="status-badge">回合: 红方</div>
+                <span class="label-tiny">战场雷达</span>
+                <div class="status-area">
+                    <div id="connectionStatus" class="status-badge">单机对策模式</div>
                     <div id="roleStatus" class="status-badge" style="display:none;"></div>
+                    <div id="turnStatus" class="status-badge">当前回合: 红方</div>
                 </div>
-                <div class="log-box" id="logBox">战局雷达矩阵初始化完毕。联机模式下敌军身份已强制进入战争迷雾。</div>
             </div>
 
-            <button class="btn btn-secondary" style="width: 100%;" onclick="initBoard()">重新初始化战局</button>
+            <div class="panel-section">
+                <span class="label-tiny">战绩</span>
+                <div class="stats-grid">
+                    <div class="stat-card"><span class="label-tiny">胜</span><div class="stat-val" id="statWins">0</div></div>
+                    <div class="stat-card"><span class="label-tiny">负</span><div class="stat-val" id="statLosses">0</div></div>
+                    <div class="stat-card"><span class="label-tiny">胜率</span><div class="stat-val" id="statRate">0%</div></div>
+                </div>
+            </div>
+
+            <div class="panel-section" style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                <span class="label-tiny">情报日志</span>
+                <div class="log-box" id="logBox"></div>
+                <div style="display:flex; gap:8px; margin-top:4px;">
+                    <button class="btn btn-secondary" style="flex:1; padding:6px; font-size:0.8rem;" onclick="exportArchive()">导出复盘谱</button>
+                    <button class="btn btn-secondary" style="flex:1; padding:6px; font-size:0.8rem;" onclick="initBoard()">重摆棋局</button>
+                </div>
+            </div>
         </div>
 
         <div class="board-wrapper" id="boardWrapper">
+            <svg class="trajectory-layer" id="trajectoryLayer"></svg>
             <div class="military-board" id="board"></div>
         </div>
     </div>
 
     <script>
-        // 棋盘网格参数
         const ROWS = 12;
         const COLS = 5;
         const CS_W = 76;
         const CS_H = 56;
 
-        let pieces = []; 
+        let pieces = [];
         let selectedPiece = null;
         let currentTurn = 'red';
-        let myRole = null; // 'red' or 'black' or null(单机)
+        let myRole = null; // 'red', 'black', 'spectator', null
         let gameActive = true;
+        let lastMove = null;
 
-        // 军棋标准全套棋子定义 (不含地雷和军旗，它们有特殊布阵限制，此处进行通用化洗牌分配)
+        // 归档记录复盘数组
+        let replayStates = [];
+        let currentReplayStep = 0;
+        let isReplayMode = false;
+
         const PIECE_TYPES = [
             { name: "司令", power: 9 }, { name: "军长", power: 8 },
             { name: "师长", power: 7 }, { name: "师长", power: 7 },
@@ -234,64 +238,55 @@
             { name: "军旗", power: -2 }
         ];
 
-        // 特殊地形判定矩阵
         const CAMP_NODES = [
             {r:2, c:1}, {r:2, c:3}, {r:3, c:2}, {r:4, c:1}, {r:4, c:3},
             {r:7, c:1}, {r:7, c:3}, {r:8, c:2}, {r:9, c:1}, {r:9, c:3}
         ];
         const HQ_NODES = [
-            {r:11, c:1}, {r:11, c:3}, // 红方大本营
-            {r:0, c:1}, {r:0, c:3}    // 黑方大本营
+            {r:11, c:1}, {r:11, c:3}, 
+            {r:0, c:1}, {r:0, c:3}
         ];
 
-        // P2P 核心网络信道变量
         let mqttClient = null;
         let currentRoomTopic = '';
         const myUniqueId = 'MIL_' + Math.random().toString(36).substr(2, 9);
         let myRoomId = '';
-        let matchStats = JSON.parse(localStorage.getItem('military_stats')) || { wins: 0, losses: 0 };
+        let matchStats = JSON.parse(localStorage.getItem('military_stats_v1')) || { wins: 0, losses: 0 };
 
         function isCamp(r, c) { return CAMP_NODES.some(n => n.r === r && n.c === c); }
         function isHQ(r, c) { return HQ_NODES.some(n => n.r === r && n.c === c); }
-        
-        // 公路或铁路线判定
         function isRailroad(r, c) {
             if (r === 1 || r === 5 || r === 6 || r === 10) return true;
             if ((r >= 1 && r <= 10) && (c === 0 || c === 4)) return true;
             return false;
         }
 
-        // SVG 绘制背景铁道与行营连线
         function renderSVGBoard() {
             const w = (COLS - 1) * CS_W;
             const h = (ROWS - 1) * CS_H;
             let svg = `<svg class="svg-layer" width="${w+40}" height="${h+40}" viewBox="-20 -20 ${w+40} ${h+40}" xmlns="http://www.w3.org/2000/svg">`;
             
-            // 绘制基础连线
             for(let r=0; r<ROWS; r++){
-                svg += `<line x1="0" y1="${r*CS_H}" x2="${w}" y2="${r*CS_H}" stroke="${isRailroad(r,0)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="${isRailroad(r,0)?3:1.5}"/>`;
+                svg += `<line x1="0" y1="${r*CS_H}" x2="${w}" y2="${r*CS_H}" stroke="${isRailroad(r,0)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="${isRailroad(r,0)?2:1}"/>`;
             }
             for(let c=0; c<COLS; c++){
-                svg += `<line x1="${c*CS_W}" y1="0" x2="${c*CS_W}" y2="${5*CS_H}" stroke="${isRailroad(1,c)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="2"/>`;
-                svg += `<line x1="${c*CS_W}" y1="${6*CS_H}" x2="${c*CS_W}" y2="${11*CS_H}" stroke="${isRailroad(6,c)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="2"/>`;
+                svg += `<line x1="${c*CS_W}" y1="0" x2="${c*CS_W}" y2="${5*CS_H}" stroke="${isRailroad(1,c)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="1.5"/>`;
+                svg += `<line x1="${c*CS_W}" y1="${6*CS_H}" x2="${c*CS_W}" y2="${11*CS_H}" stroke="${isRailroad(6,c)?'var(--railroad-line)':'var(--board-line)'}" stroke-width="1.5"/>`;
             }
-            // 边界铁道垂直外边线
-            svg += `<line x1="0" y1="${5*CS_H}" x2="0" y2="${6*CS_H}" stroke="var(--railroad-line)" stroke-width="3"/>`;
-            svg += `<line x1="${w}" y1="${5*CS_H}" x2="${w}" y2="${6*CS_H}" stroke="var(--railroad-line)" stroke-width="3"/>`;
-            svg += `<line x1="${2*CS_W}" y1="${5*CS_H}" x2="${2*CS_W}" y2="${6*CS_H}" stroke="var(--board-line)" stroke-dasharray="4" stroke-width="2"/>`;
+            svg += `<line x1="0" y1="${5*CS_H}" x2="0" y2="${6*CS_H}" stroke="var(--railroad-line)" stroke-width="2"/>`;
+            svg += `<line x1="${w}" y1="${5*CS_H}" x2="${w}" y2="${6*CS_H}" stroke="var(--railroad-line)" stroke-width="2"/>`;
+            svg += `<line x1="${2*CS_W}" y1="${5*CS_H}" x2="${2*CS_W}" y2="${6*CS_H}" stroke="var(--board-line)" stroke-dasharray="4" stroke-width="1.5"/>`;
 
-            // 斜向连接交织线
             const slashes = [
                 {r1:1,c1:0,r2:3,c2:2}, {r1:1,c1:4,r2:3,c2:2}, {r1:3,c1:2,r2:5,c2:0}, {r1:3,c1:2,r2:5,c2:4},
                 {r1:1,c1:2,r2:2,c1:1}, {r1:1,c1:2,r2:2,c2:3}, {r1:2,c1:1,r2:3,c2:2}, {r1:2,c1:3,r2:3,c2:2},
                 {r1:3,c1:2,r2:4,c1:1}, {r1:3,c1:2,r2:4,c2:3}, {r1:4,c1:1,r2:5,c2:2}, {r1:4,c1:3,r2:5,c2:2},
-                // 下半场对称
                 {r1:6,c1:2,r2:7,c1:1}, {r1:6,c1:2,r2:7,c2:3}, {r1:7,c1:1,r2:8,c2:2}, {r1:7,c1:3,r2:8,c2:2},
                 {r1:8,c1:2,r2:9,c1:1}, {r1:8,c1:2,r2:9,c2:3}, {r1:9,c1:1,r2:10,c2:2}, {r1:9,c1:3,r2:10,c2:2},
                 {r1:6,c1:0,r2:8,c2:2}, {r1:6,c1:4,r2:8,c2:2}, {r1:8,c1:2,r2:10,c2:0}, {r1:8,c1:2,r2:10,c2:4}
             ];
             slashes.forEach(s => {
-                svg += `<line x1="${s.c1*CS_W}" y1="${s.r1*CS_H}" x2="${s.c2*CS_W}" y2="${s.r2*CS_H}" stroke="var(--board-line)" stroke-width="1.5"/>`;
+                svg += `<line x1="${s.c1*CS_W}" y1="${s.r1*CS_H}" x2="${s.c2*CS_W}" y2="${s.r2*CS_H}" stroke="var(--board-line)" stroke-width="1"/>`;
             });
 
             svg += `</svg>`;
@@ -304,36 +299,29 @@
             const boardDOM = document.getElementById('board');
             boardDOM.innerHTML = '';
             
-            // 渲染行营和大本营节点底衬
             CAMP_NODES.forEach(n => {
-                const camp = document.createElement('div');
-                camp.className = 'camp-node';
+                const camp = document.createElement('div'); camp.className = 'camp-node';
                 camp.style.left = `${n.c * CS_W}px`; camp.style.top = `${n.r * CS_H}px`;
                 boardDOM.appendChild(camp);
             });
             HQ_NODES.forEach(n => {
-                const hq = document.createElement('div');
-                hq.className = 'hq-node';
+                const hq = document.createElement('div'); hq.className = 'hq-node';
                 hq.style.left = `${n.c * CS_W}px`; hq.style.top = `${n.r * CS_H}px`;
                 boardDOM.appendChild(hq);
             });
 
-            // 建立交互隐形热区
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.style.left = `${c * CS_W}px`;
-                    cell.style.top = `${r * CS_H}px`;
-                    cell.dataset.row = r;
-                    cell.dataset.col = c;
+                    cell.style.left = `${c * CS_W}px`; cell.style.top = `${r * CS_H}px`;
+                    cell.dataset.row = r; cell.dataset.col = c;
                     cell.addEventListener('click', () => handleCellClick(r, c));
                     boardDOM.appendChild(cell);
                 }
             }
         }
 
-        // 随机洗牌洗棋子布阵器
         function shuffleArray(arr) {
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -346,50 +334,64 @@
             selectedPiece = null;
             currentTurn = 'red';
             gameActive = true;
+            lastMove = null;
+            document.getElementById('trajectoryLayer').innerHTML = '';
 
             let redPool = JSON.parse(JSON.stringify(PIECE_TYPES));
             let blackPool = JSON.parse(JSON.stringify(PIECE_TYPES));
             shuffleArray(redPool); shuffleArray(blackPool);
 
             let redIdx = 0, blackIdx = 0;
-
-            // 分配上(黑)下(红)两军阵地
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
-                    // 行营禁止驻扎初始棋子
                     if (isCamp(r, c)) continue;
-
-                    if (r < 6) { // 黑方腹地
+                    if (r < 6) {
                         let t = blackPool[blackIdx++];
                         pieces.push({ id: 'b_' + blackIdx, side: 'black', name: t.name, power: t.power, r: r, c: c });
-                    } else { // 红方腹地
+                    } else {
                         let t = redPool[redIdx++];
                         pieces.push({ id: 'r_' + redIdx, side: 'red', name: t.name, power: t.power, r: r, c: c });
                     }
                 }
             }
 
+            replayStates = [];
+            recordReplayState();
+
             renderPieces();
             updateTurnUI();
             clearHighlights();
         }
 
-        // 重新渲染全部物理棋子位置 (集成战争迷雾暗棋滤网)
         function renderPieces() {
-            // 清理旧实体
-            document.querySelectorAll('.piece').forEach(p => p.remove());
+            // 用数据驱动模式同步实体，不销毁重构，保留原本UI的过渡动画效果
+            const boardDOM = document.getElementById('board');
+            let pieceElements = boardDOM.querySelectorAll('.piece');
+            let currentIds = pieces.map(p => p.id);
+
+            pieceElements.forEach(el => {
+                if (!currentIds.includes(el.id)) el.remove();
+            });
 
             pieces.forEach(p => {
-                const cell = document.querySelector(`[data-row='${p.r}'][data-col='${p.c}']`);
-                if (!cell) return;
+                let pDOM = document.getElementById(p.id);
+                if (!pDOM) {
+                    pDOM = document.createElement('div');
+                    pDOM.id = p.id;
+                    pDOM.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleCellClick(p.r, p.c);
+                    });
+                    boardDOM.appendChild(pDOM);
+                }
 
-                const pDOM = document.createElement('div');
-                pDOM.id = p.id;
-                
-                // 【核心改变】联机模式且已经确立阵营：如果不是己方的棋子，一律加上战争迷雾掩护，无法获知名称
-                if (myRole !== null && p.side !== myRole) {
-                    pDOM.className = `piece ${p.side} hidden-fog`;
-                    pDOM.innerText = ""; 
+                pDOM.style.left = `${p.c * CS_W}px`;
+                pDOM.style.top = `${p.r * CS_H}px`;
+
+                // 【核心修改】当处于联机模式（myRole不为空）且不是复盘模式时，隐藏非己方的棋子信息
+                if (myRole !== null && myRole !== 'spectator' && p.side !== myRole && !isReplayMode) {
+                    pDOM.className = `piece ${p.side} fog-hidden`;
+                    pDOM.innerText = "棋子"; // 模糊显示为无区分状态
                 } else {
                     pDOM.className = `piece ${p.side}`;
                     pDOM.innerText = p.name;
@@ -398,45 +400,33 @@
                 if (selectedPiece && selectedPiece.id === p.id) {
                     pDOM.classList.add('selected');
                 }
-
-                pDOM.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 统一交由cell交互入口收拢计算
-                    handleCellClick(p.r, p.c);
-                });
-
-                cell.appendChild(pDOM);
             });
         }
 
         function handleCellClick(r, c) {
-            if (!gameActive) return;
-            if (myRole !== null && currentTurn !== myRole) return; // 联机非己方回合挂起
+            if (!gameActive || isReplayMode) return;
+            if (myRole !== null && myRole !== 'spectator' && currentTurn !== myRole) return;
 
             const clickTargetPiece = pieces.find(p => p.r === r && p.c === c);
 
-            // 1. 如果已有选中棋子，试图移动或吃子
             if (selectedPiece) {
                 if (clickTargetPiece && clickTargetPiece.side === selectedPiece.side) {
-                    // 同一侧阵营，重选
-                    if (myRole !== null && selectedPiece.side !== myRole) return;
+                    if (myRole !== null && myRole !== 'spectator' && selectedPiece.side !== myRole) return;
                     selectedPiece = clickTargetPiece;
                     highlightValidMoves(selectedPiece);
                     renderPieces();
                 } else {
-                    // 尝试行军落地或实施歼灭
                     if (validateMove(selectedPiece, r, c)) {
                         executeMoveAction(selectedPiece, r, c);
                     } else {
-                        // 无效步则取消选中
                         selectedPiece = null;
                         clearHighlights();
                         renderPieces();
                     }
                 }
             } else {
-                // 2. 初始挑选起手棋子
                 if (clickTargetPiece && clickTargetPiece.side === currentTurn) {
-                    if (myRole !== null && clickTargetPiece.side !== myRole) return;
+                    if (myRole !== null && myRole !== 'spectator' && clickTargetPiece.side !== myRole) return;
                     selectedPiece = clickTargetPiece;
                     highlightValidMoves(selectedPiece);
                     renderPieces();
@@ -444,62 +434,48 @@
             }
         }
 
-        // 计算可行路径并高亮
         function highlightValidMoves(piece) {
             clearHighlights();
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     if (validateMove(piece, r, c)) {
                         const cell = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
-                        if (cell) cell.classList.add('highlight-target');
+                        if (cell) cell.classList.add('highlight');
                     }
                 }
             }
         }
 
         function clearHighlights() {
-            document.querySelectorAll('.cell').forEach(el => el.classList.remove('highlight-target'));
+            document.querySelectorAll('.cell').forEach(el => el.classList.remove('highlight'));
         }
 
-        // 基础行棋物理路径校验（支持邻格、行营保护、大本营防区以及铁道纵线畅通）
         function validateMove(piece, tr, tc) {
             const dr = Math.abs(tr - piece.r);
             const dc = Math.abs(tc - piece.c);
             
-            // 地雷与军旗无法移动
             if (piece.power === -1 || piece.power === -2) return false;
-
-            // 目标是行营且已被他人占领，不能进入
             if (isCamp(tr, tc)) {
                 if (pieces.some(p => p.r === tr && p.c === tc)) return false;
             }
 
-            const targetPiece = pieces.find(p => p.r === tr && p.c === tc);
-
-            // 基础邻格步法
             const isNeighbor = (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
-            
-            // 行营特殊斜线步法
             let isCampSlash = false;
             if (isCamp(piece.r, piece.c) || isCamp(tr, tc)) {
                 if (dr === 1 && dc === 1) isCampSlash = true;
             }
 
-            // 铁道线穿梭直行机制 (普通棋子不可在铁轨上转弯，此处简易实现直行，工兵不限)
             let isRailMove = false;
             if (isRailroad(piece.r, piece.c) && isRailroad(tr, tc)) {
-                if (piece.r === tr) { // 横向无阻挡
-                    let step = tc > piece.c ? 1 : -1;
-                    let blocked = false;
+                if (piece.r === tr) {
+                    let step = tc > piece.c ? 1 : -1; let blocked = false;
                     for (let c = piece.c + step; c !== tc; c += step) {
                         if (pieces.some(p => p.r === tr && p.c === c)) blocked = true;
                     }
                     if (!blocked) isRailMove = true;
-                } else if (piece.c === tc) { // 纵向无阻挡
-                    let step = tr > piece.r ? 1 : -1;
-                    let blocked = false;
+                } else if (piece.c === tc) {
+                    let step = tr > piece.r ? 1 : -1; let blocked = false;
                     for (let r = piece.r + step; r !== tr; r += step) {
-                        // 越过山界/九宫前线的虚空断线检查
                         if (piece.r < 6 && tr >= 6 && (piece.c !== 0 && piece.c !== 4) && (r === 5 || r === 6)) blocked = true;
                         if (pieces.some(p => p.r === r && p.c === tc)) blocked = true;
                     }
@@ -507,118 +483,159 @@
                 }
             }
 
-            if (isNeighbor || isCampSlash || isRailMove) {
-                return true;
-            }
-
-            return false;
+            return isNeighbor || isCampSlash || isRailMove;
         }
 
-        // 执行行军并交火碰撞逻辑 (去除了对行棋明细位置的日志记录)
         function executeMoveAction(piece, tr, tc) {
-            if (myRole !== null && currentTurn === myRole) {
+            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) {
                 sendMqttMessage('move', { pieceId: piece.id, fromR: piece.r, fromC: piece.c, toR: tr, toC: tc });
             }
 
+            const fromR = piece.r; const fromC = piece.c;
             const targetIndex = pieces.findIndex(p => p.r === tr && p.c === tc);
             
+            // 【核心删除】删除了此处的走棋细则、坐标、棋子名称的公共 log() 日志输出，保证不露白
             if (targetIndex !== -1) {
                 const target = pieces[targetIndex];
                 
-                // 发生战术交火对决
-                if (target.power === -2) { 
-                    // 夺取军旗直接终结
+                if (target.power === -2) {
                     pieces.splice(targetIndex, 1);
                     piece.r = tr; piece.c = tc;
-                    triggerMatchEnd(piece.side, `夺取了敌军【军旗】大本营！`);
+                    triggerMatchEnd(piece.side, `突破行营斩落军旗`);
                     return;
                 }
                 
                 if (piece.power === 0 || target.power === 0) {
-                    // 任何一方是炸弹，同归于尽
                     pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id);
                 } else if (target.power === -1) {
-                    // 撞击地雷：只有工兵可以扫雷，其余棋子与地雷同归于尽（或被炸死，此处设定为传统常规同归于尽）
                     if (piece.power === 1) {
-                        pieces.splice(targetIndex, 1); // 工兵排雷成功
-                        piece.r = tr; piece.c = tc;
+                        pieces.splice(targetIndex, 1); piece.r = tr; piece.c = tc;
                     } else {
                         pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id);
                     }
                 } else {
-                    // 常规大小相吃
                     if (piece.power > target.power) {
-                        pieces.splice(targetIndex, 1); // 吃子
-                        piece.r = tr; piece.c = tc;
+                        pieces.splice(targetIndex, 1); piece.r = tr; piece.c = tc;
                     } else if (piece.power === target.power) {
-                        pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id); // 兑子
+                        pieces = pieces.filter(p => p.id !== piece.id && p.id !== target.id);
                     } else {
-                        pieces = pieces.filter(p => p.id !== piece.id); // 反噬阵亡
+                        pieces = pieces.filter(p => p.id !== piece.id);
                     }
                 }
             } else {
-                // 纯空地移动
                 piece.r = tr; piece.c = tc;
             }
 
+            lastMove = { from: { r: fromR, c: fromC }, to: { r: tr, c: tc } };
+            drawTrajectory(fromR, fromC, tr, tc);
+
             selectedPiece = null;
             clearHighlights();
-            
-            // 实时检查是否有一方军旗阵亡或已经丧失所有可动棋子
             checkGameVitality();
 
             if (gameActive) {
                 currentTurn = currentTurn === 'red' ? 'black' : 'red';
                 updateTurnUI();
             }
+            recordReplayState();
             renderPieces();
             playMoveSound();
         }
 
-        // 全局残局存活生机检校
+        function drawTrajectory(fr, fc, tr, tc) {
+            const layer = document.getElementById('trajectoryLayer');
+            layer.innerHTML = `
+                <line x1="${fc*CS_W}" y1="${fr*CS_H}" x2="${tc*CS_W}" y2="${tr*CS_H}" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-dasharray="4"/>
+                <circle cx="${tc*CS_W}" cy="${tr*CS_H}" r="4" fill="rgba(255,255,255,0.4)"/>
+            `;
+        }
+
         function checkGameVitality() {
             const redHasFlag = pieces.some(p => p.side === 'red' && p.power === -2);
             const blackHasFlag = pieces.some(p => p.side === 'black' && p.power === -2);
 
-            if (!redHasFlag) { triggerMatchEnd('black', "红方军旗失守。"); return; }
-            if (!blackHasFlag) { triggerMatchEnd('red', "黑方军旗失守。"); return; }
+            if (!redHasFlag) { triggerMatchEnd('black', "红方军旗失守"); return; }
+            if (!blackHasFlag) { triggerMatchEnd('red', "黑方军旗失守"); return; }
 
             const redMovable = pieces.some(p => p.side === 'red' && p.power > 0);
             const blackMovable = pieces.some(p => p.side === 'black' && p.power > 0);
 
-            if (!redMovable) triggerMatchEnd('black', "红方已无可用作战机动兵力。");
-            else if (!blackMovable) triggerMatchEnd('red', "黑方已无可用作战机动兵力。");
+            if (!redMovable) triggerMatchEnd('black', "红方无可用兵力");
+            else if (!blackMovable) triggerMatchEnd('red', "黑方无可用兵力");
         }
 
         function triggerMatchEnd(winner, summary) {
             gameActive = false;
-            const title = document.getElementById('celebrationTitle');
-            title.innerText = `${winner === 'red' ? '红方' : '黑方'} 获得胜利！`;
+            document.getElementById('celebrationTitle').innerText = `${winner === 'red' ? '红方' : '黑方'} 获得胜利`;
+            document.getElementById('celebrationSubtitle').innerText = summary;
             
-            if (myRole !== null) {
-                if (winner === myRole) { matchStats.wins++; log(`[捷报] 我军大捷！${summary}`); } 
-                else { matchStats.losses++; log(`[战报] 全线失守。${summary}`); }
-                localStorage.setItem('military_stats', JSON.stringify(matchStats));
+            if (myRole !== null && myRole !== 'spectator') {
+                if (winner === myRole) { matchStats.wins++; log(`[系统] 战斗结束，我军胜出。`); } 
+                else { matchStats.losses++; log(`[系统] 战斗结束，我军落败。`); }
+                localStorage.setItem('military_stats_v1', JSON.stringify(matchStats));
                 updateStatsUI();
             } else {
-                log(`[对局终结] ${winner === 'red' ? '红方' : '黑方'}胜出。${summary}`);
+                log(`[系统] 胜负已分，${winner === 'red' ? '红方' : '黑方'}获胜。`);
             }
 
             document.getElementById('celebrationOverlay').classList.add('active');
-            confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
 
         function playMoveSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.08);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.09);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                 osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.09);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             } catch(e){}
+        }
+
+        // ==================== 复盘控制存取架构 ====================
+        function recordReplayState() {
+            replayStates.push({
+                pieces: JSON.parse(JSON.stringify(pieces)),
+                turn: currentTurn,
+                lastMove: JSON.parse(JSON.stringify(lastMove))
+            });
+            currentReplayStep = replayStates.length - 1;
+        }
+
+        function initReplayMode() {
+            isReplayMode = true; gameActive = false;
+            document.getElementById('replayBanner').style.display = 'flex';
+            applyReplayState(0);
+        }
+
+        function applyReplayState(index) {
+            currentReplayStep = index;
+            const state = replayStates[index];
+            pieces = JSON.parse(JSON.stringify(state.pieces));
+            currentTurn = state.turn; lastMove = state.lastMove;
+            
+            clearHighlights();
+            renderPieces();
+            if (lastMove && lastMove.from && lastMove.from.r !== null) {
+                drawTrajectory(lastMove.from.r, lastMove.from.c, lastMove.to.r, lastMove.to.c);
+            } else {
+                document.getElementById('trajectoryLayer').innerHTML = '';
+            }
+            updateTurnUI();
+        }
+
+        function replayPrev() { if (currentReplayStep > 0) applyReplayState(currentReplayStep - 1); }
+        function replayNext() { if (currentReplayStep < replayStates.length - 1) applyReplayState(currentReplayStep + 1); }
+
+        function exportArchive() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(replayStates));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Military_Chess_Archive_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
         }
 
         // ==================== P2P 信道交互网关 ====================
@@ -627,11 +644,10 @@
             document.getElementById('myIdDisplay').innerText = myRoomId;
             currentRoomTopic = `military/room/${myRoomId}`;
 
-            log("联机信道准备中...");
+            log("战局网络初始化就绪。");
             mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
 
             mqttClient.on('connect', () => {
-                log("已成功挂载云端中转总线。守候远程敌军对阵...");
                 mqttClient.subscribe(currentRoomTopic);
             });
 
@@ -646,63 +662,55 @@
 
         function connectToPeer() {
             const remoteId = document.getElementById('peerIdInput').value.trim();
-            if (!remoteId) return alert("请输入有效的阵地钥匙！");
-            if (remoteId === myRoomId) return alert("无法自连！");
-
-            log(`正在对接并切入对端战场: ${remoteId}...`);
+            if (!remoteId) return;
             mqttClient.unsubscribe(currentRoomTopic);
             currentRoomTopic = `military/room/${remoteId}`;
             mqttClient.subscribe(currentRoomTopic);
 
-            myRole = 'black'; // 后手默认为黑军
+            myRole = 'black';
             sendMqttMessage('join');
         }
 
         function sendMqttMessage(type, extra = {}) {
-            if (!mqttClient || !currentRoomTopic) return;
-            const msg = { type: type, senderId: myUniqueId, ...extra };
-            mqttClient.publish(currentRoomTopic, JSON.stringify(msg));
+            if (!mqttClient) return;
+            mqttClient.publish(currentRoomTopic, JSON.stringify({ type: type, senderId: myUniqueId, ...extra }));
         }
 
         function handleNetworkData(data) {
             if (data.type === 'join') {
-                myRole = 'red'; // 先手默认执红旗
+                myRole = 'red';
                 updateConnectionUI(true);
                 initBoard();
-                log("敌军已通过密钥长驱直入进入战场！你统帅红方。");
-                // 将本地打乱的棋子状态强制全量共享，建立绝对同步基准镜像
+                log("系统提示：敌军已切入战场，暗棋隐藏模式已启动。");
                 sendMqttMessage('sync_board', { initPieces: pieces });
             } else if (data.type === 'sync_board') {
                 pieces = data.initPieces;
                 updateConnectionUI(true);
+                replayStates = []; recordReplayState();
                 renderPieces();
-                log("战局对齐同步成功！你统帅黑方。黑子全面隐匿在密林雾网中。");
+                log("系统提示：成功接入战场，暗棋隐藏模式已启动。");
             } else if (data.type === 'move') {
                 const syncPiece = pieces.find(p => p.id === data.pieceId);
-                if (syncPiece) {
-                    executeMoveAction(syncPiece, data.toR, data.toC);
-                }
+                if (syncPiece) executeMoveAction(syncPiece, data.toR, data.toC);
             }
         }
 
         function updateTurnUI() {
             const turnBadge = document.getElementById('turnStatus');
-            if (!gameActive) { turnBadge.innerText = "战局已定"; turnBadge.className = "status-badge"; return; }
-            const name = currentTurn === 'red' ? '红方' : '黑方';
-            turnBadge.innerText = `当前轮动: ${name}`;
-            if (myRole !== null && currentTurn === myRole) {
-                turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (我方回合)";
-            } else { turnBadge.className = "status-badge"; }
+            if (!gameActive) { turnBadge.innerText = "战斗结束"; return; }
+            const name = currentTurn === 'red' ? '红方' : '黑方'; turnBadge.innerText = `当前回合: ${name}`;
+            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { 
+                turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (到你了)"; 
+            } else { 
+                turnBadge.className = "status-badge"; 
+            }
         }
 
         function updateConnectionUI(isConnected) {
-            const badge = document.getElementById('connectionStatus'); 
-            const rBadge = document.getElementById('roleStatus');
+            const badge = document.getElementById('connectionStatus'); const rBadge = document.getElementById('roleStatus');
             if (isConnected) {
-                badge.innerText = "网络暗棋对决"; badge.className = "status-badge connected";
+                badge.innerText = "网络暗棋对阵中"; badge.className = "status-badge connected";
                 rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'red' ? "红方主帅" : "黑方主帅";
-            } else {
-                badge.innerText = "单机推演"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
             }
             updateTurnUI();
         }
@@ -716,21 +724,26 @@
 
         function copyRoomKey() {
             const id = document.getElementById('myIdDisplay').innerText;
-            if(!id.includes("正在生成")) navigator.clipboard.writeText(id).then(() => log("战局密匙已安全复制至剪贴板。"));
+            if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("密钥已复制到剪贴板。"));
         }
 
         function log(text) {
             const logBox = document.getElementById('logBox');
-            logBox.innerHTML += `<br><span style="color:#57606f">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`;
+            logBox.innerHTML += `<br><span style="color:#555">[情报]</span> ${text}`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // 应用初始化引导
         renderSVGBoard();
         createDOMGrid();
-        initBoard();
-        initNetwork();
-        updateStatsUI();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'replay') {
+            initReplayMode();
+        } else {
+            initBoard();
+            initNetwork();
+            updateStatsUI();
+        }
     </script>
 </body>
 </html>

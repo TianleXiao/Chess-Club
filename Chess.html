@@ -203,11 +203,14 @@
 
             <div class="panel-section">
                 <span class="label-tiny">Establish Remote Sync Link</span>
-                <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="Enter opponent key...">
-                    <button class="btn" style="background: var(--accent);" onclick="connectToPeer('play')">Connect</button>
-                    <button class="btn btn-secondary" style="border-color: #f59e0b; color: #f59e0b;" onclick="connectToPeer('spectate')">Spectate</button>
-                </div>
+                <div class="input-group" style="flex-direction: column; gap: 8px;">
+    <input type="text" id="peerIdInput" placeholder="Enter opponent key..." style="width: 100%;">
+    
+    <div style="display: flex; gap: 8px;">
+        <button class="btn" style="background: var(--accent); flex: 1;" onclick="connectToPeer('play')">Connect / 加入</button>
+        <button class="btn btn-secondary" style="border-color: #f59e0b; color: #f59e0b; flex: 1;" onclick="connectToPeer('spectate')">Spectate / 观战</button>
+    </div>
+</div>
             </div>
 
             <div class="panel-section">

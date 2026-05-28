@@ -31,6 +31,7 @@
             padding: 60px 20px;
         }
 
+        /* Lobby Display Layout Interface */
         .lobby-container {
             max-width: 1200px;
             width: 100%;
@@ -39,7 +40,6 @@
         }
         .lobby-container.hidden {
             display: none;
-            opacity: 0;
         }
 
         header {
@@ -61,6 +61,7 @@
             text-transform: uppercase;
         }
 
+        /* 6-Grid Matrix Deployment Config */
         .matrix-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -71,6 +72,7 @@
         @media (max-width: 1024px) { .matrix-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 680px) { .matrix-grid { grid-template-columns: 1fr; } }
 
+        /* Mouse Spotlight Interactive Cards */
         .game-card {
             position: relative;
             background: var(--glass-bg);
@@ -124,7 +126,7 @@
         }
         .game-card:hover .card-action { gap: 8px; }
 
-        /* 全屏竞技场舞台 */
+        /* Fullscreen Sandbox Arena Implementation */
         .arena-container {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -181,25 +183,23 @@
             background: #000;
         }
 
-        /* 💡 核心设计改动：多维重叠隐藏机制 💡 */
+        /* 👑 核心修复：重构隐藏状态 CSS，确保物理宽高与坐标轴 100% 正确 👑 */
         .game-frame {
             position: absolute;
-            top: 0; left: 0; 
-            width: 100%; height: 100%;
+            top: 0; 
+            left: 0; /* 拒绝 -9999px，让游戏常驻正中心，确保 Canvas 初始化完美获取物理坐标 */
+            width: 100%; 
+            height: 100%;
             border: none;
-            background: #000;
-            /* 默认状态：完全重叠、不可见、不拦截鼠标，但保持 100% 的容器宽高 */
-            opacity: 0;
-            pointer-events: none;
+            opacity: 0; /* 默认完全透明 */
+            pointer-events: none; /* 隐藏时不拦截鼠标事件 */
             z-index: 1;
             transition: opacity 0.3s ease;
         }
-        
-        /* 激活状态：浮现到最上层并开启交互，绝无闪烁 */
         .game-frame.active {
-            opacity: 1;
-            pointer-events: auto;
-            z-index: 10;
+            opacity: 1; /* 浮现可见 */
+            pointer-events: auto; /* 开启正常交互 */
+            z-index: 10; /* 置于顶层 */
         }
     </style>
 </head>
@@ -276,47 +276,50 @@
         </div>
         <div class="frame-wrapper">
             <iframe id="frameInternationalChess" class="game-frame" data-src="Chess.html"></iframe>
-            <iframe id="frameChineseChess" class="game-frame" data-src="Chinese Chess.html"></iframe>
-            <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military Flag.html"></iframe>
-            <iframe id="frameNavalFlag" class="game-frame" data-src="Naval Flag.html"></iframe>
+            <iframe id="frameChineseChess" class="game-frame" data-src="Chinese chess.html"></iframe>
+            <iframe id="frameMilitaryFlag" class="game-frame" data-src="Military flag.html"></iframe>
+            <iframe id="frameNavalFlag" class="game-frame" data-src="Naval flag.html"></iframe>
             <iframe id="frameGo" class="game-frame" data-src="go.html"></iframe>
             <iframe id="frameGomoku" class="game-frame" data-src="gomoku.html"></iframe>
         </div>
     </div>
 
     <script>
-        // 聚光灯互动
+        // ==================== Dynamic Spotlight Tracking Mechanics ====================
         document.querySelectorAll('.game-card').forEach(card => {
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
-                card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
-                card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
             });
         });
 
-        // 数据注册表
+        // ==================== Optimized Post-Load Pipeline ====================
         const sourceRegistry = [
             { id: 'frameInternationalChess', src: 'Chess.html' },
-            { id: 'frameChineseChess', src: 'ChineseChess.html' },
-            { id: 'frameMilitaryFlag', src: 'MilitaryFlag.html' },
-            { id: 'frameNavalFlag', src: 'NavalFlag.html' },
+            { id: 'frameChineseChess', src: 'Chinese chess.html' },
+            { id: 'frameMilitaryFlag', src: 'Military flag.html' },
+            { id: 'frameNavalFlag', src: 'Naval flag.html' },
             { id: 'frameGo', src: 'go.html' },
             { id: 'frameGomoku', src: 'gomoku.html' }
         ];
 
-        // 💡 分时轻量化加载：每隔 250ms 加载一个游戏，避免由于一瞬间并行加载 6 个游戏导致浏览器卡顿
+        // 💡 分时轻量化阶梯预加载：每隔 250ms 静默拉起一个游戏，彻底消除并行的 CPU 堵塞卡顿
         window.addEventListener('load', () => {
-            sourceRegistry.forEach((target, index) => {
+            sourceRegistry.forEach((target, position) => {
                 setTimeout(() => {
                     const iframe = document.getElementById(target.id);
                     if (iframe && !iframe.src) {
                         iframe.src = target.src;
-                        console.log(`[OmniEngine] Channel active: ${target.id}`);
+                        console.log(`[OmniEngine] Background pipeline streamed: ${target.id}`);
                     }
-                }, 200 + index * 250); 
+                }, 400 + position * 250); 
             });
         });
 
+        // ==================== Instant Router Control Matrix ====================
         function enterArena(frameId, gameTitle) {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');
@@ -325,23 +328,21 @@
             titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
             lobby.classList.add('hidden');
 
-            // 隐藏其它游戏帧（将其降到低层级、透明）
+            // 隐藏所有其它游戏，使其不拦截鼠标、完全透明
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
-            
             const activeFrame = document.getElementById(frameId);
 
-            // 安全防护：如果分时加载还没轮到它，点击时立刻强制赋予 src 载入
+            // 保险机制：若分时加载未触及该项，点击时瞬间强制装载
             if (!activeFrame.src) {
                 const config = sourceRegistry.find(item => item.id === frameId);
                 if (config) activeFrame.src = config.src;
             }
 
-            // 完美的显示动画切换
             activeFrame.classList.add('active');
             arena.classList.add('active');
 
-            // 💡 动态唤醒事件：让常驻后台的游戏画布自适应最新的视口大小 💡
-            const syncCanvas = () => {
+            // 💡 核心唤醒锁：激活瞬间向子页面同步发送 resize 与重绘指令，保证 Canvas 画布零延迟满血复活 💡
+            const forceSynchronizeCanvas = () => {
                 try {
                     if (activeFrame.contentWindow) {
                         activeFrame.contentWindow.dispatchEvent(new Event('resize'));
@@ -350,13 +351,13 @@
                         }
                     }
                 } catch (err) {
-                    console.log("[OmniEngine] Rendering pipe adjusted.");
+                    console.log("[OmniEngine] Viewport matrix recalibrated.");
                 }
             };
 
-            // 在不同时间段轻微校准，保证渲染 100% 成功
-            syncCanvas();
-            setTimeout(syncCanvas, 60);
+            forceSynchronizeCanvas();
+            setTimeout(forceSynchronizeCanvas, 50);
+            setTimeout(forceSynchronizeCanvas, 150);
         }
 
         function exitArena() {
@@ -366,8 +367,7 @@
             arena.classList.remove('active');
             lobby.classList.remove('hidden');
             
-            // 注意：这里仅移除大厅的 active 视觉焦点，不清理 src。
-            // 完美保留所有棋局的落子进度、交互状态以及联机连接！
+            // 💡 注意：这里不清理 src，退出后保持后台状态，以便当你重新进入任何一款棋时，都能继续之前的残局完美对弈。
         }
     </script>
 </body>

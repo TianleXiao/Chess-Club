@@ -35,10 +35,15 @@
         .lobby-container {
             max-width: 1200px;
             width: 100%;
-            display: block;
+            transition: opacity 0.4s var(--ease-out-expo), transform 0.4s var(--ease-out-expo);
+            opacity: 1;
+            transform: scale(1);
         }
         .lobby-container.hidden {
-            display: none;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.99);
+            position: absolute;
         }
 
         header {
@@ -130,17 +135,15 @@
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: var(--bg-base);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            /* Fast crisp fade transition for absolute instant feeling */
+            transition: opacity 0.2s var(--ease-out-expo);
             display: flex;
             flex-direction: column;
-            /* CRITICAL: Keep frames alive in background layout loop with near-zero opacity.
-               Prevents browser optimization from freezing background Canvas elements. */
-            z-index: -1;
-            opacity: 0.001;
-            pointer-events: none;
         }
         .arena-container.active {
-            /* Snap to top layer instantly with 0ms transition delay */
-            z-index: 9999;
             opacity: 1;
             pointer-events: auto;
         }
@@ -184,17 +187,18 @@
             background: #000;
         }
 
+        /* CRITICAL: Replaced 'display: none' with opacity rules.
+           Allows iframes to fully render in background with correct layout boundaries,
+           ensuring Go and Gomoku canvases initialize instantly with precise non-zero sizes.
+        */
         .game-frame {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             border: none;
-            /* Layered visibility logic for active warm-standby frames */
-            z-index: 1;
-            opacity: 0.001;
+            opacity: 0;
             pointer-events: none;
         }
         .game-frame.active {
-            z-index: 10;
             opacity: 1;
             pointer-events: auto;
         }
@@ -294,47 +298,28 @@
             });
         });
 
-        // ==================== Instant Router Switch Matrix ====================
-        // Mounts and flashes pre-rendered dashboards instantly into active focus
+        // ==================== Instant Iframe Router Switch Control ====================
+        // Displays already pre-rendered frames instantly upon user click trigger
         function enterArena(frameId, gameTitle) {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');
             const titleDisplay = document.getElementById('arenaTitleDisplay');
 
-            // Sync navbar label stream
+            // Sync navigation title text stream
             titleDisplay.innerText = `Matrix Stream: ${gameTitle}`;
 
-            // Hide lobby context
+            // Trigger instant UI swap mechanics
             lobby.classList.add('hidden');
 
-            // Isolate active target and flash viewport layers seamlessly
+            // Isolate and toggle active classes instantly with zero reloading overhead
             document.querySelectorAll('.game-frame').forEach(f => f.classList.remove('active'));
-            const targetFrame = document.getElementById(frameId);
-            targetFrame.classList.add('active');
+            document.getElementById(frameId).classList.add('active');
 
-            // Elevate arena interface layer instantly
+            // Instantly mount full-screen arena layer without any setTimeout delay
             arena.classList.add('active');
-
-            // CRITICAL: Force immediate high-priority resize pipeline broadcast to awaken the canvas script
-            setTimeout(() => {
-                try {
-                    if (targetFrame.contentWindow) {
-                        // Dispatches standard resize event directly into the active iframe window scope
-                        targetFrame.contentWindow.dispatchEvent(new Event('resize'));
-                        
-                        // Fallback check for custom local redraw functions inside go or gomoku bundles
-                        if (typeof targetFrame.contentWindow.drawBoard === 'function') {
-                            targetFrame.contentWindow.drawBoard();
-                        }
-                    }
-                } catch (err) {
-                    // Safe catch block for native browser logging
-                    console.log("Canvas viewport synced natively.");
-                }
-            }, 0);
         }
 
-        // Dissolves arena view and pops back control panel hub grid
+        // Dissolves arena workspace and brings back primary grid dashboard selection layout
         function exitArena() {
             const lobby = document.getElementById('lobbyContainer');
             const arena = document.getElementById('arenaContainer');

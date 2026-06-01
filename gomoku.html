@@ -40,11 +40,10 @@
         .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
         .panel-section { background: #0f0f12; border: 1px solid var(--border); border-radius: 8px; padding: 14px; position: relative; }
         
-        /* Evaluation Bar Layout Container */
-        .eval-container { height: 6px; width: 100%; background: #22222a; border-radius: 3px; margin-top: 8px; display: flex; overflow: hidden; }
+        .eval-container { height: 4px; width: 100%; background: #22222a; border-radius: 2px; margin-top: 8px; display: flex; overflow: hidden; }
         .eval-bar-black { height: 100%; background: #111; width: 50%; transition: width 0.4s var(--ease); }
         .eval-bar-white { height: 100%; background: #fff; width: 50%; transition: width 0.4s var(--ease); }
-        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px; font-family: monospace; }
+        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
 
         .peer-id-display { font-family: monospace; font-size: 0.95rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
         .input-group { display: flex; gap: 8px; }
@@ -62,13 +61,6 @@
         .status-badge.local-mode { background: #1a233a; color: #70a1ff; }
 
         @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,77,77,0.3); } 100% { opacity: 0.8; } }
-
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-        .stat-card { background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
-        .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
-        .log-box { max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
-        .log-box::-webkit-scrollbar { width: 4px; }
-        .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
         /* Board Styling */
         .board-wrapper {
@@ -98,30 +90,16 @@
 
         .intersection.last-move::before { content: ""; position: absolute; width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; z-index: 15; }
         
-        /* Fixed AI Assist Purple Halo UI */
+        /* AI Assist UI */
         .intersection.assist-suggest::before {
-            content: ""; 
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            width: 44px; 
-            height: 44px;
-            border: 2px dashed #8a50ff; 
-            border-radius: 50%;
-            box-shadow: 0 0 12px rgba(138, 80, 255, 0.5);
-            z-index: 20;
-            pointer-events: none;
-            animation: assistGlow 2.5s linear infinite;
+            content: ""; position: absolute; width: 40px; height: 40px;
+            border: 2px dashed rgba(140, 80, 255, 0.8); border-radius: 50%;
+            animation: spin 6s linear infinite, pulse 1.5s infinite; z-index: 20;
         }
         
         @keyframes dropIn { from { transform: scale(1.5) translateY(-20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        
-        /* Unified animation matrix to handle rotation, scale, and positioning seamlessly */
-        @keyframes assistGlow {
-            0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.9); opacity: 0.6; }
-            50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.1); opacity: 1; box-shadow: 0 0 18px rgba(138, 80, 255, 0.8); }
-            100% { transform: translate(-50%, -50%) rotate(360deg) scale(0.9); opacity: 0.6; }
-        }
+        @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.5; } }
 
         .celebration-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -156,6 +134,13 @@
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <div class="switch-wrap" title="AI回合是否自动落子">
+                        <span style="font-size: 9px; color:#2a9d8f; font-weight: bold;">Auto Move</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoMoveToggle" onchange="toggleAutoMoveMode(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
             </h1>
             
@@ -165,18 +150,6 @@
                     <div class="stat-card" style="border-color: #52b788;"><span class="label-tiny">WIN</span><div class="stat-val" id="statWins" style="color: #52b788;">0</div></div>
                     <div class="stat-card" style="border-color: #ff4d4d;"><span class="label-tiny">LOSE</span><div class="stat-val" id="statLosses" style="color: #ff4d4d;">0</div></div>
                     <div class="stat-card"><span class="label-tiny">RATE</span><div class="stat-val" id="statRate">0%</div></div>
-                </div>
-            </div>
-
-            <div class="panel-section" id="aiEvalSection" style="display: none;">
-                <span class="label-tiny">AI Evaluation</span>
-                <div class="eval-container">
-                    <div id="evalBarBlack" class="eval-bar-black" style="width: 50%;"></div>
-                    <div id="evalBarWhite" class="eval-bar-white" style="width: 50%;"></div>
-                </div>
-                <div class="eval-labels">
-                    <span id="evalLabelBlack" style="color: #888999;">Black: 50%</span>
-                    <span id="evalLabelWhite" style="color: #ffffff;">White: 50%</span>
                 </div>
             </div>
 
@@ -225,8 +198,9 @@
         let moveHistory = [];
         let gameActive = true;
         
-        // AI engine variables
+        // AI core variables
         let assistModeActive = false;
+        let autoMoveActive = false; 
         let playAgainstAI = false; 
         let aiRole = 'white'; 
         let aiThinking = false;
@@ -312,15 +286,17 @@
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
             currentTurn = 'black'; lastMove = null; moveHistory = []; gameActive = true; aiThinking = false;
             renderStones(); updateTurnUI(); clearAssistHighlights();
-            updateEvaluationBar(null); // Reset real-time evaluation panel
-            if (playAgainstAI && currentTurn === aiRole) fetchAIOptimalMove();
+            if (playAgainstAI && currentTurn === aiRole) {
+                if (autoMoveActive) fetchAIOptimalMove();
+                else fetchAIHint();
+            }
             else if (assistModeActive) fetchAIHint();
         }
 
         function handleIntersectionClick(r, c) {
             if (!gameActive || aiThinking || boardState[r][c] !== null) return;
             if (myRole !== null && currentTurn !== myRole && !playAgainstAI) return;
-            if (playAgainstAI && currentTurn === aiRole) return;
+            if (playAgainstAI && currentTurn === aiRole && autoMoveActive) return;
             
             if (myRole !== null && !playAgainstAI) sendMqttMessage('move', { r, c });
             executeMoveSync(r, c);
@@ -341,7 +317,11 @@
 
             if (gameActive) {
                 if (playAgainstAI && currentTurn === aiRole) {
-                    fetchAIOptimalMove();
+                    if (autoMoveActive) {
+                        fetchAIOptimalMove();
+                    } else {
+                        fetchAIHint();
+                    }
                 } else if (assistModeActive) {
                     fetchAIHint();
                 } else {
@@ -350,7 +330,11 @@
             }
         }
 
-        // Generate history format needed for Piskvork engine
+        // =========================================================
+        //  Core logic for HTTP requests to Node.js server
+        // =========================================================
+        
+        // Generate history format required by Piskvork
         function generateAIHistory() {
             let history = [];
             for (let r = 0; r < BOARD_SIZE; r++) {
@@ -362,39 +346,7 @@
             return history;
         }
 
-        // Update real-time AI evaluation UI bar dynamically
-        function updateEvaluationBar(data) {
-            const evalSection = document.getElementById('aiEvalSection');
-            if (!assistModeActive && !playAgainstAI) {
-                evalSection.style.display = 'none';
-                return;
-            }
-            evalSection.style.display = 'block';
-            
-            let blackWinRate = 50;
-            if (data && data.score !== undefined) {
-                blackWinRate = Math.max(10, Math.min(90, 50 + data.score));
-            } else {
-                let blackCount = 0;
-                let whiteCount = 0;
-                for (let r = 0; r < BOARD_SIZE; r++) {
-                    for (let c = 0; c < BOARD_SIZE; c++) {
-                        if (boardState[r][c] === 'black') blackCount++;
-                        if (boardState[r][c] === 'white') whiteCount++;
-                    }
-                }
-                const diff = blackCount - whiteCount;
-                blackWinRate = Math.max(15, Math.min(85, 50 + diff * 4 + (Math.random() * 6 - 3)));
-            }
-            
-            const whiteWinRate = 100 - blackWinRate;
-            document.getElementById('evalBarBlack').style.width = `${blackWinRate}%`;
-            document.getElementById('evalBarWhite').style.width = `${whiteWinRate}%`;
-            document.getElementById('evalLabelBlack').innerText = `Black: ${Math.round(blackWinRate)}%`;
-            document.getElementById('evalLabelWhite').innerText = `White: ${Math.round(whiteWinRate)}%`;
-        }
-
-        // Active AI automated movement
+        // AI automatic move execution
         function fetchAIOptimalMove() {
             if (!gameActive) return;
             aiThinking = true;
@@ -410,7 +362,6 @@
             .then(data => {
                 aiThinking = false;
                 if (data && data.r !== undefined && data.c !== undefined) {
-                    updateEvaluationBar(data);
                     executeMoveSync(data.r, data.c);
                 }
             })
@@ -421,7 +372,7 @@
             });
         }
 
-        // Active AI visual hint mode
+        // AI assist hint (visual hint only)
         function fetchAIHint() {
             if (!gameActive || aiThinking) return;
             clearAssistHighlights();
@@ -434,22 +385,29 @@
             .then(res => res.json())
             .then(data => {
                 if (data && data.r !== undefined && gameActive) {
-                    updateEvaluationBar(data);
                     const cell = document.querySelector(`[data-row='${data.r}'][data-col='${data.c}']`);
                     if (cell) cell.classList.add('assist-suggest');
                 }
-            }).catch(() => {});
+            }).catch(() => {}); // Silent catch on failure
         }
 
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;
             document.getElementById('assistToggle').checked = assistModeActive;
             log(`[AI 引擎] 智能路线提示已${assistModeActive?'开启':'关闭'}。`);
-            if (assistModeActive && currentTurn) {
-                fetchAIHint();
-            } else {
-                clearAssistHighlights();
-                updateEvaluationBar(null);
+            if (assistModeActive && currentTurn) fetchAIHint();
+            else clearAssistHighlights();
+        }
+
+        function toggleAutoMoveMode(active) {
+            autoMoveActive = active;
+            log(`[AI 引擎] 自动落子功能已${autoMoveActive?'开启':'关闭'}。`);
+            if (gameActive && playAgainstAI && currentTurn === aiRole) {
+                if (autoMoveActive) {
+                    fetchAIOptimalMove();
+                } else {
+                    fetchAIHint();
+                }
             }
         }
 
@@ -466,6 +424,8 @@
             updateConnectionUI(false); initBoard();
             log("🤖 已连入本地 Node 算力池。人机对抗开启，你执黑先手！");
         }
+
+        // =========================================================
 
         function checkWinCondition(r, c, color) {
             const dirs = [{dr:0,dc:1}, {dr:1,dc:0}, {dr:1,dc:1}, {dr:1,dc:-1}];
@@ -546,7 +506,11 @@
             const prev = moveHistory.pop();
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             gameActive = true; renderStones(); updateTurnUI();
-            if (assistModeActive) fetchAIHint();
+            if (playAgainstAI && currentTurn === aiRole) {
+                if (autoMoveActive) fetchAIOptimalMove();
+                else fetchAIHint();
+            }
+            else if (assistModeActive) fetchAIHint();
         }
 
         function updateConnectionUI(isConnected) {

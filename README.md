@@ -1,6 +1,10 @@
 # Chess Club BDC
 
-**[English](README.md)** | **[中文](README.zh.md)** | **[日本語](README.ja.md)**
+<div align="center">
+
+**[English](README.md)** &nbsp;&nbsp;•&nbsp;&nbsp; **[中文](README.zh.md)** &nbsp;&nbsp;•&nbsp;&nbsp; **[日本語](README.ja.md)**
+
+</div>
 
 ---
 
@@ -26,29 +30,11 @@ A modern, high-performance online chess platform.
 
 ## Key Features
 
-- **Professional Chessboard**  
-  Smooth drag-and-drop movement, realistic piece animations, and high-quality visual feedback.
-
-- **Fully Responsive**  
-  Optimized for desktop, tablet, and mobile devices.
-
-- **Minimalist & Elegant Design**  
-  Focused on clarity — no distractions, just pure chess.
-
-- **Fast & Lightweight**  
-  Excellent performance with quick loading and fluid interactions.
-
-- **No Registration Required**  
-  Start playing instantly.
-
----
-
-## Technology Stack
-
-- Modern frontend framework
-- Responsive & accessible UI architecture
-- Optimized chess logic and state management
-- Progressive Web App (PWA) compatible
+- **Professional Chessboard** — Smooth drag-and-drop movement, realistic piece animations, and high-quality visual feedback.
+- **Fully Responsive** — Optimized for desktop, tablet, and mobile devices.
+- **Minimalist & Elegant Design** — Focused on clarity with no unnecessary distractions.
+- **Fast & Lightweight** — Excellent performance and fluid interactions.
+- **No Registration Required** — Start playing instantly.
 
 ---
 
@@ -71,10 +57,5 @@ A modern, high-performance online chess platform.
 
 ---
 
-## Author
-
-**Developed by BDC**
-
----
-
+**Developed by BDC**  
 **Precision. Clarity. Strategy.**

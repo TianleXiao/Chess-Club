@@ -1,4 +1,4 @@
-# Chess Club BDC
+# Chess Club 
 
 A modern, high-performance online chess platform.
 
@@ -69,7 +69,7 @@ A modern, high-performance online chess platform.
 
 ## Author
 
-**Developed by BDC**
+**Developed by Taylor Xiao**
 
 ---
 

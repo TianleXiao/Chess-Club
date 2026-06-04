@@ -1,10 +1,6 @@
 # Chess Club BDC
 
 A modern, high-performance online chess platform.
-
-![Chess Club BDC Banner](https://chess-club-bdc.pages.dev/og-image.jpg)  
-<!-- Replace with your actual banner/screenshot URL -->
-
 ---
 
 ## Overview
@@ -17,11 +13,10 @@ A modern, high-performance online chess platform.
 
 ## ✨ Screenshots
 
-| Main Interface | Gameplay View | Mobile Experience |
-|---------------|---------------|-------------------|
-| ![Main Screen](<img width="2554" height="1234" alt="image" src="https://github.com/user-attachments/assets/e8d28bdb-18b4-4df3-9cc9-5a0b9e2ca11c" />
-) | ![Gameplay](<img width="2552" height="1386" alt="image" src="https://github.com/user-attachments/assets/2c3551b9-efe6-4b88-9645-9e7a6664a15a" />
-) | ![Mobile View](https://via.placeholder.com/300x500/1a1a1a/ffffff?text=Mobile+View) |
+| Main Interface | Gameplay View | 
+|---------------|---------------|
+| ![Main Screen](<img width="2554" height="1234" alt="image" src="https://github.com/user-attachments/assets/e8d28bdb-18b4-4df3-9cc9-5a0b9e2ca11c" />) 
+| ![Gameplay](<img width="2552" height="1386" alt="image" src="https://github.com/user-attachments/assets/2c3551b9-efe6-4b88-9645-9e7a6664a15a" />) 
 
 *(Replace the placeholder images above with real screenshots from your website)*
 

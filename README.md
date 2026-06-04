@@ -19,7 +19,9 @@ A modern, high-performance online chess platform.
 
 | Main Interface | Gameplay View | Mobile Experience |
 |---------------|---------------|-------------------|
-| ![Main Screen](https://via.placeholder.com/600x400/1a1a1a/ffffff?text=Main+Interface) | ![Gameplay](https://via.placeholder.com/600x400/1a1a1a/ffffff?text=In-Game+Board) | ![Mobile View](https://via.placeholder.com/300x500/1a1a1a/ffffff?text=Mobile+View) |
+| ![Main Screen](<img width="2554" height="1234" alt="image" src="https://github.com/user-attachments/assets/e8d28bdb-18b4-4df3-9cc9-5a0b9e2ca11c" />
+) | ![Gameplay](<img width="2552" height="1386" alt="image" src="https://github.com/user-attachments/assets/2c3551b9-efe6-4b88-9645-9e7a6664a15a" />
+) | ![Mobile View](https://via.placeholder.com/300x500/1a1a1a/ffffff?text=Mobile+View) |
 
 *(Replace the placeholder images above with real screenshots from your website)*
 

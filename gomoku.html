@@ -462,35 +462,59 @@
 
         // ==================== Studio Pro Tools & API ====================
         // 修复后的 AI 请求：发送时间线序列，包含完整的错误捕获与日志输出
-        function fetchAIHint() {
-            if (!gameActive) return;
-            clearAssistHighlights();
-            
-            fetch('http://localhost:3000/api/analyze', {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ history: chronologicalMoves })
-            })
-            .then(res => {
-                if (!res.ok) throw new Error(`服务器响应异常, 状态码: ${res.status}`);
-                return res.json();
-            })
-            .then(data => {
-                if (data && data.r !== undefined && gameActive) {
-                    const cell = document.querySelector(`[data-row='${data.r}'][data-col='${data.c}']`);
-                    if (cell) {
-                        cell.classList.add('assist-suggest');
-                        log(`[AI 引擎] 推荐落子：行 ${data.r}，列 ${data.c}`);
-                    } else {
-                        log(`[AI 警告] 引擎返回了不存在的坐标: r=${data.r}, c=${data.c}`);
-                    }
-                }
-            })
-            .catch((err) => {
-                log(`<span style="color: #ff4d4d;">[AI 错误] ${err.message}</span>`);
-                console.error("AI Hint Error:", err);
-            });
+function fetchAIHint() {
+    if (!gameActive) return;
+    clearAssistHighlights();
+    
+    fetch('http://localhost:3000/api/analyze', {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ history: chronologicalMoves })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`服务器响应异常, 状态码: ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        console.log("📡 [调试] 引擎原始返回数据:", data);
+
+        // 1. 暴力兼容各种常见的坐标命名习惯 (r/c, x/y, row/col)
+        let row = data.r !== undefined ? data.r : (data.y !== undefined ? data.y : data.row);
+        let col = data.c !== undefined ? data.c : (data.x !== undefined ? data.x : data.col);
+        
+        // 如果数据包裹在 move 数组里 (例如 { move: [7, 7] })
+        if (row === undefined && data.move && Array.isArray(data.move)) {
+            row = data.move[0]; col = data.move[1];
         }
+
+        if (row !== undefined && col !== undefined && gameActive) {
+            // 2. 兼容从 1 开始的坐标系 (如果 AI 给出 1-15，自动减 1 变成 0-14)
+            if (row === 15 || col === 15) {
+                row = Math.max(0, row - 1);
+                col = Math.max(0, col - 1);
+            }
+
+            const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+            if (cell) {
+                cell.classList.add('assist-suggest');
+                log(`[AI 引擎] 推荐落子：行 ${row}，列 ${col}`);
+            } else {
+                log(`[AI 警告] 界面找不到格子: 换算后 r=${row}, c=${col}`);
+            }
+        } else {
+            // 如果还是解不开数据，直接在界面上把引擎的返回值暴露出来
+            log(`<span style="color:#ffb03a;">[AI 警告] 无法识别的数据格式: ${JSON.stringify(data)}</span>`);
+        }
+    })
+    .catch((err) => {
+        if (err.message.includes('Failed to fetch')) {
+            log(`<span style="color: #ff4d4d;">[AI 错误] 连接被拒绝。请检查引擎是否启动，或是否存在 CORS 跨域限制。</span>`);
+        } else {
+            log(`<span style="color: #ff4d4d;">[AI 错误] ${err.message}</span>`);
+        }
+        console.error("AI Hint Error:", err);
+    });
+}
 
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;

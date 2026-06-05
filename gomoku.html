@@ -95,16 +95,15 @@
 
         .intersection.last-move::before { content: ""; position: absolute; width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; z-index: 15; }
         
-        /* 修复后的 AI 提示紫圈动画 */
+        /* 修复：将 spin 和 pulse 合并为一个关键帧动画，彻底解决 transform 冲突问题 */
         .intersection.assist-suggest::before {
             content: ""; position: absolute; top: 50%; left: 50%;
             width: 40px; height: 40px;
             border: 2px dashed rgba(140, 80, 255, 0.8); border-radius: 50%;
-            animation: spinAndPulse 2.5s linear infinite; z-index: 20;
+            animation: spinAndPulse 2s linear infinite; z-index: 20;
         }
         
         @keyframes dropIn { from { transform: scale(1.5) translateY(-20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        /* 合并后的动画效果 */
         @keyframes spinAndPulse {
             0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.9); opacity: 0.5; }
             50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.1); opacity: 1; }
@@ -221,7 +220,7 @@
         let currentTurn = 'black'; 
         let lastMove = null;
         let moveHistory = [];
-        let chronologicalMoves = []; // 新增：记录真实落子时间线顺序
+        let chronologicalMoves = []; // 修复：新增一个数组，用来按真实的先后落子顺序追加数据
         let gameActive = true;
         let assistModeActive = false;
 
@@ -364,7 +363,7 @@
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
             currentTurn = 'black'; lastMove = null; moveHistory = []; 
-            chronologicalMoves = []; // 初始化时间线
+            chronologicalMoves = []; // 重置落子时间线
             gameActive = true; 
             renderStones(); updateTurnUI(); clearAssistHighlights();
             if (assistModeActive) fetchAIHint();
@@ -381,21 +380,20 @@
 
         function executeMoveSync(r, c) {
             moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
-            // 记录到时间线数组
+            
+            // 修复：每次落子，向时间线数组追加数据
             chronologicalMoves.push({ r, c, color: currentTurn === 'black' ? 1 : 2 });
             
             boardState[r][c] = currentTurn; lastMove = { r, c };
             
             renderStones(); playStoneSound();
 
-            // 1. Basic 5-in-a-row Win Check
             if (checkWinCondition(r, c, currentTurn)) {
                 triggerMatchEnd(currentTurn); return;
             }
 
-            // 2. Advanced "Must-Lose" (Inevitable Win) Judgment
             if (checkUnstoppableWin(r, c, currentTurn)) {
-                log(`[绝杀] 判定系统触发: ${currentTurn === 'black' ? '黑方' : '白方'} 形成了不可阻挡的必杀阵型（如活四、双四）。`);
+                log(`[绝杀] 判定系统触发: ${currentTurn === 'black' ? '黑方' : '白方'} 形成了不可阻挡的必杀阵型。`);
                 triggerMatchEnd(currentTurn, true); 
                 return;
             }
@@ -411,38 +409,28 @@
         function checkUnstoppableWin(r, c, color) {
             const dirs = [ {dr: 0, dc: 1}, {dr: 1, dc: 0}, {dr: 1, dc: 1}, {dr: 1, dc: -1} ];
             const getP = (row, col) => {
-                if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return 'W'; // Wall
+                if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return 'W';
                 if (boardState[row][col] === color) return 'X';
                 if (boardState[row][col] === null) return '.';
-                return 'O'; // Opponent
+                return 'O';
             };
 
-            let openFours = 0;
-            let halfOpenFours = 0;
-
+            let openFours = 0; let halfOpenFours = 0;
             for (let {dr, dc} of dirs) {
                 let line = "";
                 for (let i = -5; i <= 5; i++) { line += getP(r + i * dr, c + i * dc); }
-                
-                // Open 4 condition
-                if (line.includes(".XXXX.")) {
-                    openFours++;
-                } else {
-                    // Check for split or half-open lines that can form 5
+                if (line.includes(".XXXX.")) { openFours++; } else {
                     let winningSpots = 0;
                     for (let i = -4; i <= 4; i++) {
-                        let tr = r + i * dr, tc = c + i * dc;
-                        if (getP(tr, tc) === '.') {
+                        if (getP(r + i * dr, c + i * dc) === '.') {
                             let tempLine = line.substring(0, i+5) + 'X' + line.substring(i+6);
                             if (tempLine.includes("XXXXX")) winningSpots++;
                         }
                     }
-                    if (winningSpots >= 2) openFours++; // Forms two winning paths = Unblockable
+                    if (winningSpots >= 2) openFours++;
                     else if (winningSpots === 1) halfOpenFours++;
                 }
             }
-            
-            // If the player creates 1 Open Four, OR a Double Half-Open Four (Cross threat), the opponent must lose.
             if (openFours >= 1 || halfOpenFours >= 2) return true;
             return false;
         }
@@ -460,61 +448,64 @@
             return false;
         }
 
-        // ==================== Studio Pro Tools & API ====================
-        // 修复后的 AI 请求：发送时间线序列，包含完整的错误捕获与日志输出
-function fetchAIHint() {
-    if (!gameActive) return;
-    clearAssistHighlights();
-    
-    fetch('http://localhost:3000/api/analyze', {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ history: chronologicalMoves })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error(`服务器响应异常, 状态码: ${res.status}`);
-        return res.json();
-    })
-    .then(data => {
-        console.log("📡 [调试] 引擎原始返回数据:", data);
+        // ==================== 核心修复：AI 数据提取清洗机制 ====================
+        function fetchAIHint() {
+            if (!gameActive) return;
+            clearAssistHighlights();
+            
+            // 修复：传入严格按顺序排列的时间线数组 chronologicalMoves
+            fetch('http://localhost:3000/api/analyze', {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ history: chronologicalMoves })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`服务器响应异常, 状态码: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                console.log("📡 [调试] 引擎原始返回数据:", data);
 
-        // 1. 暴力兼容各种常见的坐标命名习惯 (r/c, x/y, row/col)
-        let row = data.r !== undefined ? data.r : (data.y !== undefined ? data.y : data.row);
-        let col = data.c !== undefined ? data.c : (data.x !== undefined ? data.x : data.col);
-        
-        // 如果数据包裹在 move 数组里 (例如 { move: [7, 7] })
-        if (row === undefined && data.move && Array.isArray(data.move)) {
-            row = data.move[0]; col = data.move[1];
-        }
+                let targetString = "";
+                if (data && typeof data.move === 'string') {
+                    targetString = data.move;
+                } else if (typeof data === 'string') {
+                    targetString = data;
+                } else {
+                    throw new Error("无法读取返回数据中的文本内容");
+                }
 
-        if (row !== undefined && col !== undefined && gameActive) {
-            // 2. 兼容从 1 开始的坐标系 (如果 AI 给出 1-15，自动减 1 变成 0-14)
-            if (row === 15 || col === 15) {
-                row = Math.max(0, row - 1);
-                col = Math.max(0, col - 1);
-            }
+                // 修复：使用正则表达式过滤提取。强行捕获整个长文本末尾可能出现的类似 "7,7" 或 "12,5" 的坐标数据
+                const match = targetString.match(/(\d+)\s*,\s*(\d+)\s*$/);
+                
+                if (match) {
+                    let row = parseInt(match[1], 10);
+                    let col = parseInt(match[2], 10);
 
-            const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
-            if (cell) {
-                cell.classList.add('assist-suggest');
-                log(`[AI 引擎] 推荐落子：行 ${row}，列 ${col}`);
-            } else {
-                log(`[AI 警告] 界面找不到格子: 换算后 r=${row}, c=${col}`);
-            }
-        } else {
-            // 如果还是解不开数据，直接在界面上把引擎的返回值暴露出来
-            log(`<span style="color:#ffb03a;">[AI 警告] 无法识别的数据格式: ${JSON.stringify(data)}</span>`);
+                    // 自动适配 1-15 或者是 0-14 坐标系（如果是以15为最大边界则减1）
+                    if (row === 15 || col === 15) {
+                        row = Math.max(0, row - 1);
+                        col = Math.max(0, col - 1);
+                    }
+
+                    if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE && gameActive) {
+                        const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+                        if (cell) {
+                            cell.classList.add('assist-suggest');
+                            log(`[AI 引擎] 智能提示：推荐落子 [行 ${row}, 列 ${col}]`);
+                        }
+                    } else {
+                        log(`[AI 警告] 解析出的坐标越界: r=${row}, c=${col}`);
+                    }
+                } else {
+                    log(`<span style="color:#ffb03a;">[AI 提示] 未能从混合日志中清洗出有效坐标数据。</span>`);
+                }
+            })
+            .catch((err) => {
+                log(`<span style="color: #ff4d4d;">[AI 错误] ${err.message}</span>`);
+                console.error("AI Hint Error:", err);
+            });
         }
-    })
-    .catch((err) => {
-        if (err.message.includes('Failed to fetch')) {
-            log(`<span style="color: #ff4d4d;">[AI 错误] 连接被拒绝。请检查引擎是否启动，或是否存在 CORS 跨域限制。</span>`);
-        } else {
-            log(`<span style="color: #ff4d4d;">[AI 错误] ${err.message}</span>`);
-        }
-        console.error("AI Hint Error:", err);
-    });
-}
 
         function toggleAssistMode(force) {
             assistModeActive = force !== undefined ? force : !assistModeActive;
@@ -610,7 +601,7 @@ function fetchAIHint() {
         function executeUndoLocal() {
             if (moveHistory.length === 0) return;
             const prev = moveHistory.pop();
-            chronologicalMoves.pop(); // 撤销时也同步弹出时间线
+            chronologicalMoves.pop(); // 同时撤销时间线中的最后一步
 
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             gameActive = true; renderStones(); updateTurnUI();
@@ -632,7 +623,6 @@ function fetchAIHint() {
         // ==================== Save & Load Mechanics ====================
         function saveGame() {
             if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
-            // 将 chronologicalMoves 一并保存进快照
             const savePacket = { 
                 boardState: boardState, currentTurn: currentTurn, 
                 lastMove: lastMove, moveHistory: moveHistory, 
@@ -665,8 +655,7 @@ function fetchAIHint() {
         function applySnapshotLocal(snapshot, targetRole) {
             boardState = snapshot.boardState; currentTurn = snapshot.currentTurn;
             lastMove = snapshot.lastMove; moveHistory = snapshot.moveHistory;
-            // 恢复时间线数组（兼容旧存档）
-            chronologicalMoves = snapshot.chronologicalMoves || []; 
+            chronologicalMoves = snapshot.chronologicalMoves || []; // 读取存档中的真实落子序列
 
             if (targetRole) { myRole = targetRole; updateConnectionUI(true); }
             renderStones(); updateTurnUI(); gameActive = true;

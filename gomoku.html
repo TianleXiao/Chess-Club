@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Gomoku - Masterpiece Pro (Node AI Edition)</title>
+    <title>P2P Gomoku - Masterpiece Pro (Archive Exchange Suite)</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -23,11 +23,10 @@
         body { background-color: var(--bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px 20px; }
         
         .container { display: flex; gap: 40px; max-width: 1100px; width: 100%; align-items: center; justify-content: center; }
-        .sidebar { flex: 0 0 340px; width: 340px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 14px; }
+        .sidebar { flex: 0 0 360px; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 14px; }
         
         h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Switch UI */
         .switches-header { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
         .switch-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 130px; }
         .switch { position: relative; display: inline-block; width: 30px; height: 16px; flex-shrink: 0; }
@@ -40,11 +39,6 @@
         .label-tiny { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
         .panel-section { background: #0f0f12; border: 1px solid var(--border); border-radius: 8px; padding: 14px; position: relative; }
         
-        .eval-container { height: 4px; width: 100%; background: #22222a; border-radius: 2px; margin-top: 8px; display: flex; overflow: hidden; }
-        .eval-bar-black { height: 100%; background: #111; width: 50%; transition: width 0.4s var(--ease); }
-        .eval-bar-white { height: 100%; background: #fff; width: 50%; transition: width 0.4s var(--ease); }
-        .eval-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
-
         .peer-id-display { font-family: monospace; font-size: 0.95rem; color: #fff; font-weight: bold; background: var(--surface-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--border); text-align: center; word-break: break-all; }
         .input-group { display: flex; gap: 8px; }
         input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; }
@@ -53,6 +47,8 @@
         .btn:hover { background: #e5e5e5; transform: translateY(-1px); color: #000; }
         .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
         .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
+        .btn-danger { background: #222; color: #ff4d4d; border: 1px solid #442222; }
+        .btn-danger:hover { background: #331111; border-color: #ff4d4d; }
 
         .status-area { display: flex; flex-wrap: wrap; gap: 6px; }
         .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #222; color: var(--text-dim); }
@@ -70,7 +66,6 @@
         .log-box::-webkit-scrollbar { width: 4px; }
         .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
-        /* Board Styling */
         .board-wrapper {
             position: relative; background: #e4d8b8; padding: 24px; border-radius: 8px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.15);
@@ -100,7 +95,6 @@
 
         .intersection.last-move::before { content: ""; position: absolute; width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; z-index: 15; }
         
-        /* AI Assist UI */
         .intersection.assist-suggest::before {
             content: ""; position: absolute; width: 40px; height: 40px;
             border: 2px dashed rgba(140, 80, 255, 0.8); border-radius: 50%;
@@ -137,7 +131,7 @@
             <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
             <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
                 <button class="btn btn-secondary" onclick="openReplay()">复盘查看局势</button>
-                <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active'); initBoard();">开启新局</button>
+                <button class="btn" onclick="startNextMatchManual()">开启新局 / 攻守交替</button>
             </div>
         </div>
     </div>
@@ -147,17 +141,10 @@
             <h1>
                 Gomoku Studio Pro
                 <div class="switches-header">
-                    <div class="switch-wrap" title="快捷键 Ctrl+W 开关 AI 助手">
+                    <div class="switch-wrap" title="快捷键 Ctrl+W 开关 AI 落子提示">
                         <span style="font-size: 9px; color:#8a50ff; font-weight: bold;">AI Assist</span>
                         <label class="switch">
                             <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="switch-wrap" title="AI回合是否自动落子">
-                        <span style="font-size: 9px; color:#2a9d8f; font-weight: bold;">Auto Move</span>
-                        <label class="switch">
-                            <input type="checkbox" id="autoMoveToggle" onchange="toggleAutoMoveMode(this.checked)">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -200,14 +187,20 @@
                     <div id="turnStatus" class="status-badge">Turn: Black</div>
                     <div id="roleStatus" class="status-badge" style="display:none;"></div>
                 </div>
-                <div class="log-box" id="logBox">系统已就绪。SVG Board rendering initialized.</div>
+                <div class="log-box" id="logBox">系统已就绪。专业战局引擎已载入。</div>
             </div>
             
-            <button class="btn" style="width: 100%; background: #2a9d8f; color:#fff;" id="aiBtn" onclick="startAIMatch()">⚔️ 启动专业AI对战 (执黑)</button>
-            <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">悔棋</button>
-                <button class="btn btn-secondary" style="flex: 1;" id="resetBtn" onclick="initBoard()">重新开始</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">求情悔棋</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="drawBtn" onclick="requestDraw()">提议言和</button>
             </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="btn btn-danger" style="flex: 1;" id="resignBtn" onclick="handleResign()">投子认输</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #8a50ff; color: #8a50ff;" id="saveBtn" onclick="saveGame()">导出存档</button>
+                <button class="btn btn-secondary" style="flex: 1; border-color: #52b788; color: #52b788;" id="loadBtn" onclick="document.getElementById('fileLoadInput').click()">导入存档</button>
+                <input type="file" id="fileLoadInput" accept=".gomoku" style="display:none;" onchange="handleFileSelect(event)">
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" id="resetBtn" onclick="initBoard()">强制掀翻重开</button>
         </div>
 
         <div class="board-wrapper" id="boardWrapper">
@@ -223,19 +216,14 @@
         let lastMove = null;
         let moveHistory = [];
         let gameActive = true;
-        
-        // AI core variables
         let assistModeActive = false;
-        let autoMoveActive = false; 
-        let playAgainstAI = false; 
-        let aiRole = 'white'; 
-        let aiThinking = false;
 
-        // Replay variables
+        // Replay Mode Integration
         let isReplayMode = false;
         let replayStates = [];
         let currentReplayStep = 0;
 
+        // Network Integration
         let mqttClient = null;
         let currentRoomTopic = '';
         const myUniqueId = 'UID_' + Math.random().toString(36).substr(2, 9);
@@ -276,7 +264,6 @@
             mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
             mqttClient.on('connect', () => { mqttClient.subscribe(currentRoomTopic); });
             mqttClient.on('message', (topic, message) => {
-                if(playAgainstAI) return;
                 try {
                     const data = JSON.parse(message.toString());
                     if (data.senderId !== myUniqueId) handleNetworkData(data);
@@ -285,7 +272,6 @@
         }
 
         function connectToPeer(mode = 'play') {
-            playAgainstAI = false;
             const remoteId = document.getElementById('peerIdInput').value.trim();
             if (!remoteId) return alert("请输入合法的棋室密钥！");
             if (remoteId === myRoomId) return alert("无法加入自己的棋局！");
@@ -295,17 +281,15 @@
             mqttClient.subscribe(currentRoomTopic);
             
             if (mode === 'spectate') {
-                myRole = 'spectator';
-                sendMqttMessage('spectator_join');
+                myRole = 'spectator'; sendMqttMessage('spectator_join');
                 log("正在作为【观众】切入房间...");
             } else {
-                myRole = 'white'; 
-                sendMqttMessage('join');
+                myRole = 'white'; sendMqttMessage('join');
             }
         }
 
         function sendMqttMessage(type, extraPayload = {}) {
-            if (playAgainstAI || !mqttClient || !currentRoomTopic) return;
+            if (!mqttClient || !currentRoomTopic) return;
             mqttClient.publish(currentRoomTopic, JSON.stringify({ type: type, senderId: myUniqueId, ...extraPayload }));
         }
 
@@ -315,25 +299,53 @@
             else if (data.type === 'spectator_join') {
                 log("👁️ 有新观众进入了观棋席。");
                 if (myRole === 'black' || myRole === 'white') {
-                    sendMqttMessage('sync_board_to_spectator', {
-                        boardState: boardState, currentTurn: currentTurn, lastMove: lastMove
-                    });
+                    sendMqttMessage('sync_board_to_spectator', { boardState: boardState, currentTurn: currentTurn, lastMove: lastMove });
                 }
             }
             else if (data.type === 'sync_board_to_spectator') {
                 if (myRole === 'spectator') {
                     boardState = data.boardState; currentTurn = data.currentTurn; lastMove = data.lastMove;
-                    updateConnectionUI(true); renderStones();
-                    log("⚡ 成功同步当前的战场实时局势！");
+                    updateConnectionUI(true); renderStones(); log("⚡ 成功同步当前的战场实时局势！");
                 }
             }
             else if (data.type === 'move') { executeMoveSync(data.r, data.c); } 
-            else if (data.type === 'reset') { resetBoardLocal(); log("对方重启了棋局。"); }
+            else if (data.type === 'reset') { resetBoardLocal(); log("对方重启了棋盘。"); }
             else if (data.type === 'undo_request') {
+                if (myRole === 'spectator') return;
                 if (confirm("对方请求悔棋，是否同意？")) { executeUndoLocal(); sendMqttMessage('undo_response', { accept: true }); } 
-                else { sendMqttMessage('undo_response', { accept: false }); }
+                else { sendMqttMessage('undo_response', { accept: false }); log("拒绝了对方的悔棋。"); }
             } 
-            else if (data.type === 'undo_response') { if (data.accept) { executeUndoLocal(); } }
+            else if (data.type === 'undo_response') { if (data.accept) { executeUndoLocal(); log("对方同意了你的悔棋。"); } else { alert("对方拒绝了悔棋申请！"); } }
+            else if (data.type === 'draw_request') {
+                if (myRole === 'spectator') return;
+                if (confirm("对方提议言和，接受吗？")) {
+                    currentTurn = null; updateTurnUI(); sendMqttMessage('draw_response', { accept: true }); showCelebration('draw'); log("握手言和。");
+                } else { sendMqttMessage('draw_response', { accept: false }); }
+            } 
+            else if (data.type === 'draw_response') {
+                if (data.accept) { currentTurn = null; updateTurnUI(); showCelebration('draw'); log("对方同意平局。"); } else { log("对方拒绝和棋。"); }
+            }
+            else if (data.type === 'resign_notice') {
+                log(`🎉 对方宣布投子认输！你在本场对抗中胜出。`);
+                triggerMatchEnd(data.loser === 'black' ? 'white' : 'black');
+            }
+            else if (data.type === 'load_request') {
+                if (myRole === 'spectator') return;
+                const snap = data.snapshot;
+                let myTargetRole = snap.savedAsRole === 'black' ? 'white' : 'black';
+                if (confirm(`📩 对方申请导入外部战局 (.gomoku)\n同意后您的阵营将被重置为 [${myTargetRole === 'black'?'黑方':'白方'}]。是否同意？`)) {
+                    applySnapshotLocal(snap, myTargetRole);
+                    sendMqttMessage('load_response', { accept: true, snapshot: snap });
+                } else {
+                    sendMqttMessage('load_response', { accept: false });
+                }
+            }
+            else if (data.type === 'load_response') {
+                if (data.accept) {
+                    applySnapshotLocal(data.snapshot, data.snapshot.savedAsRole); 
+                    log("🎉 对方已同意导入，战局已回溯。");
+                } else { alert("对方拒绝了读档申请！"); }
+            }
         }
 
         function initBoard() { 
@@ -344,23 +356,17 @@
 
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-            currentTurn = 'black'; lastMove = null; moveHistory = []; gameActive = true; aiThinking = false;
+            currentTurn = 'black'; lastMove = null; moveHistory = []; gameActive = true; 
             renderStones(); updateTurnUI(); clearAssistHighlights();
-            if (playAgainstAI && currentTurn === aiRole) {
-                if (autoMoveActive) fetchAIOptimalMove();
-                else fetchAIHint();
-            }
-            else if (assistModeActive) fetchAIHint();
+            if (assistModeActive) fetchAIHint();
         }
 
         function handleIntersectionClick(r, c) {
-            if (isReplayMode) return;
-            if (!gameActive || aiThinking || boardState[r][c] !== null) return;
+            if (isReplayMode || !gameActive || boardState[r][c] !== null) return;
             if (myRole === 'spectator') return;
-            if (myRole !== null && currentTurn !== myRole && !playAgainstAI) return;
-            if (playAgainstAI && currentTurn === aiRole && autoMoveActive) return;
+            if (myRole !== null && currentTurn !== myRole) return;
             
-            if (myRole !== null && !playAgainstAI) sendMqttMessage('move', { r, c });
+            if (myRole !== null) sendMqttMessage('move', { r, c });
             executeMoveSync(r, c);
         }
 
@@ -370,117 +376,63 @@
             
             renderStones(); playStoneSound();
 
+            // 1. Basic 5-in-a-row Win Check
             if (checkWinCondition(r, c, currentTurn)) {
                 triggerMatchEnd(currentTurn); return;
+            }
+
+            // 2. Advanced "Must-Lose" (Inevitable Win) Judgment
+            if (checkUnstoppableWin(r, c, currentTurn)) {
+                log(`[绝杀] 判定系统触发: ${currentTurn === 'black' ? '黑方' : '白方'} 形成了不可阻挡的必杀阵型（如活四、双四）。`);
+                triggerMatchEnd(currentTurn, true); 
+                return;
             }
 
             currentTurn = currentTurn === 'black' ? 'white' : 'black';
             updateTurnUI();
 
-            if (gameActive) {
-                if (playAgainstAI && currentTurn === aiRole) {
-                    if (autoMoveActive) {
-                        fetchAIOptimalMove();
-                    } else {
-                        fetchAIHint();
-                    }
-                } else if (assistModeActive) {
-                    fetchAIHint();
-                } else {
-                    clearAssistHighlights();
-                }
-            }
-        }
-
-        // Generate history format required by Piskvork
-        function generateAIHistory() {
-            let history = [];
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (boardState[r][c] === 'black') history.push({ r, c, color: 1 });
-                    if (boardState[r][c] === 'white') history.push({ r, c, color: 2 });
-                }
-            }
-            return history;
-        }
-
-        // AI automatic move execution
-        function fetchAIOptimalMove() {
-            if (!gameActive) return;
-            aiThinking = true;
-            updateTurnUI();
-            log("🧠 正在请求 Node.js 引擎算力...");
-
-            fetch('http://localhost:3000/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ history: generateAIHistory() })
-            })
-            .then(res => res.json())
-            .then(data => {
-                aiThinking = false;
-                if (data && data.r !== undefined && data.c !== undefined) {
-                    executeMoveSync(data.r, data.c);
-                }
-            })
-            .catch(err => {
-                aiThinking = false;
-                updateTurnUI();
-                log("❌ 后端引擎连接失败，请确保 server.js 已启动。");
-            });
-        }
-
-        // AI assist hint
-        function fetchAIHint() {
-            if (!gameActive || aiThinking) return;
-            clearAssistHighlights();
-            
-            fetch('http://localhost:3000/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ history: generateAIHistory() })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.r !== undefined && gameActive) {
-                    const cell = document.querySelector(`[data-row='${data.r}'][data-col='${data.c}']`);
-                    if (cell) cell.classList.add('assist-suggest');
-                }
-            }).catch(() => {});
-        }
-
-        function toggleAssistMode(force) {
-            assistModeActive = force !== undefined ? force : !assistModeActive;
-            document.getElementById('assistToggle').checked = assistModeActive;
-            log(`[AI 引擎] 智能路线提示已${assistModeActive?'开启':'关闭'}。`);
-            if (assistModeActive && currentTurn) fetchAIHint();
+            if (gameActive && assistModeActive) fetchAIHint();
             else clearAssistHighlights();
         }
 
-        function toggleAutoMoveMode(active) {
-            autoMoveActive = active;
-            log(`[AI 引擎] 自动落子功能已${autoMoveActive?'开启':'关闭'}。`);
-            if (gameActive && playAgainstAI && currentTurn === aiRole) {
-                if (autoMoveActive) {
-                    fetchAIOptimalMove();
+        // ==================== Threat Assessment Engine ====================
+        function checkUnstoppableWin(r, c, color) {
+            const dirs = [ {dr: 0, dc: 1}, {dr: 1, dc: 0}, {dr: 1, dc: 1}, {dr: 1, dc: -1} ];
+            const getP = (row, col) => {
+                if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return 'W'; // Wall
+                if (boardState[row][col] === color) return 'X';
+                if (boardState[row][col] === null) return '.';
+                return 'O'; // Opponent
+            };
+
+            let openFours = 0;
+            let halfOpenFours = 0;
+
+            for (let {dr, dc} of dirs) {
+                let line = "";
+                for (let i = -5; i <= 5; i++) { line += getP(r + i * dr, c + i * dc); }
+                
+                // Open 4 condition
+                if (line.includes(".XXXX.")) {
+                    openFours++;
                 } else {
-                    fetchAIHint();
+                    // Check for split or half-open lines that can form 5
+                    let winningSpots = 0;
+                    for (let i = -4; i <= 4; i++) {
+                        let tr = r + i * dr, tc = c + i * dc;
+                        if (getP(tr, tc) === '.') {
+                            let tempLine = line.substring(0, i+5) + 'X' + line.substring(i+6);
+                            if (tempLine.includes("XXXXX")) winningSpots++;
+                        }
+                    }
+                    if (winningSpots >= 2) openFours++; // Forms two winning paths = Unblockable
+                    else if (winningSpots === 1) halfOpenFours++;
                 }
             }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key.toLowerCase() === 'w') { e.preventDefault(); toggleAssistMode(); }
-        });
-
-        function clearAssistHighlights() {
-            document.querySelectorAll('.intersection').forEach(el => el.classList.remove('assist-suggest'));
-        }
-
-        function startAIMatch() {
-            playAgainstAI = true; myRole = 'black'; aiRole = 'white';
-            updateConnectionUI(false); initBoard();
-            log("🤖 已连入本地 Node 算力池。人机对抗开启，你执黑先手！");
+            
+            // If the player creates 1 Open Four, OR a Double Half-Open Four (Cross threat), the opponent must lose.
+            if (openFours >= 1 || halfOpenFours >= 2) return true;
+            return false;
         }
 
         function checkWinCondition(r, c, color) {
@@ -495,6 +447,45 @@
             }
             return false;
         }
+
+        // ==================== Studio Pro Tools & API ====================
+        function generateAIHistory() {
+            let history = [];
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (boardState[r][c] === 'black') history.push({ r, c, color: 1 });
+                    if (boardState[r][c] === 'white') history.push({ r, c, color: 2 });
+                }
+            }
+            return history;
+        }
+
+        function fetchAIHint() {
+            if (!gameActive) return;
+            clearAssistHighlights();
+            fetch('http://localhost:3000/api/analyze', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: generateAIHistory() })
+            }).then(res => res.json()).then(data => {
+                if (data && data.r !== undefined && gameActive) {
+                    const cell = document.querySelector(`[data-row='${data.r}'][data-col='${data.c}']`);
+                    if (cell) cell.classList.add('assist-suggest');
+                }
+            }).catch(() => {});
+        }
+
+        function toggleAssistMode(force) {
+            assistModeActive = force !== undefined ? force : !assistModeActive;
+            document.getElementById('assistToggle').checked = assistModeActive;
+            log(`[AI 引擎] 智能提示已${assistModeActive?'开启':'关闭'}。`);
+            if (assistModeActive && currentTurn) fetchAIHint();
+            else clearAssistHighlights();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'w') { e.preventDefault(); toggleAssistMode(); }
+        });
+
+        function clearAssistHighlights() { document.querySelectorAll('.intersection').forEach(el => el.classList.remove('assist-suggest')); }
 
         function renderStones() {
             for (let r = 0; r < BOARD_SIZE; r++) {
@@ -530,35 +521,46 @@
             } catch (e) {}
         }
 
-        function triggerMatchEnd(winner) {
-            gameActive = false; aiThinking = false;
-            document.getElementById('celebrationTitle').innerText = winner === 'black' ? "黑方胜" : "白方胜";
-            document.getElementById('celebrationOverlay').classList.add('active');
+        // ==================== Match Flow Controls ====================
+        function triggerMatchEnd(winner, isInevitable = false) {
+            gameActive = false; 
+            const titleEl = document.getElementById('celebrationTitle');
+            const subEl = document.getElementById('celebrationSubtitle');
             
-            if (myRole === null || myRole === 'spectator') {
-                confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
-            } else if (winner === myRole) {
-                confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
-                matchStats.wins++;
+            if (winner === 'draw') {
+                titleEl.innerText = "DRAW"; subEl.innerText = "双方提议言和，平局。";
             } else {
-                matchStats.losses++;
+                titleEl.innerText = winner === 'black' ? "黑方胜利" : "白方胜利";
+                if (isInevitable) subEl.innerText = "形成绝杀之势，胜局已定无力回天！";
+                else subEl.innerText = "精准落子，达成五连绝杀。";
+
+                if (myRole === null || myRole === 'spectator') { confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } }); } 
+                else if (winner === myRole) { confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } }); matchStats.wins++; } 
+                else { matchStats.losses++; }
             }
             
+            document.getElementById('celebrationOverlay').classList.add('active');
             localStorage.setItem('gomoku_p2p_stats', JSON.stringify(matchStats));
-            updateStatsUI();
+            updateStatsUI(); currentTurn = null; updateTurnUI();
+        }
+
+        function handleResign() {
+            if (!currentTurn) return alert("对局尚未开始或已经结束！");
+            if (!confirm("确定要投子认输吗？")) return;
+            let loserColor = (myRole !== null) ? myRole : currentTurn;
+            let winnerColor = loserColor === 'black' ? 'white' : 'black';
+            log(`🏳️ [认输] ${loserColor === 'black' ? '黑方' : '白方'} 宣布投子认输。`);
+            if (myRole !== null && myRole !== 'spectator') sendMqttMessage('resign_notice', { loser: myRole });
+            triggerMatchEnd(winnerColor);
         }
 
         function requestUndo() {
-            if (myRole === 'spectator') return;
-            if (aiThinking) return;
+            if (myRole === 'spectator' || !gameActive) return;
             if (moveHistory.length === 0) return alert("没有可以撤销的步骤。");
             
-            if (playAgainstAI) {
-                if (moveHistory.length >= 2) { executeUndoLocal(); executeUndoLocal(); } 
-                else { executeUndoLocal(); }
-            } else if (myRole !== null) {
+            if (myRole !== null) {
                 if (currentTurn === myRole) return alert("必须在对方回合期间才能申请悔棋！");
-                sendMqttMessage('undo_request');
+                sendMqttMessage('undo_request'); log("已向对方发送悔棋请求...");
             } else { executeUndoLocal(); }
         }
 
@@ -567,52 +569,83 @@
             const prev = moveHistory.pop();
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             gameActive = true; renderStones(); updateTurnUI();
-            if (playAgainstAI && currentTurn === aiRole) {
-                if (autoMoveActive) fetchAIOptimalMove();
-                else fetchAIHint();
-            }
-            else if (assistModeActive) fetchAIHint();
+            if (assistModeActive) fetchAIHint();
         }
 
+        function requestDraw() {
+            if (myRole === 'spectator' || !gameActive) return;
+            if (myRole !== null) { log("正在向对方发送和棋协议..."); sendMqttMessage('draw_request'); } 
+            else { log("单机演练：直接以平局闭幕。"); triggerMatchEnd('draw'); }
+        }
+
+        function startNextMatchManual() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            resetBoardLocal();
+            log("[战局重置] 战场初始化完毕，新对局已启动。");
+        }
+
+        // ==================== Save & Load Mechanics ====================
+        function saveGame() {
+            if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
+            const savePacket = { boardState: boardState, currentTurn: currentTurn, lastMove: lastMove, moveHistory: moveHistory, savedAsRole: myRole };
+            const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Gomoku_Studio_Archive_${new Date().toISOString().slice(0, 10)}.gomoku`; 
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            log("💾 [数据中心] 棋盘回溯文件已导出。");
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const snapshot = JSON.parse(e.target.result);
+                    if (myRole === null) { applySnapshotLocal(snapshot); log("📂 本地读档成功。"); } 
+                    else if (myRole !== 'spectator') {
+                        log("📡 正在向对方发出【导入读档】双向确认...");
+                        sendMqttMessage('load_request', { snapshot: snapshot });
+                    }
+                } catch (err) { alert("文件解析错误！"); }
+            };
+            reader.readAsText(file); event.target.value = ''; 
+        }
+
+        function applySnapshotLocal(snapshot, targetRole) {
+            boardState = snapshot.boardState; currentTurn = snapshot.currentTurn;
+            lastMove = snapshot.lastMove; moveHistory = snapshot.moveHistory;
+            if (targetRole) { myRole = targetRole; updateConnectionUI(true); }
+            renderStones(); updateTurnUI(); gameActive = true;
+            if (assistModeActive) fetchAIHint();
+        }
+
+        // ==================== UI Updates ====================
         function updateConnectionUI(isConnected) {
             const badge = document.getElementById('connectionStatus'); 
             const rBadge = document.getElementById('roleStatus');
-            const undoBtn = document.getElementById('undoBtn');
-            const resetBtn = document.getElementById('resetBtn');
-            const aiBtn = document.getElementById('aiBtn');
+            const btns = [document.getElementById('undoBtn'), document.getElementById('drawBtn'), document.getElementById('resignBtn'), document.getElementById('resetBtn')];
 
-            if (playAgainstAI) {
-                badge.innerText = "🤖 引擎对战"; badge.className = "status-badge local-mode";
-                rBadge.style.display = "inline-block"; rBadge.innerText = "你执黑子";
-            } else if (isConnected) {
+            if (isConnected) {
                 if (myRole === 'spectator') {
                     badge.innerText = "实时观棋"; badge.className = "status-badge spectator-mode";
                     rBadge.style.display = "inline-block"; rBadge.innerText = "旁观者";
-                    undoBtn.disabled = true; resetBtn.disabled = true; aiBtn.disabled = true;
-                    undoBtn.style.opacity = 0.4; resetBtn.style.opacity = 0.4; aiBtn.style.opacity = 0.4;
+                    btns.forEach(b => { b.disabled = true; b.style.opacity = 0.4; });
                 } else {
                     badge.innerText = "网络对战"; badge.className = "status-badge connected";
                     rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'black' ? "黑子(先手)" : "白子(后手)";
-                    undoBtn.disabled = false; resetBtn.disabled = false; aiBtn.disabled = false;
-                    undoBtn.style.opacity = 1; resetBtn.style.opacity = 1; aiBtn.style.opacity = 1;
+                    btns.forEach(b => { b.disabled = false; b.style.opacity = 1; });
                 }
             } else {
                 badge.innerText = "离线单机"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
-                undoBtn.disabled = false; resetBtn.disabled = false; aiBtn.disabled = false;
-                undoBtn.style.opacity = 1; resetBtn.style.opacity = 1; aiBtn.style.opacity = 1;
+                btns.forEach(b => { b.disabled = false; b.style.opacity = 1; });
             }
             updateTurnUI();
         }
 
         function updateTurnUI() {
             const turnBadge = document.getElementById('turnStatus'); 
-            if (!gameActive) { turnBadge.innerText = "对局结束"; return; }
-            
-            if (playAgainstAI && currentTurn === aiRole && aiThinking) {
-                turnBadge.innerText = "引擎深度计算中...";
-                turnBadge.className = "status-badge local-mode";
-                return;
-            }
+            if (!gameActive && !currentTurn) { turnBadge.innerText = "对局结束"; turnBadge.className = "status-badge"; return; }
             const name = currentTurn === 'black' ? '黑方' : '白方'; 
             turnBadge.innerText = `当前回合: ${name}`;
             if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { 
@@ -627,7 +660,7 @@
             document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
         }
 
-        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); log("钥匙复制成功，快发给好友吧！"); }
+        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); log("钥匙复制成功！"); }
         function log(text) { 
             const logBox = document.getElementById('logBox'); 
             logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; 
@@ -636,54 +669,33 @@
 
         // ==================== Zoom Level Logic ====================
         let boardZoomLevel = 1;
-
-        document.getElementById('zoomSlider')?.addEventListener('input', (e) => {
-            boardZoomLevel = parseFloat(e.target.value);
-            updateBoardZoom();
-        });
-
+        document.getElementById('zoomSlider')?.addEventListener('input', (e) => { boardZoomLevel = parseFloat(e.target.value); updateBoardZoom(); });
         document.querySelector('.board-wrapper')?.addEventListener('wheel', (e) => {
             if (e.ctrlKey || e.metaKey) {
-                e.preventDefault(); 
-                const delta = e.deltaY > 0 ? -0.05 : 0.05;
+                e.preventDefault(); const delta = e.deltaY > 0 ? -0.05 : 0.05;
                 boardZoomLevel = Math.max(0.5, Math.min(1.8, boardZoomLevel + delta));
-                const slider = document.getElementById('zoomSlider');
-                if (slider) slider.value = boardZoomLevel;
+                const slider = document.getElementById('zoomSlider'); if (slider) slider.value = boardZoomLevel;
                 updateBoardZoom();
             }
         }, { passive: false });
-
-        function updateBoardZoom() {
-            const boardContainer = document.querySelector('.board-wrapper');
-            if (boardContainer) boardContainer.style.scale = boardZoomLevel;
-        }
+        function updateBoardZoom() { const boardContainer = document.querySelector('.board-wrapper'); if (boardContainer) boardContainer.style.scale = boardZoomLevel; }
 
         // ==================== Replay Mode Logic ====================
         function openReplay() {
             document.getElementById('celebrationOverlay').classList.remove('active');
-            
-            const states = [...moveHistory, { 
-                board: JSON.parse(JSON.stringify(boardState)), 
-                turn: currentTurn, 
-                lastMove: lastMove ? JSON.parse(JSON.stringify(lastMove)) : null 
-            }];
+            const states = [...moveHistory, { board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? JSON.parse(JSON.stringify(lastMove)) : null }];
             localStorage.setItem('gomoku_replay_data', JSON.stringify(states));
-            
             window.open(window.location.href.split('?')[0] + '?mode=replay', '_blank');
         }
 
         function initReplayMode() {
             isReplayMode = true;
             document.querySelector('h1').innerHTML = 'Replay Room <div class="status-badge spectator-mode">Replay Mode</div>';
-            
             const panels = document.querySelectorAll('.panel-section');
-            if (panels.length >= 4) {
-                panels[3].style.display = 'none'; // Your Room Key
-                panels[4].style.display = 'none'; // Join Room
-            }
-
-            document.getElementById('aiBtn').style.display = 'none';
+            if (panels.length >= 5) { panels[3].style.display = 'none'; panels[4].style.display = 'none'; }
             document.getElementById('undoBtn').parentElement.style.display = 'none';
+            document.getElementById('resignBtn').parentElement.style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
 
             const replayUI = document.createElement('div');
             replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
@@ -696,58 +708,26 @@
             try {
                 replayStates = JSON.parse(localStorage.getItem('gomoku_replay_data')) || [];
                 if (replayStates.length === 0) throw new Error("No data");
-            } catch (e) {
-                alert("Replay data not found!");
-                return;
-            }
+            } catch (e) { alert("Replay data not found!"); return; }
 
-            currentReplayStep = replayStates.length - 1;
-            applyReplayState(currentReplayStep);
-            
-            log("📺 Entered Replay Mode. Use buttons below to navigate history.");
-            const connStatus = document.getElementById('connectionStatus');
-            connStatus.innerText = "Replay Mode";
-            connStatus.className = "status-badge spectator-mode";
+            currentReplayStep = replayStates.length - 1; applyReplayState(currentReplayStep);
+            log("📺 已进入复盘模式。");
+            const connStatus = document.getElementById('connectionStatus'); connStatus.innerText = "Replay Mode"; connStatus.className = "status-badge spectator-mode";
         }
 
         function applyReplayState(index) {
             if (index < 0 || index >= replayStates.length) return;
-            const state = replayStates[index];
-            boardState = state.board;
-            currentTurn = state.turn;
-            lastMove = state.lastMove;
-            
-            renderStones();
-            updateTurnUI();
-            log(`[Replay] Step: ${index} / ${replayStates.length - 1}`);
+            const state = replayStates[index]; boardState = state.board; currentTurn = state.turn; lastMove = state.lastMove;
+            renderStones(); updateTurnUI(); log(`[Replay] 步骤: ${index} / ${replayStates.length - 1}`);
         }
-
-        function replayPrev() {
-            if (currentReplayStep > 0) {
-                currentReplayStep--;
-                applyReplayState(currentReplayStep);
-            }
-        }
-
-        function replayNext() {
-            if (currentReplayStep < replayStates.length - 1) {
-                currentReplayStep++;
-                applyReplayState(currentReplayStep);
-            }
-        }
+        function replayPrev() { if (currentReplayStep > 0) applyReplayState(--currentReplayStep); }
+        function replayNext() { if (currentReplayStep < replayStates.length - 1) applyReplayState(++currentReplayStep); }
 
         // ==================== Initialization ====================
-        renderSVGBoard(); 
-        createDOMGrid(); 
-        
+        renderSVGBoard(); createDOMGrid(); 
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('mode') === 'replay') {
-            initReplayMode();
-        } else {
-            resetBoardLocal(); 
-            initNetwork(); 
-            updateStatsUI();
-        }
+        if (urlParams.get('mode') === 'replay') { initReplayMode(); } 
+        else { resetBoardLocal(); initNetwork(); updateStatsUI(); }
     </script>
 </body>
 </html>

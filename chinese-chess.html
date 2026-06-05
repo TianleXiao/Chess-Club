@@ -188,6 +188,15 @@
             <h1>
                 Chess Studio Pro
                 <div class="switches-header">
+                    <div class="sidebar">
+
+            <div class="panel-section">
+                <span class="label-tiny">Board Scale</span>
+                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: #8a50ff; cursor: pointer;">
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Network Connection</span>
                     <div class="switch-wrap" title="快捷键 Ctrl+W 开关 AI 助手">
                         <span style="font-size: 9px; color:#8a50ff; font-weight: bold;">AI Assist</span>
                         <label class="switch">
@@ -249,11 +258,6 @@
                     <div id="roleStatus" class="status-badge" style="display:none;"></div>
                 </div>
                 <div class="log-box" id="logBox">SVG Board rendering initialized. Smart AI engine connected.</div>
-            </div>
-
-            <div class="panel-section">
-                <span class="label-tiny">Board Scale</span>
-                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: #8a50ff; cursor: pointer;">
             </div>
             
             <div style="display: flex; gap: 8px;">

@@ -168,17 +168,17 @@
                     <!-- AI Assist Switch from Source 1 -->
                     <div class="switch-wrap" title="Shortcut: Ctrl+W to toggle AI Assist">
                         <span style="font-size: 9px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">AI Assist</span>
-                        <div class="panel-section">
-                <span class="label-tiny">Board Scale</span>
-                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: var(--accent); cursor: pointer;">
-            </div>
-                            <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
+                      <input type="checkbox" id="assistToggle" onchange="toggleAssistMode(this.checked)">
                             <span class="slider"></span>
                         </label>
                     </div>
                 </div>
             </h1>
-            
+                    <div class="panel-section">
+                <span class="label-tiny">Board Scale</span>
+                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: var(--accent); cursor: pointer;">
+            </div>
+                      
             <div class="panel-section">
                 <span class="label-tiny">Match Performance History</span>
                 <div class="stats-grid">

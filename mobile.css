@@ -1,19 +1,22 @@
-/* mobile.css - 移动端 & 侧边栏滚动优化 */
+/* mobile.css - 仅添加横向滚动条优化 */
 
 :root {
     --cell-size: clamp(42px, 9.8vw, 68px) !important;
     --board-pad: clamp(8px, 2vw, 16px) !important;
 }
 
-/* 侧边栏全局滚动支持 */
+/* 侧边栏横向滚动支持（内容超宽时出现横向滚动条） */
 .sidebar {
     max-height: 100vh !important;
-    overflow-y: auto !important;
+    overflow-x: auto !important;     /* 横向滚动 */
+    overflow-y: auto !important;     /* 保留纵向，防止内容溢出 */
     scrollbar-width: thin;
     scrollbar-color: #1e2338 var(--surface);
 }
 
+/* Webkit 浏览器横向滚动条美化 */
 .sidebar::-webkit-scrollbar {
+    height: 6px;                     /* 横向滚动条高度 */
     width: 6px;
 }
 .sidebar::-webkit-scrollbar-thumb {
@@ -24,23 +27,13 @@
     background: transparent;
 }
 
-/* 移动端布局优化 */
+/* 移动端必要布局（避免横向滚动条被挤压） */
 @media (max-width: 950px) {
-    body {
-        padding: 12px 8px !important;
-        min-height: 100dvh !important;
-    }
-    
-    .container {
-        flex-direction: column-reverse !important;
-        gap: 16px !important;
-    }
-    
     .sidebar {
         width: 100% !important;
         max-width: 100% !important;
         flex: none !important;
-        max-height: 55vh !important;   /* 留空间给棋盘 */
+        max-height: 55vh !important;
         padding: 20px 16px !important;
     }
     
@@ -49,25 +42,12 @@
         padding: var(--board-pad) !important;
     }
     
-    .btn, .btn-secondary, .btn-danger {
-        padding: 14px 20px !important;
-        min-height: 52px !important;
-    }
-    
-    .piece {
-        font-size: clamp(1.75rem, 5.2vw, 2.4rem) !important;
-    }
-    
-    .log-box {
-        max-height: 160px !important;
+    .container {
+        flex-direction: column-reverse !important;
     }
 }
 
-/* 触摸优化 */
-.chess-board, .cell {
-    touch-action: manipulation !important;
-}
-
-.piece {
+/* 基础触摸优化（防止横向滚动被干扰） */
+.chess-board {
     touch-action: none !important;
 }

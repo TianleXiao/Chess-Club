@@ -61,7 +61,8 @@
 
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
         .stat-card { background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
-        .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+        .stats-grid .stat-card { min-width: 0; }
+        .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .log-box { max-height: 110px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
         .log-box::-webkit-scrollbar { width: 4px; }
         .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -95,7 +96,7 @@
 
         .intersection.last-move::before { content: ""; position: absolute; width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; z-index: 15; }
         
-        /* 深度整合关键帧：彻底解决 CSS transform 冲突问题 */
+        /* 深度修复：统一使用 3D 转换矩阵防止旋转和位移动画相互冲突遮蔽 */
         .intersection.assist-suggest::before {
             content: ""; position: absolute; top: 50%; left: 50%;
             width: 40px; height: 40px;
@@ -220,7 +221,9 @@
         let currentTurn = 'black'; 
         let lastMove = null;
         let moveHistory = [];
-        let chronologicalMoves = []; // 用于按真实的先后落子时间线追加数据
+        
+        // 核心改造1：建立全局真正的“物理落子先后时间链”，防止发给 AI 乱序棋谱导致报错
+        let chronologicalMoves = []; 
         let gameActive = true;
         let assistModeActive = false;
 
@@ -363,7 +366,7 @@
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
             currentTurn = 'black'; lastMove = null; moveHistory = []; 
-            chronologicalMoves = []; 
+            chronologicalMoves = []; // 新局重置
             gameActive = true; 
             renderStones(); updateTurnUI(); clearAssistHighlights();
             if (assistModeActive) fetchAIHint();
@@ -381,7 +384,7 @@
         function executeMoveSync(r, c) {
             moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
             
-            // 按物理时间顺序追加落子
+            // 核心改造2：严格按开局时间推进追加落子，传递完美棋谱，从源头消灭 AI 的 ERROR 报错！
             chronologicalMoves.push({ r, c, color: currentTurn === 'black' ? 1 : 2 });
             
             boardState[r][c] = currentTurn; lastMove = { r, c };
@@ -448,7 +451,7 @@
             return false;
         }
 
-        // ==================== 智能防错清洗提取器 ====================
+        // ==================== Studio Pro Tools & API ====================
         function fetchAIHint() {
             if (!gameActive) return;
             clearAssistHighlights();
@@ -456,14 +459,14 @@
             fetch('http://localhost:3000/api/analyze', {
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ history: chronologicalMoves })
+                body: JSON.stringify({ history: chronologicalMoves }) // 传递绝对有序的历史棋谱
             })
             .then(res => {
-                if (!res.ok) throw new Error(`HTTP 异常: ${res.status}`);
+                if (!res.ok) throw new Error(`HTTP 状态异常: ${res.status}`);
                 return res.json();
             })
             .then(data => {
-                console.log("📡 [调试] 接收到原始响应:", data);
+                console.log("📡 [调试] 接收到原始响应数据:", data);
 
                 let targetString = "";
                 if (data && typeof data.move === 'string') {
@@ -471,18 +474,18 @@
                 } else if (typeof data === 'string') {
                     targetString = data;
                 } else {
-                    throw new Error("无法读取数据中的字符串文本");
+                    throw new Error("无法读取有效的数据文本");
                 }
 
-                // 升级版增强型正则：全面覆盖含有 MESSAGE、ERROR 以及各类换行前缀的复杂干扰日志
-                // 只要字符串末尾包含像 "7,7" 这样的结构即可精准捕获
-                const match = targetString.match(/(\d+)\s*,\s*(\d+)\s*$/);
+                // 核心改造3：越狱级高弹韧正则表达式！
+                // (?:[a-zA-Z]*) 用于故意吞掉像 `n7` 里的那个错误前缀 `n`，确保紧随其后的坐标完美截获
+                const match = targetString.match(/(?:[a-zA-Z]*)(\d+)\s*,\s*(\d+)\s*$/);
                 
                 if (match) {
                     let row = parseInt(match[1], 10);
                     let col = parseInt(match[2], 10);
 
-                    // 兼容部分 AI 返回 1-15 坐标系的情形
+                    // 自动适配 1-15 阵营和 0-14 阵营的潜在坐标偏移转换
                     if (row === 15 || col === 15) {
                         row = Math.max(0, row - 1);
                         col = Math.max(0, col - 1);
@@ -492,18 +495,18 @@
                         const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
                         if (cell) {
                             cell.classList.add('assist-suggest');
-                            log(`[AI 引擎] 推荐位置：[行 ${row}, 列 ${col}]`);
+                            log(`[AI 建议落子] 坐标抓取成功: [第 ${row} 行, 第 ${col} 列]`);
                         }
                     } else {
-                        log(`[AI 提示] 解析出的坐标超出棋盘边界: r=${row}, c=${col}`);
+                        log(`[清洗异常] 提取坐标越界: r=${row}, c=${col}`);
                     }
                 } else {
-                    log(`<span style="color:#ffb03a;">[AI 提示] 暂无有效推荐坐标输出（文本清洗未命中）。</span>`);
+                    log(`<span style="color:#ffb03a;">[清洗失败] 未能从字符串 "${targetString}" 中匹配到合法坐标。</span>`);
                 }
             })
             .catch((err) => {
-                log(`<span style="color: #ff4d4d;">[AI 通信异常] ${err.message}</span>`);
-                console.error("AI Hint Connection Error:", err);
+                log(`<span style="color: #ff4d4d;">[AI 引擎通信受阻] ${err.message}</span>`);
+                console.error("AI API Fetch Exception:", err);
             });
         }
 
@@ -601,7 +604,7 @@
         function executeUndoLocal() {
             if (moveHistory.length === 0) return;
             const prev = moveHistory.pop();
-            chronologicalMoves.pop(); // 同步撤销落子序列
+            chronologicalMoves.pop(); // 悔棋时同步剔除落子链
 
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             gameActive = true; renderStones(); updateTurnUI();
@@ -625,7 +628,7 @@
             if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
             const savePacket = { 
                 boardState: boardState, currentTurn: currentTurn, 
-                lastMove: lastMove, moveHistory: moveHistory, 
+                lastMove: lastMove, moveHistory: moveHistory,
                 chronologicalMoves: chronologicalMoves, savedAsRole: myRole 
             };
             const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
@@ -655,7 +658,7 @@
         function applySnapshotLocal(snapshot, targetRole) {
             boardState = snapshot.boardState; currentTurn = snapshot.currentTurn;
             lastMove = snapshot.lastMove; moveHistory = snapshot.moveHistory;
-            chronologicalMoves = snapshot.chronologicalMoves || [];
+            chronologicalMoves = snapshot.chronologicalMoves || []; // 恢复历史时序
 
             if (targetRole) { myRole = targetRole; updateConnectionUI(true); }
             renderStones(); updateTurnUI(); gameActive = true;

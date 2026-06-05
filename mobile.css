@@ -1,53 +1,61 @@
-/* mobile.css - 仅添加横向滚动条优化 */
+/* mobile.css - Horizontal scrollbar and layout optimization */
 
 :root {
-    --cell-size: clamp(42px, 9.8vw, 68px) !important;
-    --board-pad: clamp(8px, 2vw, 16px) !important;
+    --cell-size: clamp(42px, 9.8vw, 68px);
+    --board-pad: clamp(8px, 2vw, 16px);
 }
 
-/* 侧边栏横向滚动支持（内容超宽时出现横向滚动条） */
+/* Sidebar horizontal scroll support */
 .sidebar {
-    max-height: 100vh !important;
-    overflow-x: auto !important;     /* 横向滚动 */
-    overflow-y: auto !important;     /* 保留纵向，防止内容溢出 */
+    max-height: 100vh;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: auto; /* Enable vertical scrolling */
     scrollbar-width: thin;
     scrollbar-color: #1e2338 var(--surface);
+    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling for iOS */
 }
 
-/* Webkit 浏览器横向滚动条美化 */
+/* Webkit browser scrollbar styling */
 .sidebar::-webkit-scrollbar {
-    height: 6px;                     /* 横向滚动条高度 */
-    width: 6px;
+    height: 6px; /* Height for horizontal scrollbar */
+    width: 6px;  /* Width for vertical scrollbar */
 }
+
 .sidebar::-webkit-scrollbar-thumb {
     background: #1e2338;
     border-radius: 3px;
 }
+
 .sidebar::-webkit-scrollbar-track {
     background: transparent;
 }
 
-/* 移动端必要布局（避免横向滚动条被挤压） */
+/* Mobile responsive layout */
 @media (max-width: 950px) {
+    .container {
+        flex-direction: column-reverse;
+    }
+
     .sidebar {
-        width: 100% !important;
-        max-width: 100% !important;
-        flex: none !important;
-        max-height: 55vh !important;
-        padding: 20px 16px !important;
+        width: 100%;
+        max-width: 100%;
+        flex: none;
+        max-height: 55vh;
+        padding: 20px 16px;
+        box-sizing: border-box; /* Ensures padding doesn't cause unexpected overflow */
     }
     
     .board-wrapper {
-        width: 100% !important;
-        padding: var(--board-pad) !important;
-    }
-    
-    .container {
-        flex-direction: column-reverse !important;
+        width: 100%;
+        padding: var(--board-pad);
+        box-sizing: border-box;
     }
 }
 
-/* 基础触摸优化（防止横向滚动被干扰） */
+/* Touch optimization for chess board */
 .chess-board {
-    touch-action: none !important;
+    /* 'pinch-zoom' prevents default panning/gestures on the board (good for drag-and-drop piece movement), 
+       but still allows the user to pinch to zoom. 
+    */
+    touch-action: pinch-zoom; 
 }

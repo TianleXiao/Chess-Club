@@ -877,31 +877,7 @@
             document.getElementById('undoBtn').parentElement.style.display = 'none';
             document.getElementById('resignBtn').parentElement.style.display = 'none';
             document.getElementById('resetBtn').style.display = 'none';
-let boardZoomLevel = 1;
 
-// Listen for slider input changes
-document.getElementById('zoomSlider')?.addEventListener('input', (e) => {
-    boardZoomLevel = parseFloat(e.target.value);
-    updateBoardZoom();
-});
-
-// Support Ctrl + Mouse Wheel for quick zooming directly on the board
-document.querySelector('.board-wrapper')?.addEventListener('wheel', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-        e.preventDefault(); 
-        const delta = e.deltaY > 0 ? -0.05 : 0.05;
-        boardZoomLevel = Math.max(0.5, Math.min(1.8, boardZoomLevel + delta));
-        const slider = document.getElementById('zoomSlider');
-        if (slider) slider.value = boardZoomLevel;
-        updateBoardZoom();
-    }
-}, { passive: false });
-
-// Apply the CSS scale property (independent of CSS transform rotation)
-function updateBoardZoom() {
-    const boardContainer = document.querySelector('.board-wrapper');
-    if (boardContainer) boardContainer.style.scale = boardZoomLevel;
-}
             const replayUI = document.createElement('div');
             replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
             replayUI.innerHTML = `
@@ -938,7 +914,31 @@ function updateBoardZoom() {
 
         function replayPrev() { if (currentReplayStep > 0) { currentReplayStep--; applyReplayState(currentReplayStep); } }
         function replayNext() { if (currentReplayStep < replayStates.length - 1) { currentReplayStep++; applyReplayState(currentReplayStep); } }
+        let boardZoomLevel = 1;
 
+        // Listen for slider input changes
+        document.getElementById('zoomSlider')?.addEventListener('input', (e) => {
+            boardZoomLevel = parseFloat(e.target.value);
+            updateBoardZoom();
+        });
+
+        // Support Ctrl + Mouse Wheel for quick zooming directly on the board
+        document.querySelector('.board-wrapper')?.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault(); 
+                const delta = e.deltaY > 0 ? -0.05 : 0.05;
+                boardZoomLevel = Math.max(0.5, Math.min(1.8, boardZoomLevel + delta));
+                const slider = document.getElementById('zoomSlider');
+                if (slider) slider.value = boardZoomLevel;
+                updateBoardZoom();
+            }
+        }, { passive: false });
+
+        // Apply the CSS scale property (independent of CSS transform rotation)
+        function updateBoardZoom() {
+            const boardContainer = document.querySelector('.board-wrapper');
+            if (boardContainer) boardContainer.style.scale = boardZoomLevel;
+        }
         // ==================== Initialization ====================
         createDOMGrid(); 
         

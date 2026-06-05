@@ -188,12 +188,6 @@
             <h1>
                 Chess Studio Pro
                 <div class="switches-header">
-                    <div class="sidebar">
-      
-            <div class="panel-section">
-         
-            <div class="panel-section">
-                <span class="label-tiny">Network Connection</span>
                     <div class="switch-wrap" title="快捷键 Ctrl+W 开关 AI 助手">
                         <span style="font-size: 9px; color:#8a50ff; font-weight: bold;">AI Assist</span>
                         <label class="switch">
@@ -210,7 +204,9 @@
                     </div>
                 </div>
             </h1>
-            
+               <span class="label-tiny">Board Scale</span>
+                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: #8a50ff; cursor: pointer;">
+            </div>
             <div class="panel-section">
                 <span class="label-tiny">Match Stats</span>
                 <div class="stats-grid">
@@ -219,9 +215,7 @@
                     <div class="stat-card"><span class="label-tiny">RATE</span><div class="stat-val" id="statRate">0%</div></div>
                 </div>
             </div>
-   <span class="label-tiny">Board Scale</span>
-                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: #8a50ff; cursor: pointer;">
-            </div>
+
             <div class="panel-section">
                 <span class="label-tiny">Real-time Evaluation</span>
                 <div class="eval-labels">

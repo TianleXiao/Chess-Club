@@ -74,6 +74,8 @@
             border-radius: 8px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.15);
             border: 4px solid #bba374;
+            transform-origin: center center; 
+            transition: transform 0.3s var(--ease), scale 0.15s var(--ease);
         }
 
         .svg-layer { position: absolute; top: var(--board-pad); left: var(--board-pad); pointer-events: none; z-index: 1; }
@@ -247,6 +249,11 @@
                     <div id="roleStatus" class="status-badge" style="display:none;"></div>
                 </div>
                 <div class="log-box" id="logBox">SVG Board rendering initialized. Smart AI engine connected.</div>
+            </div>
+
+            <div class="panel-section">
+                <span class="label-tiny">Board Scale</span>
+                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: #8a50ff; cursor: pointer;">
             </div>
             
             <div style="display: flex; gap: 8px;">
@@ -1208,7 +1215,31 @@
 
         function copyRoomKey() { const id = document.getElementById('myIdDisplay').innerText; if(!id.includes("Generating")) navigator.clipboard.writeText(id).then(() => log("钥匙复制成功，快发给好友吧！")); }
         function log(text) { const logBox = document.getElementById('logBox'); logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; logBox.scrollTop = logBox.scrollHeight; }
+        let boardZoomLevel = 1;
 
+// Listen for slider input changes
+document.getElementById('zoomSlider')?.addEventListener('input', (e) => {
+    boardZoomLevel = parseFloat(e.target.value);
+    updateBoardZoom();
+});
+
+// Support Ctrl + Mouse Wheel for quick zooming directly on the board
+document.querySelector('.board-wrapper')?.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+        e.preventDefault(); 
+        const delta = e.deltaY > 0 ? -0.05 : 0.05;
+        boardZoomLevel = Math.max(0.5, Math.min(1.8, boardZoomLevel + delta));
+        const slider = document.getElementById('zoomSlider');
+        if (slider) slider.value = boardZoomLevel;
+        updateBoardZoom();
+    }
+}, { passive: false });
+
+// Apply the CSS scale property (independent of CSS transform rotation)
+function updateBoardZoom() {
+    const boardContainer = document.querySelector('.board-wrapper');
+    if (boardContainer) boardContainer.style.scale = boardZoomLevel;
+}
         function requestUndo() {
             if (myRole === 'spectator') return;
             if (!currentTurn) return alert("对局已结束！");

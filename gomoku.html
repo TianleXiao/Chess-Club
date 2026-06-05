@@ -95,15 +95,21 @@
 
         .intersection.last-move::before { content: ""; position: absolute; width: 8px; height: 8px; background: #ff4d4d; border-radius: 50%; z-index: 15; }
         
+        /* 修复后的 AI 提示紫圈动画 */
         .intersection.assist-suggest::before {
-            content: ""; position: absolute; width: 40px; height: 40px;
+            content: ""; position: absolute; top: 50%; left: 50%;
+            width: 40px; height: 40px;
             border: 2px dashed rgba(140, 80, 255, 0.8); border-radius: 50%;
-            animation: spin 6s linear infinite, pulse 1.5s infinite; z-index: 20;
+            animation: spinAndPulse 2.5s linear infinite; z-index: 20;
         }
         
         @keyframes dropIn { from { transform: scale(1.5) translateY(-20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
-        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.5; } }
+        /* 合并后的动画效果 */
+        @keyframes spinAndPulse {
+            0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.9); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) rotate(360deg) scale(0.9); opacity: 0.5; }
+        }
 
         .celebration-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -215,6 +221,7 @@
         let currentTurn = 'black'; 
         let lastMove = null;
         let moveHistory = [];
+        let chronologicalMoves = []; // 新增：记录真实落子时间线顺序
         let gameActive = true;
         let assistModeActive = false;
 
@@ -356,7 +363,9 @@
 
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-            currentTurn = 'black'; lastMove = null; moveHistory = []; gameActive = true; 
+            currentTurn = 'black'; lastMove = null; moveHistory = []; 
+            chronologicalMoves = []; // 初始化时间线
+            gameActive = true; 
             renderStones(); updateTurnUI(); clearAssistHighlights();
             if (assistModeActive) fetchAIHint();
         }
@@ -372,6 +381,9 @@
 
         function executeMoveSync(r, c) {
             moveHistory.push({ board: JSON.parse(JSON.stringify(boardState)), turn: currentTurn, lastMove: lastMove ? { ...lastMove } : null });
+            // 记录到时间线数组
+            chronologicalMoves.push({ r, c, color: currentTurn === 'black' ? 1 : 2 });
+            
             boardState[r][c] = currentTurn; lastMove = { r, c };
             
             renderStones(); playStoneSound();
@@ -449,28 +461,35 @@
         }
 
         // ==================== Studio Pro Tools & API ====================
-        function generateAIHistory() {
-            let history = [];
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (boardState[r][c] === 'black') history.push({ r, c, color: 1 });
-                    if (boardState[r][c] === 'white') history.push({ r, c, color: 2 });
-                }
-            }
-            return history;
-        }
-
+        // 修复后的 AI 请求：发送时间线序列，包含完整的错误捕获与日志输出
         function fetchAIHint() {
             if (!gameActive) return;
             clearAssistHighlights();
+            
             fetch('http://localhost:3000/api/analyze', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: generateAIHistory() })
-            }).then(res => res.json()).then(data => {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ history: chronologicalMoves })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`服务器响应异常, 状态码: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
                 if (data && data.r !== undefined && gameActive) {
                     const cell = document.querySelector(`[data-row='${data.r}'][data-col='${data.c}']`);
-                    if (cell) cell.classList.add('assist-suggest');
+                    if (cell) {
+                        cell.classList.add('assist-suggest');
+                        log(`[AI 引擎] 推荐落子：行 ${data.r}，列 ${data.c}`);
+                    } else {
+                        log(`[AI 警告] 引擎返回了不存在的坐标: r=${data.r}, c=${data.c}`);
+                    }
                 }
-            }).catch(() => {});
+            })
+            .catch((err) => {
+                log(`<span style="color: #ff4d4d;">[AI 错误] ${err.message}</span>`);
+                console.error("AI Hint Error:", err);
+            });
         }
 
         function toggleAssistMode(force) {
@@ -567,6 +586,8 @@
         function executeUndoLocal() {
             if (moveHistory.length === 0) return;
             const prev = moveHistory.pop();
+            chronologicalMoves.pop(); // 撤销时也同步弹出时间线
+
             boardState = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove;
             gameActive = true; renderStones(); updateTurnUI();
             if (assistModeActive) fetchAIHint();
@@ -587,7 +608,12 @@
         // ==================== Save & Load Mechanics ====================
         function saveGame() {
             if (!currentTurn) return alert("当前没有正在进行的对局可以保存！");
-            const savePacket = { boardState: boardState, currentTurn: currentTurn, lastMove: lastMove, moveHistory: moveHistory, savedAsRole: myRole };
+            // 将 chronologicalMoves 一并保存进快照
+            const savePacket = { 
+                boardState: boardState, currentTurn: currentTurn, 
+                lastMove: lastMove, moveHistory: moveHistory, 
+                chronologicalMoves: chronologicalMoves, savedAsRole: myRole 
+            };
             const blob = new Blob([JSON.stringify(savePacket, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -615,6 +641,9 @@
         function applySnapshotLocal(snapshot, targetRole) {
             boardState = snapshot.boardState; currentTurn = snapshot.currentTurn;
             lastMove = snapshot.lastMove; moveHistory = snapshot.moveHistory;
+            // 恢复时间线数组（兼容旧存档）
+            chronologicalMoves = snapshot.chronologicalMoves || []; 
+
             if (targetRole) { myRole = targetRole; updateConnectionUI(true); }
             renderStones(); updateTurnUI(); gameActive = true;
             if (assistModeActive) fetchAIHint();

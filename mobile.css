@@ -1,61 +1,44 @@
-/* mobile.css - Horizontal scrollbar and layout optimization */
+/* mobile.css - Updated for responsive scaling and pinch-to-zoom support */
 
 :root {
-    --cell-size: clamp(42px, 9.8vw, 68px);
-    --board-pad: clamp(8px, 2vw, 16px);
+    /* Responsive sizing utilizing clamp to protect layout breaking */
+    --cell-size: clamp(42px, 9.8vw, 68px) !important;
+    --board-pad: clamp(8px, 2vw, 16px) !important;
 }
 
-/* Sidebar horizontal scroll support */
+/* Sidebar layout adjustments - Scroll bars removed to prioritize zoom and scaling */
 .sidebar {
-    max-height: 100vh;
-    overflow-x: auto; /* Enable horizontal scrolling */
-    overflow-y: auto; /* Enable vertical scrolling */
-    scrollbar-width: thin;
-    scrollbar-color: #1e2338 var(--surface);
-    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling for iOS */
+    max-height: 100vh !important;
+    overflow-x: visible !important; /* Allow content to scale/overflow naturally for zooming */
+    overflow-y: auto !important;    /* Retain vertical scrolling for settings/history */
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Webkit browser scrollbar styling */
-.sidebar::-webkit-scrollbar {
-    height: 6px; /* Height for horizontal scrollbar */
-    width: 6px;  /* Width for vertical scrollbar */
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-    background: #1e2338;
-    border-radius: 3px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-/* Mobile responsive layout */
+/* Mobile viewport adjustments for layout container switching */
 @media (max-width: 950px) {
     .container {
-        flex-direction: column-reverse;
+        flex-direction: column-reverse !important;
     }
 
     .sidebar {
-        width: 100%;
-        max-width: 100%;
-        flex: none;
-        max-height: 55vh;
-        padding: 20px 16px;
-        box-sizing: border-box; /* Ensures padding doesn't cause unexpected overflow */
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+        max-height: 55vh !important;
+        padding: 20px 16px !important;
+        box-sizing: border-box !important;
     }
     
     .board-wrapper {
-        width: 100%;
-        padding: var(--board-pad);
-        box-sizing: border-box;
+        width: 100% !important;
+        padding: var(--board-pad) !important;
+        box-sizing: border-box !important;
     }
 }
 
-/* Touch optimization for chess board */
+/* Touch and Zoom optimization for the chess board */
 .chess-board {
-    /* 'pinch-zoom' prevents default panning/gestures on the board (good for drag-and-drop piece movement), 
-       but still allows the user to pinch to zoom. 
-    */
-    touch-action: pinch-zoom; 
+    /* 'pinch-zoom' enables native browser multi-finger zooming and panning behavior 
+       while preventing single-finger default scrolling gestures from disrupting piece dragging */
+    touch-action: pinch-zoom !important; 
 }

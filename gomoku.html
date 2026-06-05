@@ -50,7 +50,7 @@
         input[type="text"] { flex: 1; background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; }
         
         .btn { background: var(--text-main); color: var(--bg); border: none; padding: 10px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
-        .btn:hover { background: #e5e5e5; transform: translateY(-1px); }
+        .btn:hover { background: #e5e5e5; transform: translateY(-1px); color: #000; }
         .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
         .btn-secondary:hover { color: #fff; border-color: #888; background: rgba(255,255,255,0.02); }
 
@@ -59,14 +59,24 @@
         .status-badge.connected { background: #1b4332; color: #52b788; }
         .status-badge.your-turn { background: #431b1b; color: #ff4d4d; animation: turnPulse 2s infinite; }
         .status-badge.local-mode { background: #1a233a; color: #70a1ff; }
+        .status-badge.spectator-mode { background: #3a2a1a; color: #ffb03a; }
 
         @keyframes turnPulse { 0% { opacity: 0.8; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(255,77,77,0.3); } 100% { opacity: 0.8; } }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        .stat-card { background: var(--surface-sub); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
+        .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+        .log-box { max-height: 110px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; border-top: 1px solid #222; padding-top: 6px; }
+        .log-box::-webkit-scrollbar { width: 4px; }
+        .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
         /* Board Styling */
         .board-wrapper {
             position: relative; background: #e4d8b8; padding: 24px; border-radius: 8px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.15);
             border: 4px solid #bba374;
+            transform-origin: center center;
+            transition: transform 0.3s var(--ease), scale 0.15s var(--ease);
         }
 
         .svg-layer { position: absolute; top: 24px; left: 24px; pointer-events: none; z-index: 1; }
@@ -110,6 +120,13 @@
         .celebration-overlay.active { opacity: 1; pointer-events: auto; }
         .celebration-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 64px; text-align: center; }
         .celebration-title { font-size: 3.2rem; font-weight: 200; margin-bottom: 12px; color: #fff; }
+        .celebration-subtitle { font-size: 1.1rem; color: var(--text-dim); margin-bottom: 32px; font-weight: 300; }
+
+        @media (max-width: 950px) {
+            body { padding: 20px 10px; }
+            .container { flex-direction: column-reverse; gap: 20px; }
+            .sidebar { width: calc(476px + 48px); max-width: 100%; flex: none; }
+        }
     </style>
 </head>
 <body>
@@ -117,15 +134,18 @@
     <div id="celebrationOverlay" class="celebration-overlay">
         <div class="celebration-card">
             <div id="celebrationTitle" class="celebration-title">VICTORY</div>
-            <div id="celebrationSubtitle" style="color: var(--text-dim); margin-bottom: 24px;">Match completed beautifully.</div>
-            <button class="btn btn-secondary" onclick="document.getElementById('celebrationOverlay').classList.remove('active'); initBoard();">开启新局</button>
+            <div id="celebrationSubtitle" class="celebration-subtitle">Match completed beautifully.</div>
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="openReplay()">复盘查看局势</button>
+                <button class="btn" onclick="document.getElementById('celebrationOverlay').classList.remove('active'); initBoard();">开启新局</button>
+            </div>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
             <h1>
-                Gomoku Studio
+                Gomoku Studio Pro
                 <div class="switches-header">
                     <div class="switch-wrap" title="快捷键 Ctrl+W 开关 AI 助手">
                         <span style="font-size: 9px; color:#8a50ff; font-weight: bold;">AI Assist</span>
@@ -143,6 +163,11 @@
                     </div>
                 </div>
             </h1>
+
+            <div class="panel-section">
+                <span class="label-tiny">Board Scale</span>
+                <input type="range" id="zoomSlider" min="0.5" max="1.8" step="0.05" value="1" style="width: 100%; accent-color: #8a50ff; cursor: pointer;">
+            </div>
             
             <div class="panel-section">
                 <span class="label-tiny">Match Stats</span>
@@ -163,7 +188,8 @@
                 <span class="label-tiny">Join Room</span>
                 <div class="input-group">
                     <input type="text" id="peerIdInput" placeholder="Paste opponent key...">
-                    <button class="btn" style="padding: 10px 10px;" onclick="connectToPeer()">对战</button>
+                    <button class="btn" style="padding: 10px 10px;" onclick="connectToPeer('play')">对战</button>
+                    <button class="btn btn-secondary" style="padding: 10px 10px; border-color: #ffb03a; color: #ffb03a;" onclick="connectToPeer('spectate')">观棋</button>
                 </div>
             </div>
 
@@ -174,13 +200,13 @@
                     <div id="turnStatus" class="status-badge">Turn: Black</div>
                     <div id="roleStatus" class="status-badge" style="display:none;"></div>
                 </div>
-                <div class="log-box" id="logBox">系统已就绪。</div>
+                <div class="log-box" id="logBox">系统已就绪。SVG Board rendering initialized.</div>
             </div>
             
-            <button class="btn" style="width: 100%; background: #2a9d8f; color:#fff;" onclick="startAIMatch()">⚔️ 启动专业AI对战 (执黑)</button>
+            <button class="btn" style="width: 100%; background: #2a9d8f; color:#fff;" id="aiBtn" onclick="startAIMatch()">⚔️ 启动专业AI对战 (执黑)</button>
             <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button class="btn btn-secondary" style="flex: 1;" onclick="requestUndo()">悔棋</button>
-                <button class="btn btn-secondary" style="flex: 1;" onclick="initBoard()">重新开始</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="undoBtn" onclick="requestUndo()">悔棋</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="resetBtn" onclick="initBoard()">重新开始</button>
             </div>
         </div>
 
@@ -204,6 +230,11 @@
         let playAgainstAI = false; 
         let aiRole = 'white'; 
         let aiThinking = false;
+
+        // Replay variables
+        let isReplayMode = false;
+        let replayStates = [];
+        let currentReplayStep = 0;
 
         let mqttClient = null;
         let currentRoomTopic = '';
@@ -253,14 +284,24 @@
             });
         }
 
-        function connectToPeer() {
+        function connectToPeer(mode = 'play') {
             playAgainstAI = false;
             const remoteId = document.getElementById('peerIdInput').value.trim();
             if (!remoteId) return alert("请输入合法的棋室密钥！");
+            if (remoteId === myRoomId) return alert("无法加入自己的棋局！");
+            
             mqttClient.unsubscribe(currentRoomTopic);
             currentRoomTopic = `gomoku/room/${remoteId}`;
             mqttClient.subscribe(currentRoomTopic);
-            myRole = 'white'; sendMqttMessage('join');
+            
+            if (mode === 'spectate') {
+                myRole = 'spectator';
+                sendMqttMessage('spectator_join');
+                log("正在作为【观众】切入房间...");
+            } else {
+                myRole = 'white'; 
+                sendMqttMessage('join');
+            }
         }
 
         function sendMqttMessage(type, extraPayload = {}) {
@@ -271,6 +312,21 @@
         function handleNetworkData(data) {
             if (data.type === 'join') { myRole = 'black'; updateConnectionUI(true); initBoard(); sendMqttMessage('join_ack'); } 
             else if (data.type === 'join_ack') { myRole = 'white'; updateConnectionUI(true); initBoard(); } 
+            else if (data.type === 'spectator_join') {
+                log("👁️ 有新观众进入了观棋席。");
+                if (myRole === 'black' || myRole === 'white') {
+                    sendMqttMessage('sync_board_to_spectator', {
+                        boardState: boardState, currentTurn: currentTurn, lastMove: lastMove
+                    });
+                }
+            }
+            else if (data.type === 'sync_board_to_spectator') {
+                if (myRole === 'spectator') {
+                    boardState = data.boardState; currentTurn = data.currentTurn; lastMove = data.lastMove;
+                    updateConnectionUI(true); renderStones();
+                    log("⚡ 成功同步当前的战场实时局势！");
+                }
+            }
             else if (data.type === 'move') { executeMoveSync(data.r, data.c); } 
             else if (data.type === 'reset') { resetBoardLocal(); log("对方重启了棋局。"); }
             else if (data.type === 'undo_request') {
@@ -280,7 +336,11 @@
             else if (data.type === 'undo_response') { if (data.accept) { executeUndoLocal(); } }
         }
 
-        function initBoard() { resetBoardLocal(); sendMqttMessage('reset'); }
+        function initBoard() { 
+            if(myRole === 'spectator') return;
+            resetBoardLocal(); 
+            sendMqttMessage('reset'); 
+        }
 
         function resetBoardLocal() {
             boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
@@ -294,7 +354,9 @@
         }
 
         function handleIntersectionClick(r, c) {
+            if (isReplayMode) return;
             if (!gameActive || aiThinking || boardState[r][c] !== null) return;
+            if (myRole === 'spectator') return;
             if (myRole !== null && currentTurn !== myRole && !playAgainstAI) return;
             if (playAgainstAI && currentTurn === aiRole && autoMoveActive) return;
             
@@ -330,10 +392,6 @@
             }
         }
 
-        // =========================================================
-        //  Core logic for HTTP requests to Node.js server
-        // =========================================================
-        
         // Generate history format required by Piskvork
         function generateAIHistory() {
             let history = [];
@@ -351,7 +409,7 @@
             if (!gameActive) return;
             aiThinking = true;
             updateTurnUI();
-            log("🧠 正在请求 Node.js 引擎算力，深度解析博弈树...");
+            log("🧠 正在请求 Node.js 引擎算力...");
 
             fetch('http://localhost:3000/api/analyze', {
                 method: 'POST',
@@ -368,11 +426,11 @@
             .catch(err => {
                 aiThinking = false;
                 updateTurnUI();
-                log("❌ 后端引擎连接失败，请确保 server.js 已在 3000 端口启动。");
+                log("❌ 后端引擎连接失败，请确保 server.js 已启动。");
             });
         }
 
-        // AI assist hint (visual hint only)
+        // AI assist hint
         function fetchAIHint() {
             if (!gameActive || aiThinking) return;
             clearAssistHighlights();
@@ -388,7 +446,7 @@
                     const cell = document.querySelector(`[data-row='${data.r}'][data-col='${data.c}']`);
                     if (cell) cell.classList.add('assist-suggest');
                 }
-            }).catch(() => {}); // Silent catch on failure
+            }).catch(() => {});
         }
 
         function toggleAssistMode(force) {
@@ -424,8 +482,6 @@
             updateConnectionUI(false); initBoard();
             log("🤖 已连入本地 Node 算力池。人机对抗开启，你执黑先手！");
         }
-
-        // =========================================================
 
         function checkWinCondition(r, c, color) {
             const dirs = [{dr:0,dc:1}, {dr:1,dc:0}, {dr:1,dc:1}, {dr:1,dc:-1}];
@@ -478,18 +534,22 @@
             gameActive = false; aiThinking = false;
             document.getElementById('celebrationTitle').innerText = winner === 'black' ? "黑方胜" : "白方胜";
             document.getElementById('celebrationOverlay').classList.add('active');
-            confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
-
-            if (playAgainstAI) {
-                if (winner === myRole) matchStats.wins++; else matchStats.losses++;
-            } else if (myRole !== null) {
-                if (winner === myRole) matchStats.wins++; else matchStats.losses++;
+            
+            if (myRole === null || myRole === 'spectator') {
+                confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
+            } else if (winner === myRole) {
+                confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
+                matchStats.wins++;
+            } else {
+                matchStats.losses++;
             }
+            
             localStorage.setItem('gomoku_p2p_stats', JSON.stringify(matchStats));
             updateStatsUI();
         }
 
         function requestUndo() {
+            if (myRole === 'spectator') return;
             if (aiThinking) return;
             if (moveHistory.length === 0) return alert("没有可以撤销的步骤。");
             
@@ -497,6 +557,7 @@
                 if (moveHistory.length >= 2) { executeUndoLocal(); executeUndoLocal(); } 
                 else { executeUndoLocal(); }
             } else if (myRole !== null) {
+                if (currentTurn === myRole) return alert("必须在对方回合期间才能申请悔棋！");
                 sendMqttMessage('undo_request');
             } else { executeUndoLocal(); }
         }
@@ -516,14 +577,29 @@
         function updateConnectionUI(isConnected) {
             const badge = document.getElementById('connectionStatus'); 
             const rBadge = document.getElementById('roleStatus');
+            const undoBtn = document.getElementById('undoBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const aiBtn = document.getElementById('aiBtn');
+
             if (playAgainstAI) {
                 badge.innerText = "🤖 引擎对战"; badge.className = "status-badge local-mode";
                 rBadge.style.display = "inline-block"; rBadge.innerText = "你执黑子";
             } else if (isConnected) {
-                badge.innerText = "网络对战"; badge.className = "status-badge connected";
-                rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'black' ? "黑子(先手)" : "白子(后手)";
+                if (myRole === 'spectator') {
+                    badge.innerText = "实时观棋"; badge.className = "status-badge spectator-mode";
+                    rBadge.style.display = "inline-block"; rBadge.innerText = "旁观者";
+                    undoBtn.disabled = true; resetBtn.disabled = true; aiBtn.disabled = true;
+                    undoBtn.style.opacity = 0.4; resetBtn.style.opacity = 0.4; aiBtn.style.opacity = 0.4;
+                } else {
+                    badge.innerText = "网络对战"; badge.className = "status-badge connected";
+                    rBadge.style.display = "inline-block"; rBadge.innerText = myRole === 'black' ? "黑子(先手)" : "白子(后手)";
+                    undoBtn.disabled = false; resetBtn.disabled = false; aiBtn.disabled = false;
+                    undoBtn.style.opacity = 1; resetBtn.style.opacity = 1; aiBtn.style.opacity = 1;
+                }
             } else {
                 badge.innerText = "离线单机"; badge.className = "status-badge local-mode"; rBadge.style.display = "none";
+                undoBtn.disabled = false; resetBtn.disabled = false; aiBtn.disabled = false;
+                undoBtn.style.opacity = 1; resetBtn.style.opacity = 1; aiBtn.style.opacity = 1;
             }
             updateTurnUI();
         }
@@ -539,7 +615,7 @@
             }
             const name = currentTurn === 'black' ? '黑方' : '白方'; 
             turnBadge.innerText = `当前回合: ${name}`;
-            if (myRole !== null && currentTurn === myRole) { 
+            if (myRole !== null && myRole !== 'spectator' && currentTurn === myRole) { 
                 turnBadge.className = "status-badge your-turn"; turnBadge.innerText += " (轮到你)"; 
             } else { turnBadge.className = "status-badge"; }
         }
@@ -551,14 +627,127 @@
             document.getElementById('statRate').innerText = total === 0 ? "0%" : `${Math.round((matchStats.wins / total) * 100)}%`;
         }
 
-        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); }
+        function copyRoomKey() { navigator.clipboard.writeText(document.getElementById('myIdDisplay').innerText); log("钥匙复制成功，快发给好友吧！"); }
         function log(text) { 
             const logBox = document.getElementById('logBox'); 
             logBox.innerHTML += `<br><span style="color:#666">[${new Date().toLocaleTimeString().split(' ')[0]}]</span> ${text}`; 
             logBox.scrollTop = logBox.scrollHeight; 
         }
 
-        renderSVGBoard(); createDOMGrid(); resetBoardLocal(); initNetwork(); updateStatsUI();
+        // ==================== Zoom Level Logic ====================
+        let boardZoomLevel = 1;
+
+        document.getElementById('zoomSlider')?.addEventListener('input', (e) => {
+            boardZoomLevel = parseFloat(e.target.value);
+            updateBoardZoom();
+        });
+
+        document.querySelector('.board-wrapper')?.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault(); 
+                const delta = e.deltaY > 0 ? -0.05 : 0.05;
+                boardZoomLevel = Math.max(0.5, Math.min(1.8, boardZoomLevel + delta));
+                const slider = document.getElementById('zoomSlider');
+                if (slider) slider.value = boardZoomLevel;
+                updateBoardZoom();
+            }
+        }, { passive: false });
+
+        function updateBoardZoom() {
+            const boardContainer = document.querySelector('.board-wrapper');
+            if (boardContainer) boardContainer.style.scale = boardZoomLevel;
+        }
+
+        // ==================== Replay Mode Logic ====================
+        function openReplay() {
+            document.getElementById('celebrationOverlay').classList.remove('active');
+            
+            const states = [...moveHistory, { 
+                board: JSON.parse(JSON.stringify(boardState)), 
+                turn: currentTurn, 
+                lastMove: lastMove ? JSON.parse(JSON.stringify(lastMove)) : null 
+            }];
+            localStorage.setItem('gomoku_replay_data', JSON.stringify(states));
+            
+            window.open(window.location.href.split('?')[0] + '?mode=replay', '_blank');
+        }
+
+        function initReplayMode() {
+            isReplayMode = true;
+            document.querySelector('h1').innerHTML = 'Replay Room <div class="status-badge spectator-mode">Replay Mode</div>';
+            
+            const panels = document.querySelectorAll('.panel-section');
+            if (panels.length >= 4) {
+                panels[3].style.display = 'none'; // Your Room Key
+                panels[4].style.display = 'none'; // Join Room
+            }
+
+            document.getElementById('aiBtn').style.display = 'none';
+            document.getElementById('undoBtn').parentElement.style.display = 'none';
+
+            const replayUI = document.createElement('div');
+            replayUI.style = "display: flex; gap: 8px; margin-top: 16px;";
+            replayUI.innerHTML = `
+                <button class="btn btn-secondary" style="flex: 1; color: #8a50ff; border-color: #8a50ff;" onclick="replayPrev()">上一步 (Prev)</button>
+                <button class="btn btn-secondary" style="flex: 1; color: #52b788; border-color: #52b788;" onclick="replayNext()">下一步 (Next)</button>
+            `;
+            document.querySelector('.sidebar').appendChild(replayUI);
+
+            try {
+                replayStates = JSON.parse(localStorage.getItem('gomoku_replay_data')) || [];
+                if (replayStates.length === 0) throw new Error("No data");
+            } catch (e) {
+                alert("Replay data not found!");
+                return;
+            }
+
+            currentReplayStep = replayStates.length - 1;
+            applyReplayState(currentReplayStep);
+            
+            log("📺 Entered Replay Mode. Use buttons below to navigate history.");
+            const connStatus = document.getElementById('connectionStatus');
+            connStatus.innerText = "Replay Mode";
+            connStatus.className = "status-badge spectator-mode";
+        }
+
+        function applyReplayState(index) {
+            if (index < 0 || index >= replayStates.length) return;
+            const state = replayStates[index];
+            boardState = state.board;
+            currentTurn = state.turn;
+            lastMove = state.lastMove;
+            
+            renderStones();
+            updateTurnUI();
+            log(`[Replay] Step: ${index} / ${replayStates.length - 1}`);
+        }
+
+        function replayPrev() {
+            if (currentReplayStep > 0) {
+                currentReplayStep--;
+                applyReplayState(currentReplayStep);
+            }
+        }
+
+        function replayNext() {
+            if (currentReplayStep < replayStates.length - 1) {
+                currentReplayStep++;
+                applyReplayState(currentReplayStep);
+            }
+        }
+
+        // ==================== Initialization ====================
+        renderSVGBoard(); 
+        createDOMGrid(); 
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'replay') {
+            initReplayMode();
+        } else {
+            resetBoardLocal(); 
+            initNetwork(); 
+            updateStatsUI();
+        }
     </script>
 </body>
 </html>
